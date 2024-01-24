@@ -1,0 +1,31 @@
+from flpianoroll import *
+
+pitches = {}
+
+for i in range(score.noteCount):
+    note = score.getNote(i)
+    
+    if note.number not in pitches:
+        pitches[note.number] = [(note, i)]
+    else:
+        pitches[note.number].append((note, i))
+
+for i in range(score.noteCount):
+    score.deleteNote(0)
+    
+for p, notes in pitches.items():
+    sn = sorted(notes, key=lambda x: x[0].time)
+    sm = sorted(notes, key=lambda x: x[0].time + x[0].length)[::-1]
+    
+    nn = sn[0][0].clone()
+    
+    nn.length = sm[0][0].time - nn.time + sm[0][0].length 
+
+    score.addNote(nn)
+
+    # pivot = notes[0]
+    # nmin = pivot.time
+    # nmax = pivot.time + pivot.length
+    
+    # for ni in range(0, len(notes) - 1):
+    #     if n.time in notes:
