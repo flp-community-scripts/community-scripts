@@ -1,6 +1,7 @@
-# FLP Community Scripts monorepo
+# FLP Community Scripts collection repo
 
-This is the main FLP community scripts repository hosting scripts of all members
+This is the main FLP community scripts repository hosting a collection of
+different scripts for fl pianoroll from different authors.
 
 ### For contributing guidelines refer to [CONTRIBUTING.md](./CONTRIBUTING.md)
 

@@ -1,0 +1,37 @@
+from flpianoroll import *
+from nbpcore import *
+
+
+def main():
+  pitches = get_notes_by_pitch()
+
+  nnn = []
+  
+  note_time_min = None
+  note_end_time_max = None
+
+  for p, notes in pitches.items():
+    sn = sorted(notes, key=lambda x: x[0].time)
+    sm = sorted(notes, key=lambda x: x[0].time + x[0].length)
+    
+    if note_time_min is None or sn[0][0].time < note_time_min:
+      note_time_min = sn[0][0].time
+
+    if note_end_time_max is None or note_end_time(sm[-1][0]) > note_end_time_max:
+      note_end_time_max = note_end_time(sm[-1][0])
+    
+    nn = sn[0][0].clone()
+    nnn.append(nn)
+
+  if len(nnn) == 0:
+    return
+
+  clear_notes()
+
+  for n in nnn:
+    nn = n.clone()
+    nn.time = note_time_min
+    nn.length = note_end_time_max - note_time_min
+    score.addNote(nn)
+
+main()

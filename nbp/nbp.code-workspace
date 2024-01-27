@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.pyscript": "python",
+		},
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "ruff.interpreter": ["/Users/zacharkapustin/.pyenv/shims/python3"]
+	},
+}

@@ -1,0 +1,25 @@
+from flpianoroll import *
+from nbpcore import *
+
+
+def main():
+  pitches_2 = get_notes_by_pitch()
+  pitches_1 = get_notes_by_pitch()
+
+  sort_pitches_by_time(pitches_1)
+  mint = get_min_time_from_pitches(pitches_1)
+
+  for notes in pitches_1.values():
+    if notes[0][0].time == mint:
+      continue
+    notes[0][0].length = notes[0][0].time - mint + notes[0][0].length
+    notes[0][0].time = mint
+
+  sort_pitches_by_end_time(pitches_2)
+  maxt_end_time, maxt_time = get_max_end_time_from_pitches(pitches_2)
+
+  for notes in pitches_2.values():
+    notes[-1][0].length = maxt_end_time - notes[-1][0].time
+
+
+main()
