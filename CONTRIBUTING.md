@@ -6,7 +6,9 @@ This monorepo serves as a centralized repository for various projects. Each proj
 ## Adding a New Project
 To contribute a new project, please follow these steps:
 
-1. **Create a New Folder**: Make a new folder at the root level with a clear, descriptive name for your project.
+1. Fork master
+
+2. **Create a New Folder**: In your fork, Make a new folder at the root level with a clear, descriptive name for your project.
 
 2. **Add a README File**: Inside your project folder, include a `README.md` file. This file should contain at least:
 ```
