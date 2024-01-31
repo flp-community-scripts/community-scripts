@@ -1,0 +1,104 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Reverse
+by: BinaryBorn
+
+2023-07-02
+  - initial version
+
+CHANGES
+2023-07-17
+  - added note.release
+
+2023-10-16
+  - added ISC license text
+"""
+
+# Utility function to get time range of selection / notes
+def getTimeRange(notes):
+  if len(notes) == 0: return (0, 0)
+  # find first starting and last ending note
+  first = min(notes, key=lambda n: n.time)
+  last = max(notes, key=lambda n: n.time + n.length)
+  # return start and end time
+  return (first.time, last.time + last.length)
+
+# Utility function to copy a note
+def copyNote(note):
+  cnote = flp.Note()
+  cnote.number = note.number
+  cnote.time = note.time
+  cnote.length = note.length
+  cnote.group = note.group
+  cnote.pan = note.pan
+  cnote.velocity = note.velocity
+  cnote.release = note.release
+  cnote.color = note.color
+  cnote.fcut = note.fcut
+  cnote.fres = note.fres
+  cnote.pitchofs = note.pitchofs
+  cnote.slide = note.slide
+  cnote.porta = note.porta
+  cnote.muted = note.muted
+  cnote.selected = note.selected
+  return cnote
+
+# No GUI required - scripts runs here
+
+noteCount = flp.score.noteCount
+
+allNotes = [flp.score.getNote(i) for i in range(noteCount)]
+# order by start time
+allNotes.sort(key=lambda n: (n.time, n.number))
+
+times = getTimeRange(allNotes)
+t0 = times[0]
+t1 = times[1]
+
+# do color group by color group (keeps the whole slides treatment a bit cleaner)
+for color in range(16):
+  notes = [n for n in allNotes if n.color == color]
+  playNotes = [n for n in notes if n.slide == False]
+  slideNotes = [n for n in notes if n.slide == True]
+
+  # invert slides
+  for s in slideNotes:
+    # notes playing when slide starts === affected notes
+    st0 = s.time
+    affected = [n for n in playNotes if st0 >= n.time and st0 < n.time + n.length]
+    if affected:
+      # top note in affected notes === leading note
+      affected.sort(key=lambda n: n.number, reverse=True)
+      leading = copyNote(affected[0])
+      # invert slides (switch from/to)
+      for n in affected:
+        # note number: change relative to leading note
+        n.number += s.number - leading.number
+        # other properties: set to end of slide value
+        n.pan = s.pan
+        n.velocity = s.velocity
+        n.release = s.release
+        n.fcut = s.fcut
+        n.fres = s.fres
+      s.number = leading.number
+      # other properties: set to initial leading note values
+      s.pan = leading.pan
+      s.velocity = leading.velocity
+      s.release = leading.release
+      s.fcut = leading.fcut
+      s.fres = leading.fres
+
+  # then reverse the whole thing
+  for note in notes:
+    note.time = t1 - (note.time - t0 + note.length)                 

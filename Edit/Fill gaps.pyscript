@@ -1,0 +1,121 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Fill gaps
+by: BinaryBorn
+
+2024-01-16
+  - initial version
+"""
+
+# Utility function to get time range of selection / notes
+def getTimeRange(notes):
+  if len(notes) == 0: return (0, 0)
+  # find first starting and last ending note
+  first = min(notes, key=lambda n: n.time)
+  last = max(notes, key=lambda n: n.time + n.length)
+  # return start and end time
+  return (first.time, last.time + last.length)
+
+# Returns the note following given time (as in nearest following).
+# If there are multiple notes equally close, it takes the longest one.
+# Expects notes to be sorted by start time.
+def getNoteFollowing(notes, time):
+  next = None
+  for n in notes:
+    # already at one after next
+    if next and n.time > next.time: return next
+    # possible candidate for next
+    if n.time > time:
+      # always remember first candidate, others only if they last longer
+      if not next or n.length > next.length:
+        next = n
+  return next
+
+# Returns the note playing at given time.
+# If there are multiple notes playing, it takes the one ending the latest.
+# Expects notes to be sorted by start time.
+def getNoteAt(notes, time):
+  current = None
+  for n in notes:
+    # already after time
+    if n.time > time: return current
+    # possible candidate for current
+    if n.time <= time and (n.time + n.length) > time:
+      # always remember first candidate, others only if they last longer
+      if not current or (n.time + n.length) > (current.time + current.length):
+        current = n
+  return current
+
+def applyNoForm():
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+  # order by start time
+  notes.sort(key=lambda n: (n.time, n.number))
+
+  if not notes: return
+
+  # find range to fill
+  selection = flp.score.getTimelineSelection()
+  # ... fall back to notes' range when no timeline selection was made
+  if (selection[1] == -1): selection = getTimeRange(notes)
+  selt0 = selection[0]
+  selt1 = selection[1]
+  seldt = selt1 - selt0
+
+  cursor = selt0
+  addNotes = []
+  
+  while True:
+    # currently playing note
+    current = getNoteAt(notes, cursor)
+
+    if current:
+      # advance cursor to current's end
+      cursor = current.time + current.length
+      continue
+
+    # next starting note
+    next = getNoteFollowing(notes, cursor)
+
+    if not next: break
+
+    # gap from cursor to next note, fill
+    if next.time > cursor:
+      note = flp.Note()
+      note.number = 60
+      note.time = cursor
+      note.length = next.time - cursor
+      note.selected = True
+      addNotes.append(note)
+      # advance cursor to next's end
+      cursor = next.time + next.length
+
+  # gap from cursor to selection end, fill
+  if selt1 > cursor:
+    note = flp.Note()
+    note.number = 60
+    note.time = cursor
+    note.length = selt1 - cursor
+    note.selected = True
+    addNotes.append(note)
+
+  # deselect all existing notes
+  for n in notes:
+    n.selected = False
+
+  # add filler notes
+  for n in addNotes:
+    flp.score.addNote(n)         
+
+applyNoForm()

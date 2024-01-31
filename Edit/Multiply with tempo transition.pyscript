@@ -1,0 +1,237 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+import math
+
+"""
+Multiply with tempo transition
+by: BinaryBorn
+
+2023-07-11
+  - initial version
+
+CHANGES
+2023-07-17
+  - replaced tension function
+  - added note.release
+
+2023-10-16
+  - added ISC license text
+
+2023-10-20
+  - added getTimelineSelection()
+  - replaced cloning function
+  - fixed behavior when notes with different length are selected
+"""
+
+# Utility function to get time range of selection / notes
+def getTimeRange(notes):
+  if len(notes) == 0: return (0, 0)
+  # find first starting and last ending note
+  first = min(notes, key=lambda n: n.time)
+  last = max(notes, key=lambda n: n.time + n.length)
+  # return start and end time
+  return (first.time, last.time + last.length)
+
+# Utility function, Tension.
+# If knob is True it behaves like the tension knob in scale levels,
+# if knob is False it behaves like the Tension function in Formula Controller.
+def Tension(value, rate, knob=True):
+  if rate == 0: return value
+  # rate mapping
+  R = rate
+  if not knob and rate > 0:
+    R = math.log2(rate + 1) / 10
+  elif not knob and rate < 0:
+    R = -math.log2(-rate + 1) / 10
+  # f(x,R) = (2^(-10*R*x)-1)/(2^(-10*R)-1)
+  return (pow(2, -10 * R * value) - 1) / (pow(2, -10 * R) - 1)
+
+
+def createDialog():
+  form = flp.ScriptDialog("Multiply with tempo transition","Start and end scale multiply the sequences's length."
+  + "\r\nDuration is in 1/16."
+  + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly, the transition will then include a whole number multiple of the sequence. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
+  + "\r\n\r\n2023-10-23, BinaryBorn")
+  form.AddInputKnob('Start scale %', 100, 100/16, 1600)
+  form.AddInputKnob('End scale %', 50, 100/16, 1600)
+  form.AddInputKnobInt('Copies before', 1, 0, 16)
+  form.AddInputKnobInt('Copies after', 1, 0, 16)
+  form.AddInputKnobInt('Duration', 16, 1, 32 * 16)
+  form.AddInputCombo('Phase correction', ['none', 'stretch', 'squash'], 0)
+  form.AddInputKnob('Ph. corr. tension', 0, -1, 1)
+  
+  return form
+
+def apply(form):
+  newNotes = []
+  ppq = flp.score.PPQ
+
+  # get current notes
+  notesCnt = flp.score.noteCount
+  notes = [flp.score.getNote(i) for i in range(notesCnt)]
+
+  if not notes: return
+
+  # try using timeline selection
+  selection = flp.score.getTimelineSelection()
+  # ... fall back to notes' range when no timeline selection was made
+  if (selection[1] == -1): selection = getTimeRange(notes)
+  selt0 = selection[0]
+  selt1 = selection[1]
+  seldt = selt1 - selt0
+
+  # The whole math works in ticks.
+  # There are (s)ource ticks and (t)arget ticks. The source notes are projected onto the score at their target position.
+
+  # convert scale to rate (source ticks per target tick)
+  r0 = 1 / (form.GetInputValue('Start scale %') / 100)
+  r1 = 1 / (form.GetInputValue('End scale %') / 100)
+  dr = r1 - r0
+  # duration in ticks
+  dt = form.GetInputValue('Duration') / 4 * ppq
+  # rate of rate change
+  R = dr / dt
+
+  c0 = form.GetInputValue('Copies before')
+  c1 = form.GetInputValue('Copies after')
+  n0 = c0 * notesCnt
+  n1 = c1 * notesCnt
+
+  corr = form.GetInputValue('Phase correction')
+  corrTension = form.GetInputValue('Ph. corr. Tension')
+
+  # calculates target tick from source tick during transition
+  def tfroms(s):
+    if R == 0:
+      return s / r0
+    else:
+      D = max(r0 ** 2 + 2 * R * s, 0)
+      return (math.sqrt(D) - r0) / R
+
+  # returns source note, its start and end time for given noteIdx as dict
+  def getSource(idx):
+    c = int(idx / notesCnt)
+    i = idx % notesCnt
+    note = notes[i]
+    # times relative to selection start
+    time0 = note.time - selt0
+    time1 = (note.time + note.length) - selt0
+    # adjust for copy №
+    time0 += c * seldt
+    time1 += c * seldt
+    return {
+      'note': note,
+      'time0': time0,
+      'time1': time1
+    }
+
+  noteIdx = 0
+  toffset = selt0
+
+  # before transition
+  for n in range(n0):
+    source = getSource(noteIdx)
+    # scale times by steady rate
+    t0 = round(source['time0'] / r0)
+    t1 = round(source['time1'] / r0)
+    # and project
+    note = source['note'].clone()
+    note.time = t0 + toffset
+    note.length = t1 - t0
+    newNotes.append(note)
+    # point to next note
+    noteIdx += 1
+
+  # offset here is simply № of copies x copy length
+  soff0 = c0 * seldt
+  toffset += round(soff0 / r0)
+
+  # transition
+
+  # first guess for delta time in source and target and number of copies
+  strans = round(r0 * dt + 1/2 * R * dt ** 2)
+  ttrans = round(tfroms(strans))    # calculated duration
+  ttransEff = ttrans                # corrected duration
+  ctrans = strans / seldt           # approx. № of copies
+  dn = 0
+
+  # phase correction (and duration correction, if applicable)
+  if corr == 0:
+    # find first note starting after transition
+    # (which must lie within last copy)
+    i0 = math.floor(ctrans) * notesCnt
+    i1 = i0 + notesCnt
+    dn = i1
+    for i in range(i0, i1):
+      source = getSource(i)
+      if source['time0'] >= strans:
+        dn = i
+        break
+  elif corr == 1:
+    ctrans = math.floor(ctrans)
+  elif corr == 2:
+    ctrans = math.ceil(ctrans)
+
+  # if phase correction is applied, use exact № of copies to update coordinates
+  if corr:
+    strans = ctrans * seldt
+    ttrans = round(tfroms(strans)) 
+    ttransEff = dt
+    dn = ctrans * notesCnt
+
+  for n in range(dn):
+    source = getSource(noteIdx)
+    # scale times
+    t0 = round(tfroms(source['time0'] - soff0))
+    t1 = round(tfroms(source['time1'] - soff0))
+    # apply phase correction
+    if corr:
+      # ... by scaling the transition time
+      fcorr = ttransEff / ttrans
+      # how much to scale (Tension-dependent)
+      sf0 = Tension(t0 / ttrans, corrTension)
+      sf1 = Tension(t1 / ttrans, corrTension)
+      # scale
+      t0 = round(t0 * (1 + sf0 * (fcorr - 1)))
+      t1 = round(t1 * (1 + sf1 * (fcorr - 1)))
+    # and project
+    note = source['note'].clone()
+    note.time = t0 + toffset
+    note.length = t1 - t0
+    newNotes.append(note)
+    # point to next note
+    noteIdx += 1
+
+  # after transition
+
+  # offset here is old offset increased by transition timings
+  soff1 = soff0 + strans
+  toffset += ttransEff
+
+  # toff1 = toff0 + ttransEff
+  # noff1 = noteIdx / notesCnt
+  for n in range(n1):
+    source = getSource(noteIdx)
+    # scale times by steady rate
+    t0 = round((source['time0'] - soff1) / r1)
+    t1 = round((source['time1'] - soff1) / r1)
+    # and project
+    note = source['note'].clone()
+    note.time = t0 + toffset
+    note.length = t1 - t0
+    newNotes.append(note)
+    # point to next note
+    noteIdx += 1
+
+  flp.score.clearNotes()
+  for note in newNotes:
+    flp.score.addNote(note)

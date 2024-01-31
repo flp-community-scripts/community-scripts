@@ -1,0 +1,52 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Chord inversion
+idea: kikeyano
+code: BinaryBorn
+
+2023-08-07
+  - initial version
+
+2023-09-13
+  - added ISC license text
+"""
+
+def createDialog():
+  form = flp.ScriptDialog("Chord inversion","Invert chords"
+  + "\r\n\r\n2023-09-13, kikeyano & BinaryBorn")
+  form.AddInputKnobInt('Inversion', 0, -24, 24)
+  
+  return form
+
+def apply(form):
+  inversion = form.GetInputValue('Inversion')
+
+  # get current notes
+  notesCnt = flp.score.noteCount
+  notes = [flp.score.getNote(i) for i in range(notesCnt)]
+  # order by note number
+  notes.sort(key=lambda n: n.number)
+
+  # range of notes to invert
+  i0 = 0
+  i1 = min(inversion, notesCnt)
+  jump = 12
+  if (inversion < 0):
+    i0 = max(notesCnt + inversion, 0)
+    i1 = notesCnt
+    jump = -12
+
+  # invert
+  for i in range(i0, i1):
+    notes[i].number += jump

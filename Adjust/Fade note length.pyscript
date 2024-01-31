@@ -1,0 +1,83 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Fade note length
+by: BinaryBorn
+
+2023-06-30
+  - initial version
+
+2023-07-01
+  - fixed error when used on empty score
+
+2023-09-14
+  - added ISC license text
+"""
+
+# Utility function to get time range of selection / notes
+def getTimeRange(notes):
+  if len(notes) == 0: return (0, 0)
+  # find first starting and last ending note
+  first = min(notes, key=lambda n: n.time)
+  last = max(notes, key=lambda n: n.time + n.length)
+  # return start and end time
+  return (first.time, last.time + last.length)
+
+
+def createDialog():
+  form = flp.ScriptDialog("Fade note length","Fade note lengths from 0% to 100%"
+  + "\r\n\r\n2023-09-14, BinaryBorn")
+  form.AddInputKnob('Start length', 100, 0, 100)
+  form.AddInputKnob('End length', 100, 0, 100)
+  form.AddInputCombo('Interpolate by', ['Time', 'Note number'], 0)
+  return form
+
+def apply(form):
+  noteCount = flp.score.noteCount
+
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(noteCount)]
+  # order by start time
+  notes.sort(key=lambda n: (n.time, n.number))
+
+  # start and end time / index
+  times = getTimeRange(notes)
+  t0 = times[0]
+  t1 = times[1]
+  dt = t1 - t0
+  i0 = 0
+  i1 = noteCount - 1
+  di = i1 - i0
+
+  # go through all notes and fade length
+  mode = form.GetInputValue('Interpolate by')
+  scale0 = form.GetInputValue('Start length') / 100
+  scale1 = form.GetInputValue('End length') / 100
+  dscale = scale1 - scale0
+  idx = 0
+  for note in notes:
+    scale = 1
+    # note time / index
+    t = note.time
+    i = idx
+    # interpolate according to selected mode
+    if mode == 0:
+      scale = scale0 + dscale * ((t - t0) / dt)
+    else:
+      scale = scale0 + dscale * ((i - i0) / di)
+
+    # scale note length
+    note.length = max(1, note.length * scale)
+
+    idx += 1
+

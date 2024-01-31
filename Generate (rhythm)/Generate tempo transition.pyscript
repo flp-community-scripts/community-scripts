@@ -1,0 +1,142 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+import math
+
+"""
+Generate tempo transition
+by: BinaryBorn
+
+2023-07-11
+  - initial version
+
+2023-07-17
+  - replaced tension function
+
+2023-09-21
+  - added ISC license text
+"""
+
+# Utility function, Tension.
+# If knob is True it behaves like the tension knob in scale levels,
+# if knob is False it behaves like the Tension function in Formula Controller.
+def Tension(value, rate, knob=True):
+  if rate == 0: return value
+  # rate mapping
+  R = rate
+  if not knob and rate > 0:
+    R = math.log2(rate + 1) / 10
+  elif not knob and rate < 0:
+    R = -math.log2(-rate + 1) / 10
+  # f(x,R) = (2^(-10*R*x)-1)/(2^(-10*R)-1)
+  return (pow(2, -10 * R * value) - 1) / (pow(2, -10 * R) - 1)
+
+
+def createDialog():
+  form = flp.ScriptDialog("Generate tempo transition","Start and end freq are in 'pulses per whole note'."
+  + "\r\nDuration is in 16th."
+  + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
+  + "\r\n\r\n2023-09-21, BinaryBorn")
+  form.AddInputKnobInt('Start freq', 4, 1, 64)
+  form.AddInputKnobInt('End freq', 8, 1, 64)
+  form.AddInputKnobInt('Pulses before', 0, 0, 16)
+  form.AddInputKnobInt('Pulses after', 0, 0, 16)
+  form.AddInputKnobInt('Duration', 16, 1, 32 * 16)
+  form.AddInputCombo('Phase correction', ['none', 'stretch', 'squash'], 0)
+  form.AddInputKnob('Ph. corr. tension', 0, -1, 1)
+  form.AddInputKnobInt('Note', 60, 0, 131)
+  
+  return form
+
+def apply(form):
+  notes = []
+  ppq = flp.score.PPQ
+
+  # convert freq (1 per 4 beats) to rate (1 per tick)
+  r0 = form.GetInputValue('Start freq') / ppq / 4
+  r1 = form.GetInputValue('End freq') / ppq / 4
+  dr = r1 - r0
+  # duration in ticks
+  dt = form.GetInputValue('Duration') * ppq
+  # rate of rate change
+  R = dr / dt
+
+  p0 = form.GetInputValue('Pulses before')
+  p1 = form.GetInputValue('Pulses after')
+
+  corr = form.GetInputValue('Phase correction')
+  corrTension = form.GetInputValue('Ph. corr. Tension')
+
+  noteNr = form.GetInputValue('Note')
+
+  def tfromp(p):
+    if R == 0:
+      return p / r0
+    else:
+      D = max(r0 ** 2 + 2 * R * p, 0)
+      return (math.sqrt(D) - r0) / R 
+
+  # before transition
+  for p in range(p0):
+    t0 = round(p / r0)
+    t1 = round((p + 1) / r0)
+    note = flp.Note()
+    note.number = noteNr
+    note.time = t0
+    note.length = t1 - t0
+    notes.append(note)
+
+  # transition
+  toff0 = round(p0 / r0)
+  dp = r0 * dt + 1/2 * R * dt ** 2
+
+  # phase correction (and duration correction, if applicable)
+  if corr == 0:
+    dp = round(dp)
+  elif corr == 1:
+    dp = math.floor(dp)
+  elif corr == 2:
+    dp = math.ceil(dp)
+  ttrans = round(tfromp(dp))
+  if corr == 0:
+    ttransEff = ttrans
+  else:
+    ttransEff = dt
+
+  for p in range(dp):
+    t0 = round(tfromp(p))
+    t1 = round(tfromp(p+1))
+    # phase correction
+    if corr:
+      s = ttransEff / ttrans
+      sf0 = Tension(t0 / ttrans, corrTension)
+      sf1 = Tension(t1 / ttrans, corrTension)
+      t0 = round(t0 * (1 + sf0 * (s - 1)))
+      t1 = round(t1 * (1 + sf1 * (s - 1)))
+    note = flp.Note()
+    note.number = noteNr
+    note.time = t0 + toff0
+    note.length = t1 - t0
+    notes.append(note)
+
+  # after transition
+  toff1 = toff0 + ttransEff
+  for p in range(p1):
+    t0 = round(p / r1)
+    t1 = round((p + 1) / r1)
+    note = flp.Note()
+    note.number = noteNr
+    note.time = t0 + toff1
+    note.length = t1 - t0
+    notes.append(note)
+
+  for note in notes:
+    flp.score.addNote(note)
