@@ -1,0 +1,85 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Warp
+by: BinaryBorn
+
+2023-07-14
+  - initial version
+
+CHANGES
+2023-07-17
+  - replaced tension function
+
+2023-10-16
+  - added ISC license text
+"""
+
+# Utility function to get time range of selection / notes
+def getTimeRange(notes):
+  if len(notes) == 0: return (0, 0)
+  # find first starting and last ending note
+  first = min(notes, key=lambda n: n.time)
+  last = max(notes, key=lambda n: n.time + n.length)
+  # return start and end time
+  return (first.time, last.time + last.length)
+
+# Utility function, Tension.
+# If knob is True it behaves like the tension knob in scale levels,
+# if knob is False it behaves like the Tension function in Formula Controller.
+def Tension(value, rate, knob=True):
+  if rate == 0: return value
+  # rate mapping
+  R = rate
+  if not knob and rate > 0:
+    R = math.log2(rate + 1) / 10
+  elif not knob and rate < 0:
+    R = -math.log2(-rate + 1) / 10
+  # f(x,R) = (2^(-10*R*x)-1)/(2^(-10*R)-1)
+  return (pow(2, -10 * R * value) - 1) / (pow(2, -10 * R) - 1)
+
+
+def createDialog():
+  form = flp.ScriptDialog("Warp","Warp score"
+  + "\r\n\r\n2023-10-16, BinaryBorn")
+  form.AddInputKnob('Warp', 0, -1, 1)
+  
+  return form
+
+def apply(form):
+  warp = form.GetInputValue('Warp')
+
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  times = getTimeRange(notes)
+  t0 = times[0]
+  t1 = times[1]
+  dt = t1 - t0
+
+  # warp start and end times
+  for note in notes:
+    nt0 = note.time - t0
+    nt1 = nt0 + note.length
+    nt0 = round(Tension(nt0 / dt, warp) * dt)
+    nt1 = round(Tension(nt1 / dt, warp) * dt)
+    # keep notes length at 1 min
+    if nt0 == nt1:
+      # positive warp: move note start times forwards
+      if warp > 0:
+        nt0 -= 1
+      # negative warp: move note end times back
+      else:
+        nt1 += 1
+    note.time = nt0 + t0
+    note.length = nt1 - nt0

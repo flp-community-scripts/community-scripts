@@ -1,0 +1,58 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Text to notes
+idea: Anuman
+code: BinaryBorn
+
+2023-10-23
+  - initial version
+"""
+
+def createDialog():
+  form = flp.ScriptDialog("Text to notes","Transforms all characters in text to notes (A = first, B = second...)."
+  + "\r\nThe script is case insensitive (A = a)."
+  + "\r\n\r\n2023-10-23, Anuman & BinaryBorn")
+  form.AddInputKnobInt('Root note', 48, 0, 131)
+  form.AddInputCombo('Note length', ['1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)', '1/24', '1/32', '1/48', '1/64'], 7)
+  form.AddInputText('Text', 'Hello World')
+  
+  return form
+
+def apply(form):
+  root = form.GetInputValue('Root note')
+  text = form.GetInputValue('Text').upper()
+  length = form.GetInputValue('Note length')
+  lengthTicks = [1, 1/2, 1/3, 1/4, 1/6, 1/8, 1/12, 1/16, 1/24, 1/32, 1/48, 1/64][length] * 4 * flp.score.PPQ
+
+  newNotes = []
+
+  # valid char range
+  c0 = ord('A')
+  c1 = ord('Z')
+
+  # go through all chars
+  for i in range(len(text)):
+    c = ord(text[i])
+    flp.Utils.log(str(c))
+    # put valid chars as note
+    if c >= c0 and c <= c1:
+      note = flp.Note()
+      note.number = root + (c - c0)
+      note.time = i * lengthTicks
+      note.length = lengthTicks
+      newNotes.append(note)
+  
+  # add those notes to existing score
+  for note in newNotes:
+    flp.score.addNote(note)

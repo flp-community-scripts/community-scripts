@@ -1,0 +1,10 @@
+import flpianoroll as flp
+
+"""
+Stair upwards
+2023-07-31, copacati & BinaryBorn
+"""
+
+for i in range(flp.score.noteCount):
+    note = flp.score.getNote(i)
+    note.number += i

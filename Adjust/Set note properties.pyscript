@@ -1,0 +1,69 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Set note properties
+by: BinaryBorn
+
+2023-06-30
+  - initial version
+
+CHANGES
+2023-07-17
+  - added note.release
+
+2023-10-16
+  - added ISC license text
+"""
+
+def createDialog():
+  form = flp.ScriptDialog("Set note properties","Set note properties of selected notes"
+  + "\r\n\r\n2023-10-16, BinaryBorn")
+  form.AddInputCombo('Set pan', ['leave', 'set'], 0)
+  form.AddInputKnobInt('Pan', 0, -100, 100)
+  form.AddInputCombo('Set velocity', ['leave', 'set'], 0)
+  form.AddInputKnobInt('Velocity', 78, 0, 100)
+  form.AddInputCombo('Set release', ['leave', 'set'], 0)
+  form.AddInputKnobInt('Release', 50, 0, 100)
+  form.AddInputCombo('Set filter cutoff', ['leave', 'set'], 0)
+  form.AddInputKnobInt('Filter cutoff', 0, -100, 100)
+  form.AddInputCombo('Set filter resonance', ['leave', 'set'], 0)
+  form.AddInputKnobInt('Filter resonance', 0, -100, 100)
+  form.AddInputCombo('Set pitch', ['leave', 'set'], 0)
+  form.AddInputKnobInt('Pitch', 0, -1200, 1200)
+  return form
+
+def apply(form):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  # set their levels
+  setPan = form.GetInputValue('Set pan')
+  pan = form.GetInputValue('Pan') / 200 + 0.5
+  setVelocity = form.GetInputValue('Set velocity')
+  velocity = form.GetInputValue('Velocity') / 100
+  setRelease = form.GetInputValue('Set release')
+  release = form.GetInputValue('Release') / 100
+  setFCut = form.GetInputValue('Set filter cutoff')
+  fCut = form.GetInputValue('Filter cutoff') / 200 + 0.5
+  setFRes = form.GetInputValue('Set filter resonance')
+  fRes = form.GetInputValue('Filter resonance') / 200 + 0.5
+  setPitch = form.GetInputValue('Set pitch')
+  pitch = form.GetInputValue('Pitch') / 10
+  for note in notes:
+    if setPan: note.pan = pan
+    if setVelocity: note.velocity = velocity
+    if setRelease: note.release = release
+    if setFCut: note.fcut = fCut
+    if setFRes: note.fres = fRes
+    if setPitch: note.pitchofs = pitch
+

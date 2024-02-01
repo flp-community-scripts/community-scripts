@@ -1,0 +1,13 @@
+import flpianoroll as flp
+
+"""
+Swap mod X and mod Y
+2023-07-14, BinaryBorn
+"""
+
+# get current notes
+notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+# swap mods, no exception
+for note in notes:
+    note.fcut, note.fres = note.fres, note.fcut

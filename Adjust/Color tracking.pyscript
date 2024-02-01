@@ -1,0 +1,85 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Color tracking
+by: BinaryBorn
+
+2023-11-03
+  - initial version
+"""
+
+def createDialog():
+  form = flp.ScriptDialog("Color tracking","Change note properties based on their color."
+  + "\r\n\r\n2023-11-03, BinaryBorn")
+  form.AddInputCombo('Set pan', ['leave', 'set', 'add'], 0)
+  form.AddInputKnob('Pan', 0, -1, 1)
+  form.AddInputCombo('Set velocity', ['leave', 'set', 'add'], 0)
+  form.AddInputKnob('Velocity', 0, -1, 1)
+  form.AddInputCombo('Set release', ['leave', 'set', 'add'], 0)
+  form.AddInputKnob('Release', 0, -1, 1)
+  form.AddInputCombo('Set filter cutoff', ['leave', 'set', 'add'], 0)
+  form.AddInputKnob('Filter cutoff', 0, -1, 1)
+  form.AddInputCombo('Set filter resonance', ['leave', 'set', 'add'], 0)
+  form.AddInputKnob('Filter resonance', 0, -1, 1)
+  form.AddInputCombo('Set pitch', ['leave', 'set', 'add'], 0)
+  form.AddInputKnob('Pitch', 0, -1, 1)
+  form.AddInputCombo('Set length', ['leave', 'set', 'add'], 0)
+  form.AddInputKnob('Length', 0, -1, 1)
+  form.AddInputKnobInt('Center value', 0, 0, 15)
+  return form
+
+def apply(form):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  # set their levels
+  setPan = form.GetInputValue('Set pan')
+  pan = form.GetInputValue('Pan') / 100
+  setVelocity = form.GetInputValue('Set velocity')
+  velocity = form.GetInputValue('Velocity') / 100
+  setRelease = form.GetInputValue('Set release')
+  release = form.GetInputValue('Release') / 100
+  setFCut = form.GetInputValue('Set filter cutoff')
+  fcut = form.GetInputValue('Filter cutoff') / 100
+  setFRes = form.GetInputValue('Set filter resonance')
+  fres = form.GetInputValue('Filter resonance') / 100
+  setPitch = form.GetInputValue('Set pitch')
+  pitch = form.GetInputValue('Pitch') * 12 / 10 # the range here is -120 ... 120
+  setLength = form.GetInputValue('Set length')
+  length = form.GetInputValue('Length')
+
+  center = form.GetInputValue('Center value')
+
+  ppq = flp.score.PPQ
+  sensitivity = 10
+
+  for note in notes:
+    amount = (note.color - center) * sensitivity
+    # for every property: add amount-scaled value,
+    # reset to default first if mode is 'set'
+    if setPan == 1: note.pan = 0.5
+    if setPan: note.pan = min(max(note.pan + pan * amount, 0),1)
+    if setVelocity == 1: note.velocity = 0.78
+    if setVelocity: note.velocity = min(max(note.velocity + velocity * amount, 0),1)
+    if setRelease == 1: note.release = 0.5
+    if setRelease: note.release = min(max(note.release + release * amount, 0),1)
+    if setFCut == 1: note.fcut = 0.5
+    if setFCut: note.fcut = min(max(note.fcut + fcut * amount, 0),1)
+    if setFRes == 1: note.fres = 0.5
+    if setFRes: note.fres = min(max(note.fres + fres * amount, 0),1)
+    if setPitch == 1: note.pitchofs = 0
+    if setPitch: note.pitchofs = min(max(note.pitchofs + pitch * amount, -120),120)
+    # use 1/16 as default note length
+    if setLength == 1: note.length = ppq / 4
+    if setLength: note.length = round(max(note.length + length * amount, 1))
+

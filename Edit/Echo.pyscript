@@ -1,0 +1,161 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+import math
+import _random
+
+random = _random.Random()
+
+"""
+Echo
+by: BinaryBorn
+
+2024-01-16
+  - initial version
+
+2024-01-26
+  - added pitch, fcut, fres
+  - added group option
+  - added per note randomization
+  - added pan shift
+  - changed name of existing pan control to stereo control
+  - changed delay time range, including negative time
+"""
+
+def createDialog():
+  form = flp.ScriptDialog("Echo","Create an echo/delay effect in your score."
+  + "\r\nDelay time is in 1/16."
+  + "\r\n\r\n2024-01-26, BinaryBorn")
+  form.AddInputKnob('Delay time', 4, -16, 16)
+  form.AddInputKnobInt('Echos', 4, 1, 128)
+  form.AddInputCombo('Velocity mode', ['exponential', 'linear'], 0)
+  form.AddInputKnob('Velocity multiplier', 0.8, 0, 2)
+  form.AddInputCombo('Stereo mode', ['normal', 'ping pong'], 0)
+  form.AddInputKnob('Stereo multiplier', 1, 0, 2)
+  form.AddInputKnob('Pan shift', 0, -1, 1)
+  form.AddInputKnob('Pitch shift', 0, -12, 12)
+  form.AddInputKnob('Mod X shift', 0, -1, 1)
+  form.AddInputKnob('Mod Y shift', 0, -1, 1)
+  form.AddInputCombo('Note color mode', ['none', 'set', 'round robin'], 0)
+  form.AddInputKnobInt('Note color offset', 0, 0, 15)
+  form.AddInputCheckbox('Drop silent notes', True)
+  form.AddInputCheckbox('Group echos', True)
+  # all the randomization stuff
+  form.AddInputCheckbox('Randomize', False)
+  form.AddInputKnobInt('Seed', 0, 0, 999)
+  form.AddInputKnob('Rnd time', 0, 0, 1)
+  form.AddInputKnob('Rnd velocity', 0, 0, 1)
+  form.AddInputKnob('Rnd pan', 0, 0, 1)
+  form.AddInputKnob('Rnd pitch', 0, 0, 1)
+  form.AddInputKnob('Rnd mod X', 0, 0, 1)
+  form.AddInputKnob('Rnd mod Y', 0, 0, 1)
+  
+  return form
+
+def apply(form):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+  # order by start time
+  notes.sort(key=lambda n: (n.time, n.number))
+
+  if not notes: return
+
+  ppq = flp.score.PPQ
+  tdelay = form.GetInputValue('Delay time') / 4 * ppq
+  numEchos = form.GetInputValue('Echos')
+  velMode = form.GetInputValue('Velocity mode')
+  velMul = form.GetInputValue('Velocity multiplier')
+  sterMode = form.GetInputValue('Stereo mode')
+  sterMul = form.GetInputValue('Stereo multiplier')
+  panShft = form.GetInputValue('Pan shift')
+  pitchShft = form.GetInputValue('Pitch shift') * 100
+  modxShft = form.GetInputValue('Mod X shift')
+  modyShft = form.GetInputValue('Mod Y shift')
+  colMode = form.GetInputValue('Note color mode')
+  colOff = form.GetInputValue('Note color offset')
+  dropSilent = form.GetInputValue('Drop silent notes')
+  groupEchos = form.GetInputValue('Group echos')
+
+  randomize = form.GetInputValue('Randomize')
+  rndTime = form.GetInputValue('Rnd time')
+  rndVel = form.GetInputValue('Rnd velocity')
+  rndPan = form.GetInputValue('Rnd pan')
+  rndPitch = form.GetInputValue('Rnd pitch')
+  rndModx = form.GetInputValue('Rnd mod X')
+  rndMody = form.GetInputValue('Rnd mod Y')
+
+  # always seed with user provided seed
+  seed = form.GetInputValue('Seed')
+  random.seed(seed)
+
+  # store initial values for randomizer
+  _tdelay = tdelay
+  _velMul = velMul
+  _panShft = panShft
+  _pitchShft = pitchShft
+  _modxShft = modxShft
+  _modyShft = modyShft
+  def unityRandom():
+    return 2 * (random.random() - 0.5)
+
+  addNotes = []
+  grpIdx = 0
+
+  # clone notes/create echos
+  for n in notes:
+    # per note randomization (not per echo), range selected at discretion 
+    if randomize:
+      tdelay = _tdelay + rndTime / 10 * unityRandom() * 32 / 4 * ppq
+      velMul = _velMul + rndVel / 10 * unityRandom() * 2
+      panShft = _panShft + rndPan * unityRandom() * 2
+      pitchShft = _pitchShft + rndPitch / 10 * unityRandom() * 24 * 100
+      modxShft = _modxShft + rndModx / 10 * unityRandom() * 2
+      modyShft = _modyShft + rndMody / 10 * unityRandom() * 2
+    grpIdx += 1
+    for i in range(1, numEchos):
+      note = n.clone()
+      note.time += tdelay * i
+      # adapt velocity
+      if velMode == 0:
+        note.velocity *= math.pow(velMul, i)
+      else:
+        note.velocity *= (1 + (velMul - 1) * i)
+      note.velocity = min(max(note.velocity, 0), 1)
+      # no need to proceed if one note is silent
+      if dropSilent and round(note.velocity * 127) == 0: break
+      # adapt panning
+      dpan = note.pan - 0.5
+      dpan *= math.pow(sterMul, i)
+      if sterMode == 1 and i % 2 == 1:
+        dpan *= -1
+      note.pan = min(max(dpan + 0.5 + panShft * i, 0), 1)
+      # adapt pitch (fine and coarse)
+      # working in cents, then translate back to number + pitchofs
+      pitch = 100 * note.number + note.pitchofs * 10
+      pitch = min(max(pitch + pitchShft * i, 0), 12700)
+      note.number = round(pitch / 100)
+      note.pitchofs = (pitch - note.number * 100) / 10
+      # adapt mod x, mod y
+      note.fcut = min(max(note.fcut + modxShft * i, 0), 1)
+      note.fres = min(max(note.fres + modyShft * i, 0), 1)
+      # adapt color
+      if colMode == 1:
+        note.color = colOff
+      elif colMode == 2:
+        note.color = (colOff + i) % 16
+      addNotes.append(note)
+      # group (original note too)
+      if groupEchos: note.group = grpIdx
+    if groupEchos: n.group = grpIdx
+
+  # add notes
+  for n in addNotes:
+    flp.score.addNote(n)         

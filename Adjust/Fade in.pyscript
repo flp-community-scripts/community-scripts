@@ -1,0 +1,87 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Fade in
+by: BinaryBorn
+
+2023-06-30
+  - initial version
+
+2023-07-01
+  - fixed error when used on empty score
+  - added GUI
+  - added option for initial %
+  - added option for interpolation point (start, mid, end)
+
+2023-09-14
+  - added ISC license text
+
+2023-10-02
+  - added tension knob
+"""
+
+# Utility function to get time range of selection / notes
+def getTimeRange(notes):
+  if len(notes) == 0: return (0, 0)
+  # find first starting and last ending note
+  first = min(notes, key=lambda n: n.time)
+  last = max(notes, key=lambda n: n.time + n.length)
+  # return start and end time
+  return (first.time, last.time + last.length)
+
+# Utility function, Tension.
+# If knob is True it behaves like the tension knob in scale levels,
+# if knob is False it behaves like the Tension function in Formula Controller.
+def Tension(value, rate, knob=True):
+  if rate == 0: return value
+  # rate mapping
+  R = rate
+  if not knob and rate > 0:
+    R = math.log2(rate + 1) / 10
+  elif not knob and rate < 0:
+    R = -math.log2(-rate + 1) / 10
+  # f(x,R) = (2^(-10*R*x)-1)/(2^(-10*R)-1)
+  return (pow(2, -10 * R * value) - 1) / (pow(2, -10 * R) - 1)
+
+
+def createDialog():
+  form = flp.ScriptDialog("Fade in","Fade velocity in from intial %"
+  + "\r\n\r\n2023-10-02, BinaryBorn")
+  form.AddInputKnobInt('Initial', 1, 0, 100)
+  form.AddInputCombo('Interpolate at', ['Note start', 'Note center', 'Note end'], 0)
+  form.AddInputKnob('Tension', 0, -1, 1)
+  
+  return form
+
+def apply(form):
+  f0 = form.GetInputValue('Initial') / 100
+  f1 = 1
+  df = f1 - f0
+  mode = form.GetInputValue('Interpolate at')
+  tension = form.GetInputValue('Tension')
+
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  # time range
+  times = getTimeRange(notes)
+  t0 = times[0]
+  t1 = times[1]
+  dt = t1 - t0
+
+  # interpolate
+  lmul = mode / 2 # how much to consider note length
+  for note in notes:
+    t = note.time - t0 + note.length * lmul
+    f = f0 + df * Tension(t / dt, tension)
+    note.velocity *= f

@@ -1,0 +1,10 @@
+import flpianoroll as flp
+
+"""
+Stair downwards
+2023-08-03, windas & BinaryBorn
+"""
+
+for i in range(flp.score.noteCount):
+    note = flp.score.getNote(i)
+    note.number -= i

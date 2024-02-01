@@ -1,0 +1,91 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+import math
+
+"""
+Frequency chop
+by: BinaryBorn
+
+2023-06-30
+  - initial version
+
+2023-07-17
+  - added note.release property to copy
+
+2023-09-21
+  - added ISC license text
+"""
+
+def createDialog():
+  form = flp.ScriptDialog("Frequency chop","Chop notes into pieces at a specific frequency"
+  + "\r\nWorks best at higher PPQ and lower frequencies."
+  + "\r\n\r\n2023-09-21, BinaryBorn")
+  form.AddInputCombo('Note', ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'], 0)
+  form.AddInputKnobInt('Octave', 4, 0, 6)
+  form.AddInputKnobInt('Tempo', 120, 10, 522)
+  
+  return form
+
+def apply(form):
+  tempo = form.GetInputValue('Tempo')
+
+  noteCount = flp.score.noteCount
+
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(noteCount)]
+
+  # calculate frequency in Hz
+  midiPitch = form.GetInputValue('Octave') * 12 + form.GetInputValue('Note')
+  freq = 440 * pow(2, (midiPitch - 69) / 12)
+  # ... convert to ticks
+  timePerTick = (60 / tempo) / (4 * flp.score.PPQ)
+  timePerOsc = 1 / freq
+  ticksPerOsc = timePerOsc / timePerTick
+
+  newNotes = []
+
+  # go through all notes and replace by chopped copy
+  for note in notes:
+    # origin note
+    t0 = note.time
+    dt = note.length
+    t1 = t0 + dt
+
+    # chop
+    chops = math.ceil(dt / ticksPerOsc)
+    idx = 0
+    while idx < chops:
+      s0 = int(t0 + ticksPerOsc * idx)
+      s1 = min(int(t0 + ticksPerOsc * (idx + 1)), t1)
+
+      snote = flp.Note()
+      snote.number = note.number
+      snote.time = s0
+      snote.length = s1 - s0
+      snote.pan = note.pan
+      snote.velocity = note.velocity
+      snote.release = note.release
+      snote.color = note.color
+      snote.fcut = note.fcut
+      snote.fres = note.fres
+      snote.pitchofs = note.pitchofs
+      snote.muted = note.muted
+      snote.selected = True
+
+      newNotes.append(snote)
+
+      idx += 1
+
+  # update score
+  flp.score.clearNotes()
+  for note in newNotes:
+    flp.score.addNote(note)

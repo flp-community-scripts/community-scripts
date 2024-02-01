@@ -1,0 +1,103 @@
+"""
+ISC License
+
+Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+import math
+
+"""
+Accelerate
+by: BinaryBorn
+
+2023-07-03
+  - initial version
+  
+2023-09-13
+  - added ISC license text
+"""
+
+# Utility function to get time range of selection / notes
+def getTimeRange(notes):
+  if len(notes) == 0: return (0, 0)
+  # find first starting and last ending note
+  first = min(notes, key=lambda n: n.time)
+  last = max(notes, key=lambda n: n.time + n.length)
+  # return start and end time
+  return (first.time, last.time + last.length)
+
+
+def createDialog():
+  expRange = 5
+  mulRange = pow(2, expRange)
+  form = flp.ScriptDialog("Accelerate","Speed up or slow down score's playback rate."
+  + "\r\nRate is limited from \u00d7\u215f\u2083\u2082 to \u00d732."
+  + "\r\nAcceleration is 'rate change per bar', on a logarithmic scale:"
+  + "\r\nValue:    -5      -4      -3      -2      -1       0       1       2       3       4       5"
+  + "\r\nRate:     \u00d7\u215f\u2083\u2082   \u00d7\u215f\u2081\u2086   \u00d7\u215b   \u00d7\u00bc   \u00d7\u00bd    \u00d71    \u00d72    \u00d74    \u00d78    \u00d716    \u00d732"
+  + "\r\n\r\n2023-09-13, BinaryBorn")
+  form.AddInputKnob('Acceleration', 0, -expRange, expRange)
+  form.AddInputCombo('Off limit notes', ['leave', 'mute', 'select'], 0)
+  form.AddInputKnob('Lower rate limit %', 100/mulRange, 100/mulRange, 100)
+  form.AddInputKnob('Upper rate limit %', 100*mulRange, 100, 100*mulRange)
+  
+  return form
+
+def apply(form):
+  # to find acceleration, go via target rate after 1 bar
+  trExp = form.GetInputValue('Acceleration')
+  tr = pow(2, trExp)
+  a_ = tr - 1
+  # convert acc from %/bar to %/tick
+  a = a_ / (4 * flp.score.PPQ)
+
+  # don't do anything if there's no acceleration
+  if a == 0: return
+
+  # when the limit hits
+  lim0 = form.GetInputValue('Lower rate limit %') / 100
+  lim1 = form.GetInputValue('Upper rate limit %') / 100
+  endrate = lim0 if a < 0 else lim1
+  tlim = (endrate - 1) / a
+
+  # where the limit hits
+  slim = 1 / a * math.log(abs(a*tlim + 1))
+
+  def sfromt(t):
+    if t <= tlim:
+      return 1 / a * math.log(abs(a*t + 1))
+    else:
+      return slim + (t - tlim) / endrate
+
+  # off-limit-notes mode
+  mode = form.GetInputValue('Off limit notes')
+
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  # time offset
+  times = getTimeRange(notes)
+  toffset = times[0]
+
+  # stretch score
+  for note in notes:
+    t0 = note.time - toffset
+    t1 = t0 + note.length
+
+    s0 = sfromt(t0)
+    s1 = sfromt(t1)
+
+    note.time = s0 + toffset
+    note.length = s1 - s0
+
+    inlimit = t0 <= tlim
+    if mode == 1:
+      note.muted = not inlimit
+    elif mode == 2:
+      note.selected = not inlimit
+
