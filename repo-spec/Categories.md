@@ -1,4 +1,6 @@
-Draft for a total list of categories (not in alpha order):
+(working draft)
+
+Total list of categories (not in alpha order):
 - Adust
 - Edit
 - Generative (melody)

@@ -1,3 +1,4 @@
+(working draft)
 Currently there are three possible versions (they don't necessarily resemble current spec proposal):
 
 > use of *Author/Package implies that either name of the author or some nickname for the package bundle can be used
