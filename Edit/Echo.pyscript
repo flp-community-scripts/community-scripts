@@ -170,10 +170,12 @@ def apply(form):
   addNotes = []
   grpIdx = 0
   prevNote = None # keep track of previous note for legato option
+  origLength = None
 
   # clone notes/create echos
   for n in notes:
     prevNote = n
+    origLength = n.length
     # per note randomization (not per echo), range selected at discretion 
     if randomize:
       tdelay = _tdelay + rndTime * 16 * unityRandom() / 4 * ppq
@@ -192,6 +194,8 @@ def apply(form):
       note.time += round(tdelay * i)
       # legato? shorten overlapping notes
       if optLegato:
+        # reset this note's length to un-altered original length
+        note.length = origLength
         # non-negative tdelay: shorten previous note
         if tdelay >= 0 and prevNote.time + prevNote.length > note.time:
           prevNote.length = max(note.time - prevNote.time, 1)
