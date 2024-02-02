@@ -28,12 +28,69 @@ by: BinaryBorn
   - added pan shift
   - changed name of existing pan control to stereo control
   - changed delay time range, including negative time
+
+2024-02-02
+  - added round robin (groups) color mode option
+  - added pitch snap options
+  - added legato option
+  - added descriptions for knob values
 """
+
+# gathering markers is only required once - they don't update as long as script is active
+
+scales = []
+
+for m in range(flp.score.markerCount):
+  marker = flp.score.getMarker(m)
+  # scale marker
+  if marker.mode == 12:
+    # scale_helper is a string in form "0,1,0,1,0,0,1,0,1,0,1,0" telling which notes (starting from C) are in the scale (0) and which aren't (1)
+    # transform into array of in scale (True), not in scale (False)
+    splat = marker.scale_helper.split(',')
+    notes = [s == '0' for s in splat]
+    # "default" scale will be all False - don't append that, invert instead
+    if not max(notes) == 0:
+      # append that with its starting time
+      scales.append({
+        'time': marker.time,
+        'notes': notes
+      })
+    else:
+      scales.append({
+        'time': marker.time,
+        'notes': [True, True, True, True, True, True, True, True, True, True, True, True]
+      })
+
+# return scale active at "time" (use "Default" as fallback)
+def relevantScaleAt(time):
+  s = {
+    'time': 0,
+    'notes': [True, True, True, True, True, True, True, True, True, True, True, True]
+  }
+
+  # find latest scale before time
+  for scale in scales:
+    if time >= scale['time']: s = scale
+
+  return s
+
+# transpose note into scale
+def transposeIntoScale(number, scale):
+  # look for "True" in scale above and below original note with increasing distance
+  s = scale['notes']
+  for t in range(12):
+    if s[(number + t) % 12]: return number + t
+    if s[(number - t + 12) % 12]: return number - t
+  # return original if nothing was found
+  return number
+
 
 def createDialog():
   form = flp.ScriptDialog("Echo","Create an echo/delay effect in your score."
-  + "\r\nDelay time is in 1/16."
-  + "\r\n\r\n2024-01-26, BinaryBorn")
+  + "\r\nDelay time is in 16th."
+  + "\r\nThe knob ranges for randomness are as follows:"
+  + "\r\nTime \u00b11 bar; pitch \u00b112 semitones; rest \u00b110% f.s."
+  + "\r\n\r\n2024-02-02, BinaryBorn")
   form.AddInputKnob('Delay time', 4, -16, 16)
   form.AddInputKnobInt('Echos', 4, 1, 128)
   form.AddInputCombo('Velocity mode', ['exponential', 'linear'], 0)
@@ -44,10 +101,12 @@ def createDialog():
   form.AddInputKnob('Pitch shift', 0, -12, 12)
   form.AddInputKnob('Mod X shift', 0, -1, 1)
   form.AddInputKnob('Mod Y shift', 0, -1, 1)
-  form.AddInputCombo('Note color mode', ['none', 'set', 'round robin'], 0)
+  form.AddInputCombo('Note color mode', ['none', 'set', 'round robin (echos)', 'round robin (groups)'], 0)
   form.AddInputKnobInt('Note color offset', 0, 0, 15)
   form.AddInputCheckbox('Drop silent notes', True)
   form.AddInputCheckbox('Group echos', True)
+  form.AddInputCombo('Pitch snapping', ['none', 'whole note', 'scale (at echo)', 'scale (at origin)'], 0)
+  form.AddInputCheckbox('Legato echos', False)
   # all the randomization stuff
   form.AddInputCheckbox('Randomize', False)
   form.AddInputKnobInt('Seed', 0, 0, 999)
@@ -77,12 +136,14 @@ def apply(form):
   sterMul = form.GetInputValue('Stereo multiplier')
   panShft = form.GetInputValue('Pan shift')
   pitchShft = form.GetInputValue('Pitch shift') * 100
+  pitchMode = form.GetInputValue('Pitch snapping')
   modxShft = form.GetInputValue('Mod X shift')
   modyShft = form.GetInputValue('Mod Y shift')
   colMode = form.GetInputValue('Note color mode')
   colOff = form.GetInputValue('Note color offset')
   dropSilent = form.GetInputValue('Drop silent notes')
   groupEchos = form.GetInputValue('Group echos')
+  optLegato = form.GetInputValue('Legato echos')
 
   randomize = form.GetInputValue('Randomize')
   rndTime = form.GetInputValue('Rnd time')
@@ -108,21 +169,39 @@ def apply(form):
 
   addNotes = []
   grpIdx = 0
+  prevNote = None # keep track of previous note for legato option
+  origLength = None
 
   # clone notes/create echos
   for n in notes:
+    prevNote = n
+    origLength = n.length
     # per note randomization (not per echo), range selected at discretion 
     if randomize:
-      tdelay = _tdelay + rndTime / 10 * unityRandom() * 32 / 4 * ppq
-      velMul = _velMul + rndVel / 10 * unityRandom() * 2
-      panShft = _panShft + rndPan * unityRandom() * 2
-      pitchShft = _pitchShft + rndPitch / 10 * unityRandom() * 24 * 100
-      modxShft = _modxShft + rndModx / 10 * unityRandom() * 2
-      modyShft = _modyShft + rndMody / 10 * unityRandom() * 2
+      tdelay = _tdelay + rndTime * 16 * unityRandom() / 4 * ppq
+      velMul = _velMul + rndVel / 10 * unityRandom()
+      panShft = _panShft + rndPan / 10 * unityRandom()
+      pitchShft = _pitchShft + rndPitch * 1200 * unityRandom()
+      modxShft = _modxShft + rndModx / 10 * unityRandom()
+      modyShft = _modyShft + rndMody / 10 * unityRandom()
+    # in round robin (groups) mode, adapt color before cloning
+    if colMode == 3:
+      n.color = (colOff + grpIdx) % 16
+    # group index must be >0 in order to group notes
     grpIdx += 1
     for i in range(1, numEchos):
       note = n.clone()
-      note.time += tdelay * i
+      note.time += round(tdelay * i)
+      # legato? shorten overlapping notes
+      if optLegato:
+        # reset this note's length to un-altered original length
+        note.length = origLength
+        # non-negative tdelay: shorten previous note
+        if tdelay >= 0 and prevNote.time + prevNote.length > note.time:
+          prevNote.length = max(note.time - prevNote.time, 1)
+        # negative tdelay: shorten new note
+        elif tdelay < 0 and note.time + note.length > prevNote.time:
+          note.length = max(prevNote.time - note.time, 1)
       # adapt velocity
       if velMode == 0:
         note.velocity *= math.pow(velMul, i)
@@ -141,8 +220,30 @@ def apply(form):
       # working in cents, then translate back to number + pitchofs
       pitch = 100 * note.number + note.pitchofs * 10
       pitch = min(max(pitch + pitchShft * i, 0), 12700)
-      note.number = round(pitch / 100)
-      note.pitchofs = (pitch - note.number * 100) / 10
+      # no snapping: keep original note as long as pitchofs is below one octave
+      if pitchMode == 0:
+        tarnum = note.number
+        tarofs = (pitch - tarnum * 100) / 10
+        # introduce octave jumps if pitchofs becomes too large
+        while abs(tarofs > 120):
+          if tarofs > 0:
+            tarnum += 12
+            tarofs -= 120
+          elif tarofs < 0:
+            tarnum -= 12
+            tarofs += 120
+        note.number = tarnum
+        note.pitchofs = tarofs
+      # snap to note: round note, minimize pitchofs
+      elif pitchMode == 1:
+        note.number = round(pitch / 100)
+        note.pitchofs = (pitch - note.number * 100) / 10
+      # snap to scale (at echo): snap note number, ignore pitchofs
+      elif pitchMode == 2:
+        note.number = transposeIntoScale(round(pitch / 100), relevantScaleAt(note.time))
+      # snap to scale (at origin): snap note number, ignore pitchofs
+      elif pitchMode == 3:
+        note.number = transposeIntoScale(round(pitch / 100), relevantScaleAt(n.time))
       # adapt mod x, mod y
       note.fcut = min(max(note.fcut + modxShft * i, 0), 1)
       note.fres = min(max(note.fres + modyShft * i, 0), 1)
@@ -152,6 +253,7 @@ def apply(form):
       elif colMode == 2:
         note.color = (colOff + i) % 16
       addNotes.append(note)
+      prevNote = note
       # group (original note too)
       if groupEchos: note.group = grpIdx
     if groupEchos: n.group = grpIdx
