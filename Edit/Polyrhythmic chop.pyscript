@@ -1,0 +1,107 @@
+"""
+ISC License
+
+Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+"""
+
+import flpianoroll as flp
+
+"""
+Polyrhythmic chop
+by: BinaryBorn
+
+2024-02-05
+  - initial version
+"""
+
+def splitNote(note, splits, relative = False):
+  """Returns a list of notes representing `note` split at given times.
+
+  Overlapping splits will be ignored.
+  Splits outside the initial note times will be ignored.
+
+  Args:
+    note (Note): Note to split.
+    splits (list[int]): Times at which to split the note.
+    relative (bool, optional): If true, split times are treated as being relative to the note start time.
+
+  Returns:
+    list[Note]: A list representing the result of `note` split at `splits`.
+
+  License:
+    CC0
+  """
+  splat = []
+  # start with original note (length adjustment happens later on)
+  current = note.clone()
+  splat.append(current)
+  if len(splits) == 0: return splat
+  # round splits to ticks and sort
+  splits = [round(s) for s in splits]
+  splits.sort()
+
+  # go through all splits times and split the current note
+  lastSplit = 0 # to prevent two splits at the same time
+  for s in splits:
+    tsplit = s + note.time if relative else s
+    t1 = current.time + current.length
+    if tsplit > lastSplit and tsplit >= current.time and tsplit < t1:
+      # shorten note before split
+      current.length = tsplit - current.time
+      # create a new note after split
+      next = current.clone()
+      next.time = tsplit
+      next.length = t1 - tsplit
+      splat.append(next)
+      current = next
+      lastSplit = tsplit
+
+  return splat
+
+def createDialog():
+  form = flp.ScriptDialog("Polyrhythmic chop","Chop your notes at different rates."
+  + "\r\n\r\n2024-02-05, BinaryBorn")
+  form.AddInputCombo('Iterate by', ['start time', 'note (top down)', 'note (bottom up)', 'color'], 0)
+  form.AddInputKnobInt('Chops start', 2, 1, 32)
+  
+  return form
+
+def apply(form):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  if not notes: return
+
+  iterMode = form.GetInputValue('Iterate by')
+  chopCnt = form.GetInputValue('Chops start')
+
+  # order notes according to iteration mode
+  if iterMode == 0:
+    notes.sort(key=lambda n: n.time)
+  elif iterMode == 1:
+    # top down
+    notes.sort(key=lambda n: -n.number)
+  elif iterMode == 2:
+    # bottom up
+    notes.sort(key=lambda n: n.number)
+  elif iterMode == 3:
+    # color
+    notes.sort(key=lambda n: n.color)
+
+  newNotes = []
+
+  for n in notes:
+    dt = n.length
+    splits = [dt / chopCnt * i for i in range(1, chopCnt)]
+    newNotes.extend(splitNote(n, splits, True))
+    # increase chop count for next iteration
+    chopCnt += 1
+
+  # update score
+  flp.score.clearNotes()
+  for note in newNotes:
+    flp.score.addNote(note)
