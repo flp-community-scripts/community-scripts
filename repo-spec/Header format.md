@@ -46,6 +46,7 @@ License:
 ```
 
 # variant 3
+
 | Field | Required |
 | ---- | ---- |
 | Title | Yes |
@@ -55,6 +56,9 @@ License:
 | Version | No |
 | Changelog | No |
 | Description | No |
+
+* must start with `"""flp`
+* All keys can be used inline or expanded to multiple lines
 
 ```python
 """flp
@@ -75,5 +79,23 @@ Changelog:
 1.1 (Planned)
 - Enhance data visualization features.
 - Optimize performance for large datasets.
+"""
+```
+
+Template example:
+
+```python
+"""flp
+Title: {title}
+Author: {authors}
+Category: {category}
+Version: {version}
+License: {license}
+
+Description: 
+{description}
+
+Changelog:
+{changelog}
 """
 ```
