@@ -5,10 +5,10 @@ Total list of categories (not in alpha order):
 - Archive
 - Color
 - Edit
-- Generative (melody)
-- Generative (chords)
-- Generative (rhythm)
-- Generative (creative)
+- Generate (melody)
+- Generate (chords)
+- Generate (rhythm)
+- Generate (creative)
 - Utility
 - Select
 - Packages? (Conditional, based on what solution we pick)
