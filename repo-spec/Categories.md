@@ -2,6 +2,8 @@
 
 Total list of categories (not in alpha order):
 - Adust
+- Archive
+- Color
 - Edit
 - Generative (melody)
 - Generative (chords)
