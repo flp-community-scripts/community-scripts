@@ -44,3 +44,36 @@ License:
 	{License text}
 """
 ```
+
+# variant 3
+| Field | Required |
+| ---- | ---- |
+| Title | Yes |
+| Author | Yes |
+| Category | Yes |
+| License | No |
+| Version | No |
+| Changelog | No |
+| Description | No |
+
+```python
+"""flp
+Title: Example Python Script
+Author: Jane Doe, John Smith
+Category: Generate
+Version: 1.0
+License: MIT License
+
+Description: 
+This script demonstrates a standard way to label Python scripts. It includes metadata such as author(s), category, and license information.
+
+Changelog:
+1.0 (2024-02-08)
+- Initial release: Implemented the basic functionality for data analysis.
+- Added support for CSV file input.
+
+1.1 (Planned)
+- Enhance data visualization features.
+- Optimize performance for large datasets.
+"""
+```
