@@ -1,0 +1,84 @@
+"""flp
+Title: Chop and Skew
+Author: Pierre Sosa
+Category: Archive
+Version: v2
+
+Description: 
+This script allows you to chop a note or multiple notes and then skew the starting points of the chops to create an accelerating or decelerating roll of notes. It has been updated with improved note length calculation and an option to allow or disallow infinite note lengths.
+
+Changelog:
+2023-07-19 (Chop and Skew v2) - Improved note length calculation - Added option to allow/don't allow infinite note lengths no changelog for previous versions.
+"""
+import flpianoroll as flp
+import math
+
+beat = flp.score.PPQ # PPQ = ticks per beat. So PPQ equals ticks in beat.
+step = int(beat / 4)
+
+def createDialog():
+    Form = flp.ScriptDialog("Chop and Skew","Toggle 'Mode' setting to activate 'Number of notes' or 'Chop in step' knob.       "
+    + "*** Script by Pierre Sosa ***")
+    Form.AddInputKnob("Skew", 0, -100, 100)
+    Form.AddInputKnob("Skew Modifier", 50, 0, 100)
+    Form.AddInputKnobInt("Number of notes", 8, 1, 128) 
+    Form.AddInputKnobInt("Chop in 1/4 steps", 4, 1, 64)
+    Form.AddInputCombo("Mode","Number of notes,Chop",0)
+    Form.AddInputCombo("Delete original notes?","Yes,No",0)    
+    return Form
+
+def apply(Form):
+
+    org_notes = []
+    
+    for n in range(flp.score.noteCount):
+        org_notes.append(flp.score.getNote(n))
+    
+    if Form.GetInputValue("Delete original notes?")  == 0:
+        flp.score.clear(True) 
+    
+    for org_note in org_notes:
+    
+        if Form.GetInputValue("Mode") == 0:
+            num_of_notes = Form.GetInputValue("Number of notes")
+            new_notes_length = org_note.length / num_of_notes
+        else:
+            new_notes_length = Form.GetInputValue("Chop in 1/4 steps") * step / 4
+            num_of_notes = int(org_note.length / new_notes_length)
+
+        skew_in_percent = abs(Form.GetInputValue("Skew")/100)
+        
+        mod = Form.GetInputValue("Skew Modifier")/100
+        
+        def modifier(i):
+            return (mod + ((i) / (num_of_notes))*((1-mod)*0.95))
+
+        def remainder(i):
+            return (org_note.time + org_note.length - (org_note.time + new_notes_length * (i)))
+            
+        for i in range(num_of_notes):
+            new_note = flp.Note()
+            new_note.number = org_note.number
+            new_note.velocity = org_note.velocity
+            new_note.pan = org_note.pan
+            new_note.color = org_note.color
+            
+            if i == 0:
+                new_note.time = org_note.time
+            else: new_note.time = org_note.time + (new_notes_length * i) + skew_in_percent * modifier(i+1) * remainder(i)
+            
+            if i < num_of_notes-1:
+                new_note.length = (org_note.time + new_notes_length * (i+1) + skew_in_percent * modifier(i+2) * remainder(i+1)) - new_note.time # Next note time minus current note time
+            else: new_note.length = (org_note.time + org_note.length - new_note.time)
+            
+            flp.score.addNote(new_note)
+            
+        if Form.GetInputValue("Skew") < 0: # Reverse order
+            for i in reversed(range(num_of_notes)):
+                i = i + num_of_notes * (org_notes.index(org_note))
+                if i == num_of_notes + num_of_notes * org_notes.index(org_note) - 1:
+                    flp.score.getNote(i).time = org_note.time 
+                else: flp.score.getNote(i).time = flp.score.getNote(i+1).time + flp.score.getNote(i+1).length
+            
+
+

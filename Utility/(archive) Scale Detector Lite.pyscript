@@ -1,0 +1,119 @@
+"""flp
+Title: Scale Detector Lite
+Author: Pierre Sosa
+Category: Utility
+Version: (n/a)
+
+Description: 
+This script detects matching scales for notes in the score, allowing you to create key markers for the chosen scale. There are two versions: "Full" and "Lite". The Lite version detects basic scales, while the Full version detects more uncommon scales. The Lite version is more convenient to use in most cases.
+
+Changelog:
+no changelog
+"""
+import flpianoroll as flp
+
+notes_names = ("C","C#","D","D#","E","F","F#","G","G#","A","A#","B")
+scales_names = (
+	"Major (Ionian)",
+	"Minor Natural (Aeolian)",
+	"Major Pentatonic",
+	"Minor Pentatonic",
+	"Minor Harmonic",	
+	"Minor Melodic",
+	"Dorian",
+	"Phrygian",
+	"Lydian",
+	"Mixolydian",
+	"Locrian",
+)
+
+scales_intervals = [
+	[0, 2, 4, 5, 7, 9, 11], # Major (Ionian) Intervals
+	[0, 2, 3, 5, 7, 8, 10], # Minor Natural (Aeolian) Intervals  
+	[0, 2, 4, 7, 9], # Major Pentatonic Intervals
+	[0, 3, 5, 7, 10], # Minor Pentatonic Intervals	
+	[0, 2, 3, 5, 7, 8, 11], # Minor Harmonic Intervals	
+	[0, 2, 3, 5, 7, 9, 11], # Minor Melodic Intervals  
+	[0, 2, 3, 5, 7, 9, 10], # Dorian Intervals  
+	[0, 1, 3, 5, 7, 8, 10], # Phrygian Intervals  
+	[0, 2, 4, 6, 7, 9, 11], # Lydian Intervals
+	[0, 2, 4, 5, 7, 9, 10], # Mixolydian Intervals  
+	[0, 1, 3, 5, 6, 8, 10], # Locrian Intervals
+]
+
+# Transposes notes to C key (as scale intervals are in C key)
+def transpose_to_C_key(root):
+	shifted_detected_notes_numbers = []
+	for note_number in detected_notes_numbers_fin:
+		shifted_note_number = note_number - root
+		if shifted_note_number < 0:
+			shifted_note_number += 12
+		shifted_detected_notes_numbers.append(shifted_note_number)
+	shifted_detected_notes_numbers.sort()
+	return shifted_detected_notes_numbers
+	
+def detect_scales(shifted_detected_notes_numbers):
+	matching_scales = []
+	for i,scale in enumerate(scales_intervals):
+		if set(shifted_detected_notes_numbers).issubset(scale):
+			matching_scales.append(scales_names[i])
+	return matching_scales
+	
+def detect_scales_for_all_roots():
+	matching_scales_for_all_roots = dict.fromkeys(notes_names,False)
+	for root in range(12):
+		shifted_detected_notes_numbers = transpose_to_C_key(root)
+		matching_scales = detect_scales(shifted_detected_notes_numbers)
+		if matching_scales:
+			matching_scales_for_all_roots[notes_names[root]] = matching_scales
+	return matching_scales_for_all_roots
+
+if flp.score.noteCount:
+	detected_notes_numbers = [flp.score.getNote(n).number for n in range(flp.score.noteCount)] # All notes numbers
+	detected_notes_numbers_in_octave_range = [n % 12 for n in detected_notes_numbers] # All notes in octave range (0-11)
+	detected_notes_numbers_fin = sorted(set(detected_notes_numbers_in_octave_range)) # Removes duplicates and sort
+	matching_scales_for_all_roots = detect_scales_for_all_roots()
+	if any([matching_scales_for_all_roots[s] for s in matching_scales_for_all_roots]):
+		matching_scales_for_all_roots_str = "\r\n".join(s + ": " + str(", ".join(scale for scale in matching_scales_for_all_roots[s])) for s in matching_scales_for_all_roots if matching_scales_for_all_roots[s]) # Creates string for dialog
+		scales_for_selector = []
+		for s in matching_scales_for_all_roots:
+			if matching_scales_for_all_roots[s]:
+				for scale in matching_scales_for_all_roots[s]:
+					scales_for_selector.append(s + " " + str(scale))
+		
+		def createDialog():
+			form = flp.ScriptDialog("Scale Detector Lite","Detected matching scales for each root: \r\n" + matching_scales_for_all_roots_str + "\r\n" + 
+			"\r\n" +
+			"*** script by Pierre Sosa ***")
+			form.AddInputCombo("Scale for marker:",scales_for_selector,0)
+			form.AddInputCheckbox("Create marker?",True)
+			return form
+				
+		def apply(form):
+			if form.GetInputValue("Create marker?"):
+				scale_value = form.GetInputValue("Scale for marker:")
+				scale = scales_for_selector[scale_value]
+				scale_split = scale.split(" ",1)
+				scale_i = scales_names.index(scale_split[1])
+				root_note = notes_names.index(scale_split[0])
+				intervals = scales_intervals[scale_i]
+				intervals_length_at_start = len(intervals)
+				for octave in range(1,2):
+					intervals.extend([intervals[i]+12*octave for i in range(intervals_length_at_start)])
+				
+				key_marker = flp.Marker()
+				scale_name = scales_names[scale_i] if scale_i < 6 else "Other " + scales_names[scale_i] 
+				key_marker.name = notes_names[root_note] + " " + scale_name
+				key_marker.time = 0
+				key_marker.mode = 12
+				key_marker.scale_root = root_note
+				scale_helper_for_created_marker = ""
+				for i in range(12-root_note,24-root_note):
+					scale_helper_for_created_marker += "1," if intervals.count(i) == 0 else "0,"
+				scale_helper_for_created_marker = scale_helper_for_created_marker.rstrip(",")
+				key_marker.scale_helper = scale_helper_for_created_marker
+				flp.score.addMarker(key_marker)
+			else: pass # if not form.GetInputValue("Create marker?"):
+	else: flp.Utils.ShowMessage("There is no matching scale. Try reducing the number of (selected) notes.") # if not any([matching_scales_for_all_roots[s] for s in matching_scales_for_all_roots]):
+else: flp.Utils.ShowMessage("There are no notes!") # if not flp.score.noteCount: 
+

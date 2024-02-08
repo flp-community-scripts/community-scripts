@@ -1,0 +1,104 @@
+"""flp
+Title: Select by harmony voice
+Author: ezra5512
+Category: Archive
+Version: (n/a)
+
+Description: 
+This script allows you to select individual voices from each chord in the piano roll. You can choose to include or exclude all notes below a given note. It is useful for selecting specific notes within chords or for instruments with articulation changes. The script provides a slick interface and allows you to dynamically change the maximum value of the voices parameter.
+
+Changelog:
+no changelog
+"""
+from flpianoroll import *
+
+NOTELETTERS = 'C C# D D# E F F# G G# A A# B'.split(" ")
+MIDINOTES = [NOTELETTERS[i % 12] + str(int(i/12)) for i in range(0,127)]
+
+# notes organized by ascending time and ascending pitch
+# notes are contained in a list: [flp.note,index]
+def getNotes():
+    notes = []
+    for i in range(score.noteCount):
+        notes.append([score.getNote(i),i])
+    return sorted(notes, key=lambda x:(x[0].time,x[0].number))
+
+def selectNotes(noteList):
+    for note in noteList:
+        score.getNote(note[1]).selected = True
+
+def deselectNotes(noteList):
+    for note in noteList:
+        score.getNote(note[1]).selected = False
+
+def getNotesBelowPitch(notes,value):
+    updatedNotes = []
+    for note in notes:
+        if (note[0].number < value):
+            updatedNotes.append(note)
+    return updatedNotes
+
+#Input: organized list of notes from getNotes() and exclude/include options.
+#Output: List of lists.
+#Assigns each note to a nested list in groups.
+#The nested list index of groups indicates which voice the note belongs to. 
+def createHarmonyGroups(notes,exclude=0,below=0):
+    groups = []
+    currGroup = []
+
+    for i in range(0,len(notes)):
+        note = notes[i]
+
+        if (note[0].number < below and exclude==1):
+            #if last note, add to groups
+            if (i == len(notes)-1):
+                for j in range(0,len(currGroup)):
+                    if len(groups) < j+1:
+                        groups.append([])
+                    groups[j].append(currGroup[j])
+            continue
+
+        if (len(currGroup)==0 or note[0].time == currGroup[-1][0].time):
+            currGroup.append(note)
+
+        if (note[0].time != currGroup[-1][0].time):
+            #add previous group to groups
+            for j in range(0,len(currGroup)):
+                if len(groups) < j+1:
+                    groups.append([])
+                groups[j].append(currGroup[j])
+            #create new group, add current note to it
+            currGroup = [note]
+
+        #if last note, add to groups
+        if (i == len(notes)-1):
+            for j in range(0,len(currGroup)):
+                if len(groups) < j+1:
+                    groups.append([])
+                groups[j].append(currGroup[j])
+    
+    return groups
+
+def createDialog():
+    form = ScriptDialog("Harmony Voice Selector","Selects all notes from a harmony voice.\r\n" + 
+                        " Voices are assigned from the bottom up of all chords. Monophonic lines (\"one note chords\") are treated as voice 1.\r\n" +
+                        "*** Script by ezra5512 ***")
+    form.AddInputCombo("",["Include","Exclude"],1)
+    form.AddInputKnobInt("Voice",1,1,10)
+    form.AddInputCombo("Below",MIDINOTES, 0)
+    return form
+
+def apply(form):
+    #The index of groups that contains notes from the selected voice
+    selectedVoice = form.GetInputValue("Voice")-1
+    exclude = form.GetInputValue("")
+    below = form.GetInputValue("Below")
+
+    notes = getNotes()
+    deselectNotes(notes)
+    groups = createHarmonyGroups(notes,exclude,below)
+    if (len(groups)>selectedVoice):
+        selectedNotes = groups[selectedVoice]
+        if (exclude == 0):
+            selectedNotes.extend(getNotesBelowPitch(notes,below))
+        selectNotes(selectedNotes)

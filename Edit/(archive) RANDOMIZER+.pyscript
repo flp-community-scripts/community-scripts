@@ -1,0 +1,235 @@
+"""flp
+Title: RANDOMIZER+ Script Updated / RANDOMIZER+
+Author: LETT
+Category: Edit
+Version: 08/14/2023
+
+Description: 
+This script is an extension of the Randomizer tool in FL Studio. It randomizes note start time, velocity, and more, and also allows for randomizing note pitch in multi-sample instruments like Kontakt Drum library. It ensures that notes do not overlap or extend past the desired looping pattern length. The script includes a video demonstration of randomizing drum programming. Feedback and issue reports are welcome.
+
+Changelog:
+2023-08-14
+- Fixed some odd behavior with randomization of Panning/Cutoff/Resonance
+"""
+"""
+An extension of the Randomizer tool concept, combined with note start time humanizing. Credit to the stock 'Humanize' script provided. 
+"""
+import flpianoroll as flp
+
+import time
+import math
+
+launch_flag = True
+notes_to_alter = []
+probability = 0
+notes_org = [note for note in range(flp.score.noteCount)]
+
+# ==================== Utility Functions ==================== #
+
+def rand_int(seed=None):
+    """
+    Generate a random non-negative integer
+
+    seed: int or None (generate a seed from current time)
+    """
+    state = time.time_ns() if seed is None else seed
+
+    while True:
+        state = (1103515245 * state + 12345) & 0x7fffffff
+        yield state
+
+
+def rand_uniform(seed=None):
+    """
+    Generate a random float in the range [0, 1)
+
+    seed: int or None (generate a seed from current time)
+    """
+    gen = rand_int(seed)
+
+    while True:
+        yield next(gen) / 0x80000000
+
+
+def rand_tri(mode=0.5, curvature_degree=1, seed=None):
+    """
+    Generate a float from the (skewed) triangular distribution in range [0, 1)
+
+    mode: horizontal position of peak of triangle (int in range [0, 1])
+    curvature_idx (int > 0): values > 1 give convexity to the sides of the triangle.  
+        Larger values result in a higher degree of curvature. 
+        1: Triangle with straight sides
+    seed: int or None (generate a seed from current time)
+    """
+    if mode < 0 or mode > 1:
+        raise ValueError(f"Invalid mode: {mode} --> Must be in range [0, 1]")
+    if curvature_degree < 1:
+        raise ValueError(f"Invalid curvature_degree: {curvature_degree} --> " + 
+                         "Must be >= 1. ")
+    gen = rand_uniform(seed)
+
+    while True:
+        x = next(gen)
+        for _ in range(int(curvature_degree)):
+            x = math.sqrt(x * mode) if x <= mode else 1 - math.sqrt((mode - 1) * (x - 1))
+        yield x
+
+
+def rand_sin_recursive(n=3, seed=None):
+    """
+    Generate a random float in range [0, 1) for n passes through a sinusoid distribution
+
+    n: based on sin^n(x)
+    seed: int or None (generate a seed from current time)
+    """
+    gen = rand_uniform(seed)
+
+    while True:
+        x = next(gen)
+        for _ in range(n):
+            x = math.acos(-2 * x + 1) / math.pi
+        yield x
+
+
+# ==================== Scripting Functions ==================== #
+
+def createDialog():
+    """
+    This creates the Dialog Box to control the tool.  
+    """
+    form = flp.ScriptDialog("RANDOMIZER+","Adds randomization to note start time, note duration, velocity, pan, filter cutoff, filter resonance (Q), and note fine pitch. Dial in range of randomization from 0 (none) to 1 (full range). \r\r\n" +
+    "Ability to offset these parameters for all notes to be weighted more positively or negatively. Default is no offset. \r\r\n" +
+    "Global Multiplier can be used to dial in how minimal or extreme the randomization is for all parameters. 0% to 200% range. \r\r\n" +
+    "Time Max Interval locks in the maximum distance of randomization of Note Start Time. \r\r\n" +
+    "Move Seed knob to try different randomizations and hit Accept to lock in the Seed changes to Piano Roll.\r\r\n" +
+    "Script by Brandon Lett @lett_music\r\r\n" +
+    "Additional Credits and thanks to the Image-Line team and Pierre Sosa")
+    form.AddInputKnob('Global Multiplier Value', 1, 0, 2)
+    form.AddInputCombo('Time Max Interval', '1/4,1/8,1/32,1/64,1/128', 2)
+    form.AddInputKnob('Start Time Range', 0.10, 0, 1)
+    form.AddInputKnob('Start Time Offset' ,0, -1, 1)
+    form.AddInputKnob('Duration Range', 0.1, 0, 1)
+    form.AddInputKnob('Duration Offset', 0, -1, 1)
+    form.AddInputKnob('Velocity Range', 0.10, 0, 1)
+    form.AddInputKnob('Velocity Offset', 0, -0.5, 0.5)
+    form.AddInputKnob('Pan Range', 0.10, 0, 1)
+    form.AddInputKnob('Pan Offset', 0, -0.5, 0.5)
+    form.AddInputKnob('Cutoff Range', 0.10, 0, 1)
+    form.AddInputKnob('Cutoff Offset', 0, -0.5, 0.5)
+    form.AddInputKnob('Resonance Range', 0.10, 0, 1)
+    form.AddInputKnob('Resonance Offset', 0, -0.5, 0.5)
+    form.AddInputKnob('Fine Pitch Range', 0.025, 0, 1)
+    form.AddInputKnob('Fine Pitch Offset', 0, -120, 120)
+    form.AddInputCombo('Distribution', 'Uniform,Triangular,Quasi-Normal', 2)
+    form.AddInputKnobInt('Seed', 0, 0, 25)
+    return form
+
+
+def apply(form):
+    """
+    This function contains the processing logic for your script.  
+
+    form: This function must accept only this parameter.  This is dealt with behind the 
+        scenes, and it is the same 'form' that was returned from the createDialog() above.  
+    """
+    seed = int(form.GetInputValue('Seed')) if form.GetInputValue('Seed') else None
+    # get distribution
+    dist_type = form.GetInputValue('Distribution')
+    if dist_type == 0:
+        rng = rand_uniform(seed=seed)
+    elif dist_type == 1:
+        rng = rand_tri(seed=seed)
+    elif dist_type == 2:
+        rng = rand_sin_recursive(3, seed=seed)
+
+    max_time_change = form.GetInputValue('Time Max Interval')
+    max_ticks = flp.score.PPQ * 2 ** (0 - max_time_change)
+    max_pattern_end_time = flp.score.length # Determine the maximum allowable end time based on Pattern Selection
+
+    global_multiplier_value = form.GetInputValue('Global Multiplier Value')
+    overlapping_notes = {}  # Dictionary to store overlapping notes # Create a dictionary to track overlapping notes based on note numbers
+    short_note_threshold = 1  # Minimum duration in ticks to be considered extremely short
+
+    pan_offset = form.GetInputValue('Pan Offset')
+    cutoff_offset = form.GetInputValue('Cutoff Offset')
+    resonance_offset = form.GetInputValue('Resonance Offset')
+
+    for n in range(flp.score.noteCount):
+        current_note = None  # Initialize current_note before the loop
+        # Additional code to prevent overlapping notes
+        current_note = flp.score.getNote(n)
+
+        # Note start (absolute)
+        offset = form.GetInputValue('Start Time Offset') * max_ticks
+        change = form.GetInputValue('Start Time Range') * max_ticks * (2 * next(rng) - 1) *  global_multiplier_value
+        flp.score.getNote(n).time = max(flp.score.getNote(n).time + offset + change, 0)
+
+        # Note duration (relative)
+        offset = form.GetInputValue('Duration Offset') * global_multiplier_value
+        change = form.GetInputValue('Duration Range') * (2 * next(rng) - 1) * global_multiplier_value
+        new_duration = flp.score.getNote(n).length * (1 + offset) * (1 + change)
+
+        # velocity (relative)
+        offset = form.GetInputValue('Velocity Offset') * 2
+        change = form.GetInputValue('Velocity Range') * (2 * next(rng) - 1) * global_multiplier_value
+        vel = flp.score.getNote(n).velocity * (1 + offset) * (1 + change)
+        flp.score.getNote(n).velocity = min(vel, 1)
+
+        # Pan (relative)
+        offset = form.GetInputValue('Pan Offset')
+        if pan_offset >= 0:
+            change = form.GetInputValue('Pan Range') * (2 * next(rng) - 1) * global_multiplier_value
+        else:
+            change = form.GetInputValue('Pan Range') * -(2 * next(rng) - 1) * global_multiplier_value
+        pan = (flp.score.getNote(n).pan * (1 + 2 * change)) + offset
+        flp.score.getNote(n).pan = max(0, min(pan, 1))
+
+        # Cutoff (relative)
+        offset = form.GetInputValue('Cutoff Offset') * 2
+        if cutoff_offset >= 0:
+            change = form.GetInputValue('Cutoff Range') * (2 * next(rng) - 1) * global_multiplier_value
+        else:
+            change = form.GetInputValue('Cutoff Range') * -(2 * next(rng) - 1) * global_multiplier_value
+        fcut = (flp.score.getNote(n).fcut * (1 + 2 * change)) + offset
+        flp.score.getNote(n).fcut = max(0, min(fcut, 1))
+
+        # Resonance (relative)
+        offset = form.GetInputValue('Resonance Offset') * 2
+        if resonance_offset >= 0:
+            change = form.GetInputValue('Resonance Range') * (2 * next(rng) - 1) * global_multiplier_value
+        else:
+            change = form.GetInputValue('Resonance Range') * -(2 * next(rng) - 1) * global_multiplier_value
+        fres = (flp.score.getNote(n).fres * (1 + 2 * change)) + offset
+        flp.score.getNote(n).fres = max(0, min(fres, 1))
+
+        # Fine Pitch (relative)
+        offset = form.GetInputValue('Fine Pitch Offset')
+        change = form.GetInputValue('Fine Pitch Range') * 120 * (2 * next(rng) - 1) * global_multiplier_value
+        pitchofs = flp.score.getNote(n).pitchofs + offset + change
+        flp.score.getNote(n).pitchofs = min(max(pitchofs, -120), 120)
+
+        # Calculate the new end time based on the original start time and adjusted duration
+        new_end_time = flp.score.getNote(n).time + new_duration
+
+        # Ensure the new end time does not exceed the maximum allowable end time
+        if new_end_time > max_pattern_end_time:
+            new_duration -= (new_end_time - max_pattern_end_time)
+
+        # Update the note's duration
+        flp.score.getNote(n).length = max(new_duration, 0)  # Ensure non-negative duration
+
+        # Additional code to prevent overlapping notes
+        current_note = flp.score.getNote(n)
+        if current_note.number not in overlapping_notes:
+            overlapping_notes[current_note.number] = [current_note]
+        else:
+            # Check for overlapping notes and adjust their durations
+            for note in overlapping_notes[current_note.number]:
+                if current_note.time < note.time + note.length:
+                    overlap_amount = note.time + note.length - current_note.time
+                    if current_note.time < note.time:
+                        current_note.length = note.time - current_note.time
+                    else :
+                        note.length -= overlap_amount  # Reduce the duration of the overlapping note
+
+            overlapping_notes[current_note.number].append(current_note)

@@ -1,0 +1,69 @@
+"""flp
+Title: Mute Random Notes
+Author: Pierre Sosa
+Category: Adjust
+Version: v1.1
+
+Description: 
+This script allows you to mute random notes in the FL Studio piano roll. It has a probability knob that determines the percentage of notes to mute. You can also choose to unmute notes that were previously muted before running the script. It works on all notes if none are selected, or only on the selected notes. The script has been updated to include selection options and a "seed for RNG" knob.
+
+Changelog:
+2023-08-27 (v.1.1)
+- Added 'seed for RNG' knob
+
+2023-07-02
+- Added selection options
+"""
+import flpianoroll as flp
+import _random
+
+def random_value(return_int, range_min, range_max):
+	x = _random.Random()
+	x.seed()
+	random_value = x.random()
+	random_value = random_value * (range_max - range_min) + range_min # convert value to fit between min and max range
+
+	if return_int == True: # convert value to integer
+		return round(random_value)
+	return random_value
+
+def createDialog():
+    Form = flp.ScriptDialog("Mute Random Notes", "Mutes random notes. Probability knob = percent of notes to mute.\r\n" + 
+	"*** Script by Pierre Sosa ***")
+    Form.AddInputKnob('Probability', 50, 0, 100)
+    Form.AddInputCombo("Unmute all before", "No,Yes", 0)
+    Form.AddInputCombo("Select notes after", "All,Only muted,Only not muted,None", 0)
+    return Form
+
+def apply(Form):
+ 
+	if Form.GetInputValue("Unmute all before") == True:
+		for n in range(flp.score.noteCount):
+			flp.score.getNote(n).muted = False
+			flp.score.getNote(n).selected = False
+
+	notes_to_alter = [] # List of indexes of notes to change 
+	for i in range(int(flp.score.noteCount * Form.GetInputValue("Probability") / 100)):
+		random_int = random_value(True, 0, flp.score.noteCount-1) # Generate random note index
+		while notes_to_alter.count(random_int) != 0: # If the random index is already on the list...
+			random_int = random_value(True, 0, flp.score.noteCount-1)
+		notes_to_alter.append(random_int) # Add generated note index to the list 
+	
+	for note in notes_to_alter:
+		flp.score.getNote(note).muted = True
+		if Form.GetInputValue("Select notes after") == 1:
+			flp.score.getNote(note).selected = True
+
+	if Form.GetInputValue("Select notes after") == 0:
+		for n in range(flp.score.noteCount):
+			flp.score.getNote(n).selected = True
+		
+	elif Form.GetInputValue("Select notes after") == 2:
+		for n in range(flp.score.noteCount):
+			flp.score.getNote(n).selected = True
+		for note in notes_to_alter:
+			flp.score.getNote(note).selected = False
+    
+
+
+

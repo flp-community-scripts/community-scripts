@@ -1,0 +1,121 @@
+"""flp
+Title: text to notes
+Author: seomeenu
+Category: Generative (creative)
+Version: (n/a)
+
+Description: 
+This script converts a string into musical notes. It assigns each character in the string to a specific note, allowing you to create melodies or chord progressions based on the input text.
+
+Changelog:
+no changelog
+"""
+from flpianoroll import *
+
+A = [{'number': 62, 'time': 0, 'length': 24}, {'number': 61, 'time': 0, 'length': 24}, {'number': 64, 'time': 24, 'length': 24}, {'number': 63, 'time': 24, 'length': 120}, {'number': 66, 'time': 48, 'length': 24}, {'number': 65, 'time': 48, 'length': 24}, {'number': 68, 'time': 72, 'length': 24}, {'number': 67, 'time': 72, 'length': 24}, {'number': 66, 'time': 96, 'length': 24}, {'number': 65, 'time': 96, 'length': 24}, {'number': 64, 'time': 120, 'length': 24}, {'number': 61, 'time': 144, 'length': 24}, {'number': 62, 'time': 144, 'length': 24}]
+B = [{'number': 67, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 96}, {'number': 62, 'time': 0, 'length': 24}, {'number': 61, 'time': 0, 'length': 96}, {'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 96}, {'number': 66, 'time': 0, 'length': 24}, {'number': 66, 'time': 96, 'length': 24}, {'number': 62, 'time': 96, 'length': 24}, {'number': 63, 'time': 96, 'length': 24}, {'number': 64, 'time': 96, 'length': 24}, {'number': 67, 'time': 96, 'length': 24}]
+C = [{'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 62, 'time': 24, 'length': 24}, {'number': 67, 'time': 24, 'length': 24}, {'number': 61, 'time': 48, 'length': 96}, {'number': 68, 'time': 48, 'length': 96}, {'number': 62, 'time': 144, 'length': 24}, {'number': 67, 'time': 144, 'length': 24}]
+D = [{'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 61, 'time': 0, 'length': 96}, {'number': 68, 'time': 0, 'length': 96}, {'number': 67, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 67, 'time': 96, 'length': 24}, {'number': 62, 'time': 96, 'length': 24}, {'number': 66, 'time': 120, 'length': 24}, {'number': 65, 'time': 120, 'length': 24}, {'number': 64, 'time': 120, 'length': 24}, {'number': 63, 'time': 120, 'length': 24}]
+E = [{'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 120}, {'number': 66, 'time': 0, 'length': 24}, {'number': 61, 'time': 0, 'length': 120}, {'number': 68, 'time': 0, 'length': 120}, {'number': 67, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}]
+F = [{'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 120}, {'number': 66, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 120}, {'number': 67, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 61, 'time': 0, 'length': 24}]
+G = [{'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 62, 'time': 24, 'length': 24}, {'number': 67, 'time': 24, 'length': 24}, {'number': 61, 'time': 48, 'length': 96}, {'number': 68, 'time': 48, 'length': 96}, {'number': 64, 'time': 96, 'length': 72}, {'number': 67, 'time': 144, 'length': 24}, {'number': 62, 'time': 144, 'length': 24}, {'number': 63, 'time': 144, 'length': 24}]
+H = [{'number': 64, 'time': 0, 'length': 24}, {'number': 63, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 120}, {'number': 66, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 61, 'time': 0, 'length': 24}, {'number': 61, 'time': 96, 'length': 24}, {'number': 62, 'time': 96, 'length': 24}, {'number': 66, 'time': 96, 'length': 24}, {'number': 64, 'time': 96, 'length': 24}, {'number': 63, 'time': 96, 'length': 24}, {'number': 67, 'time': 96, 'length': 24}, {'number': 68, 'time': 96, 'length': 24}]
+I = [{'number': 61, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 63, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}]
+J = [{'number': 63, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 61, 'time': 24, 'length': 72}, {'number': 68, 'time': 96, 'length': 24}, {'number': 66, 'time': 96, 'length': 24}, {'number': 67, 'time': 96, 'length': 24}, {'number': 65, 'time': 96, 'length': 24}, {'number': 64, 'time': 96, 'length': 24}, {'number': 63, 'time': 96, 'length': 24}, {'number': 62, 'time': 96, 'length': 24}]
+K = [{'number': 62, 'time': 0, 'length': 24}, {'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 24}, {'number': 61, 'time': 0, 'length': 24}, {'number': 65, 'time': 24, 'length': 24}, {'number': 66, 'time': 48, 'length': 24}, {'number': 64, 'time': 48, 'length': 24}, {'number': 67, 'time': 72, 'length': 24}, {'number': 63, 'time': 72, 'length': 24}, {'number': 68, 'time': 96, 'length': 24}, {'number': 62, 'time': 96, 'length': 24}, {'number': 61, 'time': 120, 'length': 24}]
+L = [{'number': 61, 'time': 0, 'length': 96}, {'number': 62, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 63, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}]
+M = [{'number': 65, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 24}, {'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 61, 'time': 0, 'length': 24}, {'number': 65, 'time': 24, 'length': 24}, {'number': 66, 'time': 24, 'length': 24}, {'number': 63, 'time': 48, 'length': 24}, {'number': 64, 'time': 48, 'length': 24}, {'number': 62, 'time': 72, 'length': 24}, {'number': 61, 'time': 72, 'length': 24}, {'number': 64, 'time': 96, 'length': 24}, {'number': 63, 'time': 96, 'length': 24}, {'number': 65, 'time': 120, 'length': 24}, {'number': 66, 'time': 120, 'length': 24}, {'number': 68, 'time': 144, 'length': 24}, {'number': 67, 'time': 144, 'length': 24}, {'number': 65, 'time': 144, 'length': 24}, {'number': 61, 'time': 144, 'length': 24}, {'number': 62, 'time': 144, 'length': 24}, {'number': 66, 'time': 144, 'length': 24}, {'number': 64, 'time': 144, 'length': 24}, {'number': 63, 'time': 144, 'length': 24}]
+N = [{'number': 61, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 63, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}, {'number': 67, 'time': 24, 'length': 24}, {'number': 66, 'time': 24, 'length': 24}, {'number': 65, 'time': 48, 'length': 24}, {'number': 64, 'time': 48, 'length': 24}, {'number': 63, 'time': 72, 'length': 24}, {'number': 62, 'time': 72, 'length': 24}, {'number': 65, 'time': 96, 'length': 24}, {'number': 68, 'time': 96, 'length': 24}, {'number': 67, 'time': 96, 'length': 24}, {'number': 63, 'time': 96, 'length': 24}, {'number': 64, 'time': 96, 'length': 24}, {'number': 66, 'time': 96, 'length': 24}, {'number': 62, 'time': 96, 'length': 24}, {'number': 61, 'time': 96, 'length': 24}]
+O = [{'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 62, 'time': 24, 'length': 24}, {'number': 67, 'time': 24, 'length': 24}, {'number': 68, 'time': 48, 'length': 96}, {'number': 61, 'time': 48, 'length': 96}, {'number': 67, 'time': 144, 'length': 24}, {'number': 62, 'time': 144, 'length': 24}, {'number': 66, 'time': 168, 'length': 24}, {'number': 65, 'time': 168, 'length': 24}, {'number': 63, 'time': 168, 'length': 24}, {'number': 64, 'time': 168, 'length': 24}]
+P = [{'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 120}, {'number': 65, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 120}, {'number': 67, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 61, 'time': 0, 'length': 24}, {'number': 65, 'time': 120, 'length': 24}, {'number': 66, 'time': 120, 'length': 24}, {'number': 67, 'time': 120, 'length': 24}]
+Q = [{'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 67, 'time': 24, 'length': 24}, {'number': 62, 'time': 24, 'length': 24}, {'number': 68, 'time': 48, 'length': 96}, {'number': 61, 'time': 48, 'length': 96}, {'number': 63, 'time': 120, 'length': 24}, {'number': 62, 'time': 144, 'length': 24}, {'number': 67, 'time': 144, 'length': 24}, {'number': 61, 'time': 168, 'length': 24}, {'number': 66, 'time': 168, 'length': 24}, {'number': 65, 'time': 168, 'length': 24}, {'number': 63, 'time': 168, 'length': 24}, {'number': 64, 'time': 168, 'length': 24}]
+R = [{'number': 61, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 120}, {'number': 66, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 120}, {'number': 63, 'time': 0, 'length': 24}, {'number': 67, 'time': 120, 'length': 24}, {'number': 65, 'time': 120, 'length': 24}, {'number': 66, 'time': 120, 'length': 24}, {'number': 61, 'time': 120, 'length': 24}, {'number': 63, 'time': 120, 'length': 24}, {'number': 62, 'time': 120, 'length': 24}]
+S = [{'number': 67, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 62, 'time': 0, 'length': 24}, {'number': 61, 'time': 24, 'length': 96}, {'number': 65, 'time': 24, 'length': 48}, {'number': 68, 'time': 24, 'length': 96}, {'number': 64, 'time': 72, 'length': 48}, {'number': 67, 'time': 120, 'length': 24}, {'number': 62, 'time': 120, 'length': 24}, {'number': 63, 'time': 120, 'length': 24}]
+T = [{'number': 68, 'time': 0, 'length': 120}, {'number': 63, 'time': 48, 'length': 24}, {'number': 64, 'time': 48, 'length': 24}, {'number': 65, 'time': 48, 'length': 24}, {'number': 66, 'time': 48, 'length': 24}, {'number': 67, 'time': 48, 'length': 24}, {'number': 61, 'time': 48, 'length': 24}, {'number': 62, 'time': 48, 'length': 24}]
+U = [{'number': 62, 'time': 0, 'length': 24}, {'number': 63, 'time': 0, 'length': 24}, {'number': 64, 'time': 0, 'length': 24}, {'number': 65, 'time': 0, 'length': 24}, {'number': 66, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 61, 'time': 24, 'length': 96}, {'number': 62, 'time': 120, 'length': 24}, {'number': 63, 'time': 120, 'length': 24}, {'number': 64, 'time': 120, 'length': 24}, {'number': 65, 'time': 120, 'length': 24}, {'number': 66, 'time': 120, 'length': 24}, {'number': 68, 'time': 120, 'length': 24}, {'number': 67, 'time': 120, 'length': 24}]
+V = [{'number': 68, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 66, 'time': 24, 'length': 24}, {'number': 65, 'time': 24, 'length': 24}, {'number': 64, 'time': 48, 'length': 24}, {'number': 63, 'time': 48, 'length': 24}, {'number': 61, 'time': 72, 'length': 24}, {'number': 62, 'time': 72, 'length': 24}, {'number': 63, 'time': 96, 'length': 24}, {'number': 64, 'time': 96, 'length': 24}, {'number': 66, 'time': 120, 'length': 24}, {'number': 65, 'time': 120, 'length': 24}, {'number': 67, 'time': 144, 'length': 24}, {'number': 68, 'time': 144, 'length': 24}]
+W = [{'number': 68, 'time': 0, 'length': 24}, {'number': 67, 'time': 0, 'length': 24}, {'number': 66, 'time': 24, 'length': 24}, {'number': 65, 'time': 24, 'length': 24}, {'number': 64, 'time': 48, 'length': 24}, {'number': 63, 'time': 48, 'length': 24}, {'number': 61, 'time': 72, 'length': 24}, {'number': 62, 'time': 72, 'length': 24}, {'number': 63, 'time': 96, 'length': 24}, {'number': 64, 'time': 96, 'length': 24}, {'number': 66, 'time': 120, 'length': 24}, {'number': 65, 'time': 120, 'length': 24}, {'number': 67, 'time': 144, 'length': 24}, {'number': 68, 'time': 144, 'length': 24}, {'number': 66, 'time': 168, 'length': 24}, {'number': 65, 'time': 168, 'length': 24}, {'number': 64, 'time': 192, 'length': 24}, {'number': 63, 'time': 192, 'length': 24}, {'number': 61, 'time': 216, 'length': 24}, {'number': 62, 'time': 216, 'length': 24}, {'number': 63, 'time': 240, 'length': 24}, {'number': 64, 'time': 240, 'length': 24}, {'number': 65, 'time': 264, 'length': 24}, {'number': 66, 'time': 264, 'length': 24}, {'number': 68, 'time': 288, 'length': 24}, {'number': 67, 'time': 288, 'length': 24}]
+X = [{'number': 61, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 24}, {'number': 62, 'time': 24, 'length': 24}, {'number': 67, 'time': 24, 'length': 24}, {'number': 63, 'time': 48, 'length': 24}, {'number': 66, 'time': 48, 'length': 24}, {'number': 64, 'time': 72, 'length': 24}, {'number': 65, 'time': 72, 'length': 24}, {'number': 66, 'time': 96, 'length': 24}, {'number': 63, 'time': 96, 'length': 24}, {'number': 62, 'time': 120, 'length': 24}, {'number': 67, 'time': 120, 'length': 24}, {'number': 68, 'time': 144, 'length': 24}, {'number': 61, 'time': 144, 'length': 24}]
+Y = [{'number': 68, 'time': 0, 'length': 24}, {'number': 67, 'time': 24, 'length': 24}, {'number': 66, 'time': 48, 'length': 24}, {'number': 65, 'time': 72, 'length': 24}, {'number': 61, 'time': 72, 'length': 24}, {'number': 63, 'time': 72, 'length': 24}, {'number': 62, 'time': 72, 'length': 24}, {'number': 64, 'time': 72, 'length': 24}, {'number': 66, 'time': 96, 'length': 24}, {'number': 67, 'time': 120, 'length': 24}, {'number': 68, 'time': 144, 'length': 24}]
+Z = [{'number': 62, 'time': 0, 'length': 24}, {'number': 68, 'time': 0, 'length': 144}, {'number': 61, 'time': 0, 'length': 144}, {'number': 63, 'time': 24, 'length': 24}, {'number': 64, 'time': 48, 'length': 24}, {'number': 65, 'time': 72, 'length': 24}, {'number': 66, 'time': 96, 'length': 24}, {'number': 67, 'time': 120, 'length': 24}]
+
+alphabet = {
+    "A": A,
+    "B": B,
+    "C": C,
+    "D": D,
+    "E": E,
+    "F": F,
+    "G": G,
+    "H": H,
+    "I": I,
+    "J": J,
+    "K": K,
+    "L": L,
+    "M": M,
+    "N": N,
+    "O": O,
+    "P": P,
+    "Q": Q,
+    "R": R,
+    "S": S,
+    "T": T,
+    "U": U,
+    "V": V,
+    "W": W,
+    "X": X,
+    "Y": Y,
+    "Z": Z,
+    " ": []
+}
+
+alphabetSpacing = {
+    "A": 7,
+    "B": 5,
+    "C": 7,
+    "D": 6,
+    "E": 5,
+    "F": 5,
+    "G": 7,
+    "H": 5,
+    "I": 1,
+    "J": 5,
+    "K": 6,
+    "L": 4,
+    "M": 7,
+    "N": 5,
+    "O": 8,
+    "P": 6,
+    "Q": 8,
+    "R": 6,
+    "S": 6,
+    "T": 5,
+    "U": 6,
+    "V": 7,
+    "W": 13,
+    "X": 7,
+    "Y": 7,
+    "Z": 6,
+    " ": 1
+}
+
+def createDialog():
+    form = ScriptDialog("Text to notes", "input a string, and it converts it into notes! \r\nscript made by Seo Minwoo (@seomeenu)")
+    form.AddInputText("String", "enter text here")
+    return form
+
+def apply(form):
+    inputString = form.GetInputValue("String")
+    spacing = 0
+    for letter in inputString:
+        letter = letter.upper()
+        if letter in alphabet:
+            letterNotes = alphabet[letter]
+            for note in letterNotes:
+                newNote = Note()
+                newNote.number = note["number"]
+                newNote.time = note["time"]+spacing
+                newNote.length = note["length"]
+                newNote.velocity = 124.78
+                score.addNote(newNote) 
+            spacing += (alphabetSpacing[letter]+1)*24

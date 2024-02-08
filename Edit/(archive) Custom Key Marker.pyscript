@@ -1,0 +1,63 @@
+"""flp
+Title: Custom Key Marker
+Author: Pierre Sosa
+Category: Edit
+Version: (n/a)
+
+Description: 
+This script creates a custom key marker in FL Studio's piano roll. It allows you to set a specific key as the root note and displays it as a marker on the piano roll. This marker helps you visualize and stay in key while composing or playing melodies.
+
+Changelog:
+2021-10-XX
+- Added custom key marker feature.
+
+no changelog
+"""
+import flpianoroll as flp
+
+key_names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
+beat = flp.score.PPQ # PPQ equals how many ticks there are in a beat
+bar = beat * 4
+step = beat / 4
+
+def createDialog():
+	Form = flp.ScriptDialog("Custom Key Marker","*** script by Pierre Sosa ***")
+	for i in key_names:
+		Form.AddInputCheckbox("Include " + i + " Note",True)
+	Form.AddInputCombo("Root note",[i for i in key_names],0)
+	Form.AddInputKnobInt("Time (in steps)",0,0,round(max((4*bar)/step,flp.score.length/step)))
+	Form.AddInputText("Marker name","Custom key marker")
+	Form.AddInputCombo("Delete existing markers?","No,Yes",0)
+	return Form
+	
+def apply(Form):
+	root_note = Form.GetInputValue("Root note")
+
+	if Form.GetInputValue("Include " + key_names[root_note] + " Note") == False:
+		flp.Utils.ShowMessage("Root note is not included in the scale!")
+		return
+	if Form.GetInputValue("Delete existing markers?"):
+		flp.score.clearMarkers(True) # Deletes all markers
+	scale_helper = ""
+	for i in key_names:
+		if Form.GetInputValue("Include " + i + " Note") == True:
+			scale_helper += "0,"
+		else: scale_helper += "1,"
+	scale_helper = scale_helper.rstrip(",")
+
+	key_marker = flp.Marker()
+	key_marker.name = Form.GetInputValue("Marker name")
+	key_marker.mode = 12
+	key_marker.time = Form.GetInputValue("Time (in steps)") * step
+	key_marker.scale_root = root_note
+	key_marker.scale_helper = scale_helper
+	flp.score.addMarker(key_marker) 
+	
+
+	
+
+
+    
+
+
+

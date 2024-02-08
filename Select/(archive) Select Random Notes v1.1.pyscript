@@ -1,0 +1,81 @@
+"""flp
+Title: Select Random Notes v1.1
+Author: Pierre Sosa
+Category: Select
+Version: v1.1
+
+Description: 
+This script allows you to select random notes with a given probability. It has been updated to include a 'seed for RNG' knob.
+
+Changelog:
+2023-08-27 (v.1.1)
+- Added 'seed for RNG' knob
+"""
+import flpianoroll as flp
+import _random
+
+seed_for_RNG_max = 999
+
+# Randomizer
+def random_generator(seed):
+	x = _random.Random()
+	x.seed(seed) if seed > 0 else x.seed()
+	while True:
+		yield x.random()
+	
+def random_value(return_int, range_min, range_max):
+	random_value = next(rng) * (range_max - range_min) + range_min  # convert value to fit between min and max range
+
+	if return_int:  # convert value to integer
+		return round(random_value)
+	return random_value	
+
+def createDialog():
+	Form = flp.ScriptDialog("Select Random Notes v1.1", "Probability knob = percent of notes to select.\r\n" + 
+	"\r\n" +
+	"Seed for RNG knob = if it's set to 0 then the seed is changed in each execution of the script. If it's set to a positive value then the seed is keeped. \r\n" +
+	"\r\n" +
+	"*** Script by Pierre Sosa ***")
+	Form.AddInputKnob('Probability', 50, 0, 100)
+	Form.AddInputKnobInt("Seed for RNG",0,0,seed_for_RNG_max)
+	return Form
+
+def apply(Form):
+ 
+	# Checks if there are notes in the score
+	if not flp.score.noteCount: 
+		flp.Utils.ShowMessage("There are no notes!")
+		return	
+	
+	for n in range(flp.score.noteCount):
+		flp.score.getNote(n).selected = False
+            
+	seed = Form.GetInputValue("Seed for RNG")
+	global rng
+	rng = random_generator(seed)
+	
+	# Create a list of notes indexes with a random order
+	def randomize_notes():
+		notes = [note for note in range(flp.score.noteCount)]
+		for i in range(len(notes)):
+			max = len(notes)-1
+			random_int = random_value(True, 0, max) # Finds random index from the list of notes indexes
+			notes_to_alter.append(notes[random_int]) # Add random note index to the list
+			notes.pop(random_int) # Removes note index from the list of notes indexes	 
+	
+	notes_to_alter = []	
+	randomize_notes()
+
+	probability = Form.GetInputValue("Probability") / 100
+ 
+	for n in range(round(flp.score.noteCount * probability)):
+		flp.score.getNote(notes_to_alter[n]).selected = True
+
+
+
+
+
+    
+
+
+

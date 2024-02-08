@@ -1,0 +1,81 @@
+"""flp
+Title: Advanced Velocity Fades
+Author: Ind3x
+Category: Adjust
+Version: (n/a)
+
+Description: 
+This script allows you to create more complex velocity fades in FL Studio. It offers six settings: Velocity L/R for the leftmost/rightmost notes, Dynamic for overall note dynamic (with values over 1 increasing it), Dynamic Pinch to reduce dynamic towards the outer notes, Curve to add a fade curve, and Zero Velocity Protection to prevent notes from having a velocity of 0. The code is available on Github with comments for further explanation. Feel free to provide feedback or report any bugs to the author.
+
+Changelog:
+no changelog
+"""
+from flpianoroll import *
+
+######################################################################
+#           Advanced Velocity Fades v1.0 by Wisteria Motif           #
+# For more information or potential updates check the FL Studio      #
+# Piano roll scripting subforum or my github page:                   #
+# https://github.com/WisteriaMotif/FL_Studio_Piano_Roll_Scripts/     #
+######################################################################
+
+if score.noteCount == 0:
+    Utils.ShowMessage("There are no notes to work with.\r\nYou will get an error message after clicking 'Ok'.\r\nJust close that message and try again... but maybe with notes...")
+
+init_velocity_L = 0
+init_velocity_R = 0
+L_vel_list = []
+R_vel_list = []
+
+for i in range(0, score.noteCount):
+    if score.getNote(i).time == score.getNote(0).time:
+        L_vel_list.append(score.getNote(i).velocity)
+    if score.getNote(i).time == score.getNote(score.noteCount - 1).time:
+        R_vel_list.append(score.getNote(i).velocity)
+init_velocity_L = sum(L_vel_list) / len(L_vel_list)
+init_velocity_R = sum(R_vel_list) / len(R_vel_list)
+
+def createDialog():
+    settingsWindow = ScriptDialog("### Advanced Velocity Fades v1.0 by Wisteria Motif ###", "Velocity L/R: The velocity of the leftmost/rightmost note(s).\r\nDynamic: The overall dynamic of the notes.\r\nDynamic Pinch: Reduces the dynamic towards the outmost notes.\r\nCurve: Adds a curve to the fade.\r\nZero Velocity Protection: Stops notes' velocity from becoming 0.\r\n - Script by Wisteria Motif - ")
+    settingsWindow.AddInputKnob('Velocity L', init_velocity_L, 0, 1)
+    settingsWindow.AddInputKnob('Velocity R', init_velocity_R, 0, 1)
+    settingsWindow.AddInputKnob('Dynamic', 1, 0, 2)
+    settingsWindow.AddInputKnob('Dynamic Pinch', 0, -1, 1)
+    settingsWindow.AddInputKnob('Curve', 0, -10, 10)
+    settingsWindow.AddInputCheckbox("Zero Velo Protect.", False)
+    return settingsWindow
+
+def apply(settingsWindow):
+    first_note_position = score.getNote(0).time
+    last_note_position = score.getNote(score.noteCount - 1).time
+    velocity_difference = settingsWindow.GetInputValue('Velocity R') - settingsWindow.GetInputValue('Velocity L')
+
+    for i in range(score.noteCount):
+        if score.getNote(i).time == score.getNote(0).time:
+            percentage = 0
+        else:
+            percentage = ((score.getNote(i).time - first_note_position) / (last_note_position - first_note_position))
+
+        initial_velocity_offset = score.getNote(i).velocity - (init_velocity_L + ((init_velocity_R - init_velocity_L) * percentage))
+
+        if settingsWindow.GetInputValue('Dynamic Pinch') >= 0:
+            pinch_velocity = (initial_velocity_offset - percentage * initial_velocity_offset * settingsWindow.GetInputValue('Dynamic Pinch'))
+        else:
+            pinch_velocity = (initial_velocity_offset - (1 - percentage) * initial_velocity_offset * settingsWindow.GetInputValue('Dynamic Pinch') * -1)
+
+        curve_value = (settingsWindow.GetInputValue('Curve') / 10) ** 3 * 10
+        if settingsWindow.GetInputValue('Curve') >= 0:
+            percentage = percentage ** (curve_value + 1)
+        elif settingsWindow.GetInputValue('Curve') < 0:
+            percentage = percentage - (1 - percentage) ** (curve_value * -1 + 1) - percentage + 1
+
+        calculated_velocity = (settingsWindow.GetInputValue('Velocity L') + (velocity_difference * percentage)) + pinch_velocity * settingsWindow.GetInputValue('Dynamic')
+
+        if calculated_velocity < 0:
+            calculated_velocity = 0
+        if calculated_velocity > 1:
+            calculated_velocity = 1
+        if calculated_velocity <= 0.01 and settingsWindow.GetInputValue('Zero Velo Protect.'):
+            calculated_velocity = 0.01
+
+        score.getNote(i).velocity = calculated_velocity

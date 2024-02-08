@@ -1,0 +1,47 @@
+"""flp
+Title: Legato scripts / Legato for selected notes
+Author: Pierre Sosa
+Category: Edit
+Version: (n/a)
+
+Description: 
+This script provides two legato functionalities that work differently from the built-in legato tool in FL Studio. There is no graphical user interface (GUI) for these scripts.
+
+1) Legato for selected notes: This script considers only the timing of the selected notes when applying legato.
+
+2) Legato for each key: This script treats notes in each key (e.g., C5) separately when applying legato.
+
+The script was inspired by D3Mens and the author welcomes suggestions for improvements or different behaviors.
+
+Changelog:
+no changelog
+"""
+import flpianoroll as flp
+import math
+
+if flp.score.noteCount == 0: 
+	flp.Utils.ShowMessage("There are no notes!")
+
+beat = flp.score.PPQ  # PPQ equals how many ticks there are in a beat
+bar = beat * 4
+
+score_length = flp.score.length
+
+notes_times = []
+for n in range(flp.score.noteCount):
+	if notes_times.count(flp.score.getNote(n).time) == 0:
+		notes_times.append(flp.score.getNote(n).time)
+
+notes_times.sort()
+
+for n in range(flp.score.noteCount):
+	t = notes_times.index(flp.score.getNote(n).time)
+	if flp.score.getNote(n).time != max(notes_times):
+		flp.score.getNote(n).length = notes_times[t+1] - notes_times[t]
+	else: flp.score.getNote(n).length = math.ceil(score_length / bar) * bar - notes_times[t]
+
+
+
+
+
+

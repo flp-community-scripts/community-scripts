@@ -1,0 +1,643 @@
+"""flp
+Title: Chord Progression Tool
+Author: Pierre Sosa
+Category: Generative (chords)
+Version: v1
+
+Description: 
+This script is a Chord Progression Tool that allows you to create chord progressions in FL Studio. It has various features such as adding different scales and chord types, randomizing keys and arpeggios, and adjusting the humanizer time. The latest update includes the addition of new scales and chord types, as well as improvements and bug fixes. You can watch a video presentation of the script and download it from the provided links.
+
+Changelog:
+2023-08-27 (Chord Progression Tool v1.1)
+- Added Minor Hungarian, Minor Neapolitan, Minor Romanian, Major Bulgarian, Major Persian, Neapolitan, Arabic, Phrygian Dominant, Locrian Super scales.
+- Added Add9, Add11, Add13, Fifth 9th, 7add11, 7add13 and Single Note (root) chord types.
+- Added Random Keys and Poly (chop chords) arp modes.
+- Added more arpeggiator speed units.
+- Added "Seed for RNG" knob instead of "Change seed" checkbox. Read the script description for details of how to use.
+- Humanizer time maximum change is now relative to the chord duration setting.
+- Corrected Sixth chord.
+- Fixed random inversion mode randomizing values in too large range. Now it's doing it only in range of applicable inversions (depending on the number of notes in the chord).
+- Fixed creating wrong scale helpers for key markers.
+- Fixed humanizer affecting also notes existing in the score before running the script.
+"""
+# *** FL Studio Piano Roll script by Pierre Sosa ***
+
+import flpianoroll as flp
+import _random
+from itertools import permutations
+ 
+# Script Global Variables Section
+
+# Defaults
+default_root_note = 6
+default_scale = 1
+default_start_octave = 5
+default_quantization = 0
+default_chord_duration = 5
+default_chords = [0, 5, 3, 4] # Default values for chord selectors
+default_chords_types = [0,0,0,0]
+default_inversions = [0,0,0,0]
+default_clear_before = 1
+default_markers = 3
+
+# Grid units
+beat = flp.score.PPQ # PPQ equals how many ticks there are in a beat
+bar = beat * 4
+step = beat / 4
+
+# Duration, quantization and arpeggiator units
+duration_units = [beat / 2, beat, 1.5 * beat,2 * beat, 3 * beat, bar, 1.5 * bar, 2 * bar]
+duration_control = ["1/2 Beat","Beat","1.5 Beat","2 Beats","3 Beats","Bar","1.5 Bar","2 Bars"]
+quantization_units = [step / 2, step, beat / 2, beat, 2 * beat]
+quantization_control = ["1/2 Step","Step","1/2 Beat","Beat","1/2 Bar"]
+arpeggiator_units = [step / 3, step / 2, beat / 6, step, beat / 3, beat / 2, bar / 6, beat]
+arpeggiator_control = ["1/3 Step","1/2 Step","1/6 Beat","Step","1/3 Beat", "1/2 Beat","1/6 Bar","Beat"]
+
+if step % 4 == 0: # In 24, 72, 120, 168 PPQ settings step is not divisible by 4
+	quantization_units = [step / 4] + quantization_units
+	quantization_control = ["1/4 Step"] + quantization_control
+	arpeggiator_units = [step / 4] + arpeggiator_units
+	arpeggiator_control = ["1/4 Step"] + arpeggiator_control
+	
+# Strings lists
+root_notes_names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
+scales_names = ["Major","Minor","Minor Harmonic","Minor Melodic","Dorian","Phrygian","Lydian","Mixolydian","Locrian"]
+scales_names_for_markers = ["Major (Ionian)","Minor Natural (Aeolian)","Minor Harmonic","Minor Melodic","Other Dorian","Other Phrygian","Other Lydian","Other Mixolydian","Other Locrian"]
+chords_nums = ["filler", "1st", "2nd", "3rd", "4th"]
+chords_types = ["Triad","Power","Open","Sus2","Sus4","Sixth","Seventh","6/9","Ninth","Eleventh","Thirteenth"]
+inversions = ["Root","First","Second","Third","Fourth","Fifth","Sixth"]
+roman_numerals = ["I","II","III","IV","V","VI","VII"]
+
+# Permutations
+permutations_list = list(permutations([1,2,3,4]))
+
+# Strings list for Shuffle control
+permutations_str_list = [str("-".join(str(i) for i in p)) for p in permutations_list]
+permutations_str_list[0] += " (Off)" 
+
+# Scales intervals
+scales_intervals = [
+	[0, 2, 4, 5, 7, 9, 11], # Major Intervals
+	[0, 2, 3, 5, 7, 8, 10], # Minor Intervals  
+	[0, 2, 3, 5, 7, 8, 11], # Minor Harmonic Intervals  
+	[0, 2, 3, 5, 7, 9, 11]  # Minor Melodic Intervals  
+]
+
+# Add modes
+modes_shift = (2,4,5,7,11) # Dorian, Phrygian, Lydian, Mixolydian, Locrian shift from Major Intervals
+
+for mode in modes_shift:
+	mode_scale = []
+	for i in scales_intervals[0]:
+		i -= mode if i - mode >= 0 else (mode - 12)
+		mode_scale.append(i)
+	mode_scale.sort()
+	scales_intervals.append(mode_scale)
+
+# Chords intervals (at scale intervals)	
+chords_intervals = (
+	(0, 2, 4), # Triad
+	(0, 4), # Power
+	(0, 4, 9), # Open
+	(0, 1, 4), # Sus2
+	(0, 3, 4), # Sus4
+	(0, 2, 5), # Sixth
+	(0, 2, 4, 6), # Seventh
+	(0, 2, 4, 5, 8), # 6/9  
+	(0, 2, 4, 6, 8), # Ninth  
+	(0, 2, 4, 6, 8, 10), # Eleventh  
+	(0, 2, 4, 6, 8, 10, 12) # Thirteenth  
+)
+
+# Markers detection
+detected_key_marker = "none"
+if flp.score.markerCount > 0:
+	chords_detections = 0
+	there_is_a_match = False
+	first_key_marker_root = True	
+	for m in range(flp.score.markerCount):
+		marker = flp.score.getMarker(m)
+		if marker.mode == 12 and there_is_a_match == False:	# Key marker detection		
+			if first_key_marker_root == True: 
+				default_root_note = marker.scale_root
+				first_key_marker_root = False
+			scale_helper = marker.scale_helper
+			temp_helper = scale_helper.split(",")
+			marker_intervals = [i for i in range(len(temp_helper)) if temp_helper[i] == '0']
+			if len(marker_intervals) == 7:
+				for i in range(len(marker_intervals)):
+					marker_intervals[i] -= marker.scale_root if marker_intervals[i] - marker.scale_root >= 0 else (marker.scale_root - 12)
+				marker_intervals.sort()
+				for s in range(len(scales_intervals)):
+					if scales_intervals[s] == marker_intervals:
+						default_scale = s
+						default_root_note = marker.scale_root
+						there_is_a_match = True
+						detected_key_marker = flp.score.getMarker(m).name
+						flp.Utils.ProgressMsg("Detected key marker: " + detected_key_marker,0,0)							
+						break
+
+		if marker.mode == 0 and chords_detections < 4: # Chords markers detection
+			detected_marker_name = flp.score.getMarker(m).name
+			splitted_marker_name = detected_marker_name.split()
+			len_of_splitted_marker_name = len(splitted_marker_name)
+			if len_of_splitted_marker_name > 0:
+				for numeral in range(len(roman_numerals)):
+					if splitted_marker_name[0] == roman_numerals[numeral]:
+						default_chords.pop(chords_detections)
+						default_chords.insert(chords_detections,numeral)
+						if len_of_splitted_marker_name > 3:
+							for ch_type in range(len(chords_types)):	
+								if splitted_marker_name[3] == chords_types[ch_type]:
+									default_chords_types.pop(chords_detections)
+									default_chords_types.insert(chords_detections,ch_type)
+									if len_of_splitted_marker_name > 4:
+										for inv in range(len(inversions)):	
+											if splitted_marker_name[4] == "(" + inversions[inv]:
+												default_inversions.pop(chords_detections)
+												default_inversions.insert(chords_detections,inv)
+												break
+									break
+						chords_detections += 1
+						break
+
+# For random
+launch_flag = True
+random_degree_flags = [False for i in range(0,4)]
+random_degree_values = [0 for i in range(0,4)]
+random_types_flags = [False for i in range(0,4)]
+random_types_values = [0 for i in range(0,4)]
+random_inversions_flags = [False for i in range(0,4)]
+random_inversions_values = [0 for i in range(0,4)]
+
+# Randomizer
+def random_value(return_int, range_min, range_max):
+	x = _random.Random()
+	x.seed()
+	random_value = x.random()
+	random_value = random_value * (range_max - range_min) + range_min  # convert value to fit between min and max range
+
+	if return_int == True:  # convert value to integer
+		return round(random_value)
+	return random_value	
+
+# Script GUI Section
+def createDialog():
+	Form = flp.ScriptDialog(
+	"Chord Progression Tool", "Detected key marker: " + detected_key_marker + "\r\n" + 
+	"\r\n" + 
+	"This script can detect key markers in Piano Roll and 'chord markers' created by itself (with the 'Create Markers?' drop down menu) to set default values for selectors. If there are more than one key markers in Piano Roll then the firts (earliest) one is used. \r\n" + 
+	"\r\n" + 
+	"'Chord duration' drop down menu sets the 'base' duration of the chords. 'Duration mode' drop down menu affects the behavior of the chord start and duration knobs: \r\n" + 
+	"-Absolute: chord duration is not relative to other chords.\r\n" + 
+	"-Relative: chord duration is relative to the start of the next chord (or to the end of the score). It means that tweaking the chord start knobs will automatically change the duration of its chord and the chord previous to it.\r\n" + 
+	"-Legato: chords always ends at the start of the next chord (or at the end of the score). Chord duration knobs are deactivated. \r\n" + 
+	"\r\n" + 
+	"Humanize knobs: positive values = bipolar, negative values = unipolar (shift forward for time, decrease for velocity).\r\n" +
+	"\r\n" +
+	"Shuffle setting: permutates the chords order.\r\n" +
+	"\r\n" + 
+	"Change seed: when it's on then tweaking any control will change the values of controls set to 'random'. Turn it off to keep the random values. When it's off then random values can be changed by tweaking the control to other value, and going back to random.\r\n" +
+	"\r\n" + 
+	"Clear score setting: deletes all notes or/and markers existing in the score before running the script.\r\n" +
+	"\r\n" + 
+	"Image-Line forums thread of the script: https://forum.image-line.com/viewtopic.php?t=310058 \r\n" +
+	"\r\n" + 
+	"*** script by Pierre Sosa ***"
+	)
+	Form.AddInputCombo("Root Note", root_notes_names + ["Random"], default_root_note)
+	Form.AddInputCombo("Scale", scales_names + ["Random"], default_scale)
+	Form.AddInputCombo("Start Octave", [str(i) for i in range(11)], default_start_octave)	
+	Form.AddInputCombo("Quantization", ["None"] + quantization_control, default_quantization)   
+	Form.AddInputCombo("Chord duration", duration_control, default_chord_duration)
+	Form.AddInputCombo("Duration mode", "Absolute,Relative,Legato", 1) 
+	for i in range(1,5):
+		Form.AddInputCombo(chords_nums[i] + " Chord", roman_numerals + ["Extend Previous Chord,Skip,Empty Space,Random"], default_chords[i-1])
+		Form.AddInputCombo(chords_nums[i] + " Type", chords_types + ["Random"], default_chords_types[i-1])
+		Form.AddInputCombo(chords_nums[i] + " Inversion", inversions + ["Random"], default_inversions[i-1])
+		Form.AddInputCombo(chords_nums[i] + " Transpose", [str(i) for i in range(-3,4)], 3)
+		Form.AddInputKnob(chords_nums[i] + " Start", 0, -16, 16)
+		Form.AddInputKnob(chords_nums[i] + " Duration", 0, -16, 16)
+	Form.AddInputCombo("Layers", "None,One Octave Above,Two Octaves Above,One + Two Octaves Above", 0)     
+	Form.AddInputCombo("Bass Notes", "None,One Octave Below,Two Octaves Below,One + Two Octaves Below", 0)
+	Form.AddInputKnob("Strum (time)", 0, -100, 100)	
+	Form.AddInputKnob("Strum (velocity)", 0, -100, 100)
+	Form.AddInputCombo("Arp (mode)", "Off,Up,Down,Up-Down (bounce),Down-Up (bounce),Up-Down (sticky),Down-Up (sticky),Random order,Random mode", 0)	
+	Form.AddInputCombo("Arp (speed)", arpeggiator_control + ["Random"],4)
+	Form.AddInputKnob("Humanize (time)", 0, -1, 1)	
+	Form.AddInputKnob("Humanize (velocity)", 0, -1, 1)	
+	Form.AddInputCombo("Shuffle", permutations_str_list + ["Random"], 0)
+	Form.AddInputCheckbox("Change seed",False)	
+	Form.AddInputCombo("Clear before?", "No,Yes,Only Notes,Only Markers",default_clear_before)
+	Form.AddInputCombo("Create Markers?", "No,Key Marker,Chords,Key and Chords",default_markers)
+	return Form   
+    
+# Script Main Function Section    
+def apply(Form):
+	
+	GIV = lambda x : Form.GetInputValue(x)
+	
+	if GIV("Clear before?") == 1:
+		flp.score.clear(True) # Deletes all notes and markers    
+	elif GIV("Clear before?") == 2:
+		flp.score.clearNotes(True) # Deletes all notes
+	elif GIV("Clear before?") == 3:
+		flp.score.clearMarkers(True) # Deletes all markers
+	
+	# Random section
+	global launch_flag
+	global random_root_flag
+	global random_root_value 
+	global random_scale_flag
+	global random_scale_value 
+	global random_arp_mode_flag
+	global random_arp_mode_value
+	global random_arp_speed_flag
+	global random_arp_speed_value	
+	global random_shuffle_flag
+	global random_shuffle_value
+	
+	if GIV("Change seed") == True or launch_flag == True:
+		launch_flag = False
+		random_root_flag = False
+		random_scale_flag = False
+		random_arp_mode_flag = False
+		random_arp_speed_flag = False
+		random_shuffle_flag = False
+		
+	# Random root
+	root_note = GIV("Root Note") 
+	if root_note == 12:			
+		if random_root_flag == False:
+			root_note = random_value(True,0,11)
+			random_root_value = root_note
+			random_root_flag = True
+		else: root_note = random_root_value
+	else: random_root_flag = False	
+	
+	# Random scale
+	scale = GIV("Scale")
+	if scale == len(scales_names):			
+		if random_scale_flag == False:
+			scale = random_value(True,0,8)
+			random_scale_value = scale
+			random_scale_flag = True
+		else: scale = random_scale_value
+	else: random_scale_flag = False		
+	
+	# Random arp mode
+	arp_mode = GIV("Arp (mode)")
+	if arp_mode == 8:
+		if random_arp_mode_flag == False:
+			arp_mode = random_value(True,1,7)
+			random_arp_mode_value = arp_mode
+			random_arp_mode_flag = True
+		else: arp_mode = random_arp_mode_value
+	else: random_arp_mode_flag = False	
+	
+	# Random arp speed
+	arp_speed = GIV("Arp (speed)")
+	if arp_speed == len(arpeggiator_units):
+		if random_arp_speed_flag == False:
+			arp_speed = random_value(True,0,len(arpeggiator_units)-1)
+			random_arp_speed_value = arp_speed
+			random_arp_speed_flag = True
+		else: arp_speed = random_arp_speed_value
+	else: random_arp_speed_flag = False	
+	
+	# Random shuffle
+	shuffle = GIV("Shuffle")
+	max_shuffle = len(permutations_list)
+	if shuffle == max_shuffle:
+		if random_shuffle_flag == False:
+			shuffle = random_value(True,0,max_shuffle-1)
+			random_shuffle_value = shuffle
+			random_shuffle_flag = True
+		else: shuffle = random_shuffle_value
+		flp.Utils.ProgressMsg("Random Shuffle: " + str(permutations_str_list[shuffle]),0,0)			
+	else: random_shuffle_flag = False
+	
+	# Expands scale intervals to 11 octaves	
+	intervals = scales_intervals[scale].copy()
+	intervals_length_at_start = len(intervals)
+	for octave in range(1,11):
+		intervals.extend([intervals[i]+12*octave for i in range(intervals_length_at_start)])			
+
+	# Loop length in ticks
+	loop_length_in_ticks = duration_units[GIV("Chord duration")] * 4
+    
+	# Starts and lengths of chords
+	chords_start = []
+	chords_length = []
+	active_chord_spaces = []
+	
+	skipped_count = 0
+	i = -1
+	for chord_space_i in permutations_list[shuffle]: 
+		i += 1
+		if GIV(chords_nums[chord_space_i] + " Chord") == 7: # Extend Previous Chord
+			continue
+		if GIV(chords_nums[chord_space_i] + " Chord") == 8: # Skip
+			skipped_count += 1
+			continue
+		start_knob_value_in_percent = (GIV(chords_nums[chord_space_i] + " Start")/16)
+		if start_knob_value_in_percent >= 0:
+			mod = (loop_length_in_ticks - (loop_length_in_ticks / 4) * (i-skipped_count))
+		else: mod = ((loop_length_in_ticks / 4) * (i-skipped_count))
+		chords_start.append((loop_length_in_ticks / 4) * (i-skipped_count) + start_knob_value_in_percent * mod)
+		active_chord_spaces.append(chord_space_i)
+		
+	# Quantize start points
+	if GIV("Quantization") > 0:
+		quantization_unit = quantization_units[GIV("Quantization") - 1]	
+		for i in range(len(chords_start)):
+			if (chords_start[i] % quantization_unit) > (quantization_unit / 2):
+				chords_start[i] = chords_start[i] - (chords_start[i] % quantization_unit) + quantization_unit
+			else: chords_start[i] = chords_start[i] - (chords_start[i] % quantization_unit)
+
+	# Calculates lengths
+	if GIV("Duration mode") == 0: # Absolute chords duration
+		for i in range(len(active_chord_spaces)):
+			chord_space_i = active_chord_spaces[i]
+			length_knob_value_in_percent = (GIV(chords_nums[chord_space_i] + " Duration")/16)
+			if length_knob_value_in_percent >= 0:
+				mod = (loop_length_in_ticks - (chords_start[i]+(loop_length_in_ticks / 4)))
+			else: mod = (loop_length_in_ticks / 4)
+			chords_length.append((loop_length_in_ticks / 4) + length_knob_value_in_percent * mod)
+	else: # Relative and Legato chords duration
+		sorted_chords_start = chords_start.copy()
+		sorted_chords_start.sort()
+		
+		# Removes duplicate chords starts points from the sorted list (happens when there are overlapping start points)
+		for i in reversed(range(len(sorted_chords_start))):   
+			while i < (len(sorted_chords_start) - 1) and sorted_chords_start[i] == sorted_chords_start[i+1]:
+				sorted_chords_start.pop(i+1)
+        
+		# Final calculation
+		for i in range(len(active_chord_spaces)):  
+			chord_space_i = active_chord_spaces[i]
+			j = sorted_chords_start.index(chords_start[i])
+			if j < (len(sorted_chords_start) - 1): # All chords except the last chord        
+				chords_length.append(sorted_chords_start[j+1] - sorted_chords_start[j]) # Legato and base for relative
+			else: # For last chord
+				chords_length.append((loop_length_in_ticks / 4) * (4-skipped_count) - sorted_chords_start[j]) # Legato and base for relative
+			if GIV("Duration mode") == 1: # Relative
+				length_knob_value_in_percent = (GIV(chords_nums[chord_space_i] + " Duration")/16)
+				if length_knob_value_in_percent >= 0:
+					mod = (loop_length_in_ticks - (chords_start[i]+chords_length[i]))
+				else: mod = chords_length[i]
+				chords_length[i] = chords_length[i] + length_knob_value_in_percent * mod
+
+	# Quantize end points
+	if GIV("Quantization") > 0:
+		for i in range(len(chords_start)):
+			if (chords_length[i] % quantization_unit) > (quantization_unit / 2):
+				chords_length[i] = chords_length[i] - (chords_length[i] % quantization_unit) + quantization_unit
+			else: chords_length[i] = chords_length[i] - (chords_length[i] % quantization_unit)
+	
+	# Create Key Marker
+	if GIV("Create Markers?") % 2 != 0:
+		key_marker = flp.Marker()
+		key_marker.name = root_notes_names[root_note] + " " + scales_names_for_markers[scale]
+		key_marker.time = 0
+		key_marker.mode = 12
+		key_marker.scale_root = root_note
+		scale_helper_for_created_marker = ""
+		for i in range(root_note,12+root_note):
+			if intervals.count(i) == 0:
+				scale_helper_for_created_marker += "1,"
+			else: scale_helper_for_created_marker += "0,"
+		scale_helper_for_created_marker = scale_helper_for_created_marker.rstrip(",")
+		key_marker.scale_helper = scale_helper_for_created_marker
+		flp.score.addMarker(key_marker)
+	
+	# For strumizer
+	strum_time_factor = GIV("Strum (time)")/100
+	strum_vel_factor = GIV("Strum (velocity)")/100
+	
+	# Creates chords
+	for i in range(len(active_chord_spaces)): 
+	
+		chord_space_i = active_chord_spaces[i] 
+
+		chord_degree = GIV(chords_nums[chord_space_i] + " Chord")
+		
+		if chord_degree == 9: # Empty Space
+			continue
+			
+		# Random properties
+		if GIV("Change seed") == True:
+			random_degree_flags[chord_space_i-1] = False
+			random_types_flags[chord_space_i-1] = False
+			random_inversions_flags[chord_space_i-1] = False
+
+		if chord_degree == 10: # Random chord
+			if (random_degree_flags[chord_space_i-1] == False): 
+				chord_degree = random_value(True,0,6)
+				random_degree_values[chord_space_i-1] = chord_degree
+				random_degree_flags[chord_space_i-1] = True
+			else: chord_degree = random_degree_values[chord_space_i-1]
+		else: random_degree_flags[chord_space_i-1] = False
+		
+		chord_type = GIV(chords_nums[chord_space_i] + " Type")
+		if chord_type == 11: # Random chord type
+			if (random_types_flags[chord_space_i-1] == False):
+				chord_type = random_value(True,0,10)
+				random_types_values[chord_space_i-1] = chord_type
+				random_types_flags[chord_space_i-1] = True
+			else: chord_type = random_types_values[chord_space_i-1]
+		else: random_types_flags[chord_space_i-1] = False
+		
+		inversion = GIV(chords_nums[chord_space_i] + " Inversion")
+		if inversion == 7: # Random inversion
+			if (random_inversions_flags[chord_space_i-1] == False):
+				inversion = random_value(True,0,6)
+				random_inversions_values[chord_space_i-1] = inversion
+				random_inversions_flags[chord_space_i-1] = True
+			else: inversion = random_inversions_values[chord_space_i-1]
+		else: random_inversions_flags[chord_space_i-1] = False
+		
+		# Notes in chord intervals (at scale intervals)
+		notes_in_chord_intervals = []
+		for j in range(len(chords_intervals[chord_type])):
+			interval = chords_intervals[chord_type][j] + intervals_length_at_start * 2
+			if j == 0 and (GIV("Bass Notes")) > 0:	
+				if GIV("Bass Notes") % 2 != 0:
+					notes_in_chord_intervals.append(interval - intervals_length_at_start)
+				if GIV("Bass Notes") >= 2:
+					notes_in_chord_intervals.append(interval - intervals_length_at_start*2)
+			if j <= inversion - 1:
+					interval = interval + intervals_length_at_start
+			notes_in_chord_intervals.append(interval)				
+			if GIV("Layers") > 0: 
+				if GIV("Layers") % 2 != 0:
+					notes_in_chord_intervals.append(interval + intervals_length_at_start)
+				if GIV("Layers") >= 2:
+					notes_in_chord_intervals.append(interval + intervals_length_at_start*2)
+		notes_in_chord_intervals.sort()
+
+		# Starts and lengths
+		chord_start = round(chords_start[i])
+		chord_length = round(chords_length[i])
+		
+		# Number of notes in the chord with layers and bass notes (for strumizer and arpeggiator)
+		layers = (1,2,2,3)
+		bass_notes = (0,1,1,2)
+		num_of_notes = len(notes_in_chord_intervals)
+				
+		# Strumizer functions
+		def calc_time_shift(n):
+			if strum_time_factor >= 0:
+				start_shift = ((loop_length_in_ticks / 4) / 4) * n * strum_time_factor
+			else: # strum_time_factor < 0
+				start_shift = ((loop_length_in_ticks / 4) / 4) * (num_of_notes - (n+1)) * -strum_time_factor
+			return int(start_shift)
+		
+		def calc_velocity(n):
+			if strum_vel_factor >= 0:
+				velocity = 0.78125 - (0.78125 / 3) * n * strum_vel_factor
+			else: # strum_vel_factor < 0
+				velocity = 0.78125 - (0.78125 / 3) * (num_of_notes - (n+1)) * -strum_vel_factor
+			return max(0.0625,velocity)
+			
+		# For arpeggiator
+		if arp_mode > 0:
+			arp_unit = arpeggiator_units[arp_speed]
+			arp_notes_max = int(chord_length / arp_unit)
+			arp_note_remainder = chord_length % arp_unit
+			arp_note_remainder_flag = 0 if arp_note_remainder == 0 else 1
+			if arp_mode == 3 or arp_mode == 4:
+				arp_loops = int((arp_notes_max - num_of_notes) / (num_of_notes-1) + 1)
+			else: arp_loops = int(arp_notes_max / num_of_notes)
+			if arp_mode == 7: # Arp - random order 
+					random_arp_notes_position = []
+					possible_random_arp_notes_position = [p for p in range(arp_notes_max + arp_note_remainder_flag)]
+					for r in range(arp_notes_max + arp_note_remainder_flag):
+						find_random_position = random_value(True,0,len(possible_random_arp_notes_position)-1)
+						random_arp_notes_position.append(possible_random_arp_notes_position[find_random_position])
+						possible_random_arp_notes_position.pop(find_random_position)
+
+		arp_loop_numbers = []
+		arp_loop_time_bases = []
+		arp_loop_time_shifts = []
+		arp_loop_velocities = []
+			
+		# Adds Markers
+		if GIV("Create Markers?") > 1: 
+			new_marker = flp.Marker()
+			chord_note = root_note + intervals[chord_degree] if root_note + intervals[chord_degree] < 12 else root_note + intervals[chord_degree] - 12
+			new_marker.name = roman_numerals[chord_degree] + " - " + root_notes_names[chord_note] + " " + chords_types[chord_type] + (" (" + inversions[inversion] + " inversion)" if inversion > 0 else "")
+			new_marker.time = chord_start
+			flp.score.addMarker(new_marker) 
+
+		# Adds Notes
+		for n in range(num_of_notes): 
+		
+			new_note = flp.Note()
+			new_note.number = root_note + (GIV("Start Octave")-2) * 12 + (GIV(chords_nums[chord_space_i] + " Transpose") - 3) * 12 + intervals[notes_in_chord_intervals[n] + chord_degree] # 60 = C5 note  
+			if new_note.number >= 0 and new_note.number <= 131:
+				new_note.time = chord_start
+				new_note.length = chord_length
+				time_shift = 0
+				if strum_time_factor != 0: # Strum (time)
+					time_shift = calc_time_shift(n)
+					new_note.time = chord_start + time_shift					
+					new_note.length = chord_length - time_shift	if chord_length - time_shift > 0 else 1
+				if strum_vel_factor != 0: # Strum (velocity)
+					new_note.velocity = calc_velocity(n)
+					
+				if arp_mode > 0: # Arpeggiator for original chords notes
+
+					arp_loop_len = num_of_notes
+					if arp_mode % 2 != 0: # Arp mode = up / up-down (bounce) / up-down (sticky)
+						note_i = n
+					elif arp_mode % 2 == 0: # Arp mode = down / down-up (bounce) / down-up (sticky)
+						note_i = (num_of_notes - (n+1))
+					
+					new_note.time = new_note.time + arp_unit * note_i
+					new_note.length = arp_unit
+					
+					if note_i > arp_notes_max - 1:
+						if note_i == arp_notes_max and arp_note_remainder != 0:
+							new_note.length = arp_note_remainder
+						else: continue
+					
+					arp_loop_numbers.append(new_note.number)
+					arp_loop_time_bases.append(chord_start + arp_unit * note_i)
+					arp_loop_time_shifts.append(time_shift)
+					arp_loop_velocities.append(new_note.velocity)
+					
+					if arp_mode == 7: # Arp - random order 
+						new_note.time = chord_start + time_shift + arp_unit * random_arp_notes_position[note_i]
+						if random_arp_notes_position[note_i] == arp_notes_max and arp_note_remainder != 0:
+							new_note.length = arp_note_remainder
+						else: new_note.length = arp_unit					
+				
+				flp.score.addNote(new_note)	
+
+		if arp_mode > 0: # Arpeggiator
+			
+			arp_notes_count = num_of_notes
+
+			if arp_mode % 2 == 0:
+				arp_loop_numbers.reverse()
+				arp_loop_time_bases.reverse()
+				arp_loop_time_shifts.reverse()
+				arp_loop_velocities.reverse()
+			
+			for arp_loop in range(2,arp_loops+2):
+				arp_range_base = range(num_of_notes)
+				arp_range_rev = reversed(range(num_of_notes))
+				
+				arp_range = arp_range_base
+				
+				if arp_mode > 2 and arp_mode != 7:
+					arp_loop_numbers.reverse()
+					arp_loop_time_shifts.reverse()
+					arp_loop_velocities.reverse()
+							
+				time_correction = 0
+				
+				for note_i in arp_range: 
+					if ((arp_mode == 3) or (arp_mode == 4)) and note_i == 0:	
+						time_correction = 1
+						continue
+							
+					arp_note = flp.Note()
+					arp_note.number = arp_loop_numbers[note_i]
+					arp_note.time = arp_loop_time_bases[note_i] + arp_loop_time_shifts[note_i] + arp_unit * (num_of_notes - time_correction) * (arp_loop-1)
+					arp_note.length = arp_unit
+					arp_note.velocity = arp_loop_velocities[note_i]
+					
+					arp_notes_count += 1
+					
+					if arp_notes_count > arp_notes_max:
+						if arp_notes_count == arp_notes_max + 1 and arp_note_remainder != 0:
+							arp_note.length = arp_note_remainder
+						else: break
+	
+					if arp_mode == 7: # Arp - random order 
+						arp_note.time = chord_start + arp_loop_time_shifts[note_i] + arp_unit * random_arp_notes_position[arp_notes_count-1]
+						if random_arp_notes_position[arp_notes_count-1] == arp_notes_max and arp_note_remainder != 0:
+							arp_note.length = arp_note_remainder
+						else: arp_note.length = arp_unit
+						
+					flp.score.addNote(arp_note)
+					
+	# Humanize
+	for new_note in range(flp.score.noteCount):
+		if GIV("Humanize (time)") != 0:
+			max_change = GIV("Humanize (time)") * step
+			if max_change > 0:
+				change = round(random_value(False,-max_change,max_change))
+			else: change = round(random_value(False,0,-max_change))
+			flp.score.getNote(new_note).time += change if flp.score.getNote(new_note).time + change > 0 else 0
+		if GIV("Humanize (velocity)") != 0:
+			max_change = GIV("Humanize (velocity)")
+			if max_change > 0:
+				change = random_value(False,-max_change,max_change)
+			else: change = random_value(False,0,max_change)
+			new_velocity = flp.score.getNote(new_note).velocity + change
+			if new_velocity > 1: new_velocity = 1
+			elif new_velocity < 0: new_velocity = 0
+			flp.score.getNote(new_note).velocity = new_velocity

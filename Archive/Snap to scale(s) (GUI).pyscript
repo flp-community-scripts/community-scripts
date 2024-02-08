@@ -1,0 +1,170 @@
+"""flp
+Title: Snap to scale(s) (GUI)
+Author: Pierre Sosa
+Category: Archive
+Version: (n/a)
+
+Description: 
+This script allows you to snap notes to a specific scale based on key markers. There are two versions available: one with a GUI for additional options and one without a GUI for quick snapping. The script also includes a version that allows for the creation of custom key markers.
+
+Changelog:
+2021-10-01 (GUI) - Initial version of Snap to scale(s) with GUI. 2021-09-30 (no GUI) - Initial version of Snap to scale(s) without GUI.
+"""
+import flpianoroll as flp
+import _random
+
+# Markers detection
+is_there_key_marker = False
+key_markers_times_in_ticks = []
+key_markers_intervals = []
+detected_key_marker_names = []
+if flp.score.markerCount > 0:
+	for m in range(flp.score.markerCount):
+		marker = flp.score.getMarker(m)
+		if marker.mode == 12: # Key marker detection		
+			is_there_key_marker = True
+			key_markers_times_in_ticks.append(marker.time)
+			scale_helper = marker.scale_helper
+			temp_helper = scale_helper.split(",")
+			marker_intervals = [i for i in range(len(temp_helper)) if temp_helper[i] == '0']
+			key_markers_intervals.append(marker_intervals)
+			detected_key_marker_names.append(flp.score.getMarker(m).name)
+if is_there_key_marker:
+	key_markers_list_str = ", ".join(detected_key_marker_names)
+else: key_markers_list_str = "none"
+
+def coin_flip():
+	x = _random.Random()
+	x.seed()
+	random_value = x.random()
+	if random_value >= 0.5: 
+		return True
+	return False 
+coin_flips = []
+launch_flag = True
+controls_values = []	
+	
+if not is_there_key_marker:
+	flp.Utils.ShowMessage("There are no key markers!")
+else:
+	def createDialog():
+		Form = flp.ScriptDialog("Snap to scale(s)","Detected key markers: " + key_markers_list_str + "\r\n" + 
+		"\r\n" + 
+		"*** script by Pierre Sosa ***")
+		Form.AddInputCombo("Snap to",["All markers (depending on time)"] + [str(i) for i in detected_key_marker_names],0)
+		Form.AddInputCombo("If equal distance","Upper,Lower,Random,Random for each note",0)		
+		Form.AddInputCombo("Prevent overlapping","No,Shrink earlier,Shrink later,Select overlapping",0)
+		return Form
+		
+	def apply(Form):
+	
+		global launch_flag
+		
+		if_equal = Form.GetInputValue("If equal distance")
+		snap_to = Form.GetInputValue("Snap to")
+		overlap_mode = Form.GetInputValue("Prevent overlapping")
+		
+		regenerate_button = True
+		if not launch_flag:
+			if if_equal != controls_values[0]:
+				regenerate_button = False
+			elif snap_to != controls_values[1]:
+				regenerate_button = False
+			elif overlap_mode != controls_values[2]:
+				regenerate_button = False
+		controls_values.clear()
+		controls_values.append(if_equal)
+		controls_values.append(snap_to)
+		controls_values.append(overlap_mode)
+		
+		if launch_flag or regenerate_button:
+			coin_flips.clear()
+			for n in range(flp.score.noteCount):
+				coin_flips.append(coin_flip())
+			launch_flag = False
+		
+		def find_closest_allowed_key(note_num,current_marker,n):
+			nonlocal if_equal
+			for i in range(12):
+				temp = note_num + i
+				new_key = temp if temp < 12 else temp - 12 
+				if new_key in key_markers_intervals[current_marker]:
+					diff_up = i
+					break
+			for i in range(12):
+				temp = note_num - i
+				new_key = temp if temp >= 0 else temp + 12 
+				if new_key in key_markers_intervals[current_marker]:
+					diff_down = i
+					break
+					
+			if diff_up == diff_down:
+				if if_equal == 2: if_equal = coin_flips[0]
+				elif if_equal == 3: 
+					if coin_flips[n]:
+						return diff_up
+					else: return -diff_down
+				if not if_equal:
+					return diff_up
+				if if_equal:
+					return -diff_down
+					
+			if diff_up < diff_down: 
+				return diff_up
+			return -diff_down
+		
+		notes = []
+		for n in range(flp.score.noteCount):
+			note = flp.score.getNote(n)
+			if overlap_mode == 3:
+				note.selected = False
+			notes.append(note)
+			if not snap_to: # All markers mode
+				current_note_time = note.time
+				for i, marker_time in enumerate(key_markers_times_in_ticks):
+					if not i and current_note_time < marker_time: # Notes before the first marker
+						before_markers_flag = True
+						break
+					elif current_note_time >= marker_time:
+						before_markers_flag = False
+						current_marker = i
+				if before_markers_flag:
+					continue
+			else: current_marker = snap_to - 1
+			
+			note_num = note.number % 12
+			if note_num not in key_markers_intervals[current_marker]:
+				note.number += find_closest_allowed_key(note_num,current_marker,n)
+		
+		if overlap_mode:
+			for i,current_note in enumerate(notes):
+				for n in range(flp.score.noteCount):
+					compared_note = flp.score.getNote(n)
+					if current_note is not compared_note and current_note.number == compared_note.number:
+						curr_start = current_note.time
+						comp_start = compared_note.time
+						curr_end = current_note.time + current_note.length
+						comp_end = compared_note.time + compared_note.length
+						if comp_start >= curr_start and comp_start < curr_end:
+							if overlap_mode == 1: # Shrink earlier
+								if curr_start != comp_start:
+									current_note.length = comp_start - curr_start
+								elif curr_end <= comp_end:
+									current_note.length = 0
+								else: compared_note.length = 0
+							if overlap_mode == 2: # Shrink later
+								if curr_start != comp_start or curr_end < comp_end:
+									compared_note.time = curr_end
+									compared_note.length = comp_end - curr_end
+								else: # curr_end >= comp_end:
+									current_note.time = comp_end
+									current_note.length = curr_end - comp_end
+							if overlap_mode == 3: # Select overlapping
+								current_note.selected = True
+								compared_note.selected = True
+
+					
+    
+
+
+

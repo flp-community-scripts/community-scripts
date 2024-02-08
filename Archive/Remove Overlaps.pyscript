@@ -1,0 +1,79 @@
+"""flp
+Title: Remove Overlaps
+Author: Iboibo
+Category: Archive
+Version: (n/a)
+
+Description: 
+This script allows you to shrink overlapping notes in the FL Studio pianoroll. It provides an option to choose whether the end time of the overlapping note will be based on the note that covers it or the note itself. If the notes start at the same time, the longer ones will remain and the shorter ones will be deleted. Feedback is welcome.
+
+Changelog:
+no changelog
+"""
+from flpianoroll import *
+
+
+label = 'Note end time option'
+
+
+def createDialog():
+    form = ScriptDialog('Remove Overlaps', '''
+        When a note A "covers" a note B of the same pitch (i.e. note A begins before note B and ends after note B), you can choose whether the end time of B will be A's or B's.
+        If you choose "Max", it will be the end time of A. And if you select "Leave", it will be the end time of B.
+        Whichever you choose, if the notes start at the same time, the longer ones will remain and the shorter ones will be deleted.
+    '''.replace('        ', '  '))
+    form.AddInputCombo(label, ['Max','Leave'], 0)
+    return form
+
+
+def apply(form):
+
+    noteListByNumber = {}
+
+    class Note1:
+        def __init__(self, start, end, idx):
+            self.start = start
+            self.end = end
+            self.idx = idx
+
+    length = []
+
+    for i in range(score.noteCount):
+        note = score.getNote(i)
+        length.append(note.length)
+        note1 = Note1(note.time,
+                      note.time + note.length,
+                      i)
+        if note.number in noteListByNumber:
+            noteListByNumber[note.number].append(note1)
+        else:
+            noteListByNumber[note.number] = [note1]
+
+    for n in noteListByNumber.values():
+        n.sort(key=lambda x: x.start)
+        def setLength(i): length[n[i].idx] = n[i].end - n[i].start
+        for i in range(len(n)-1):
+            if n[i].end <= n[i+1].start:
+                continue
+            elif n[i].start == n[i+1].start:
+                length[n[i].idx] = -1
+                n[i+1].end = max(n[i].end, n[i+1].end)
+                setLength(i+1)
+            else:
+                if form.GetInputValue(label) == 0: # max
+                    n[i+1].end = max(n[i].end, n[i+1].end)
+                    setLength(i+1)
+                n[i].end = n[i+1].start
+                setLength(i)
+
+    notes = []
+    for i in range(score.noteCount):
+        if length[i] == -1: continue
+        notes.append(score.getNote(i))
+        notes[-1].length = length[i]
+
+    score.clearNotes("True")
+    for note in notes:
+        score.addNote(note)
+
+    return

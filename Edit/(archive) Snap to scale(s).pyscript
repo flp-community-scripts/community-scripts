@@ -1,0 +1,78 @@
+"""flp
+Title: Snap to scale(s)
+Author: Pierre Sosa
+Category: Edit
+Version: (n/a)
+
+Description: 
+This script allows you to snap notes to a specific scale based on key markers. There are two versions available: one with a GUI for additional options and one without a GUI for quick snapping. The script also includes a version that allows for the creation of custom key markers.
+
+Changelog:
+2021-10-01 (GUI)
+- Initial version of Snap to scale(s) with GUI.
+
+2021-09-30 (no GUI)
+- Initial version of Snap to scale(s) without GUI.
+"""
+import flpianoroll as flp
+
+# Markers detection
+is_there_key_marker = False
+key_markers_times_in_ticks = []
+key_markers_intervals = []
+detected_key_marker_names = []
+if flp.score.markerCount > 0:
+	for m in range(flp.score.markerCount):
+		marker = flp.score.getMarker(m)
+		if marker.mode == 12: # Key marker detection		
+			is_there_key_marker = True
+			key_markers_times_in_ticks.append(marker.time)
+			scale_helper = marker.scale_helper
+			temp_helper = scale_helper.split(",")
+			marker_intervals = [i for i in range(len(temp_helper)) if temp_helper[i] == '0']
+			key_markers_intervals.append(marker_intervals)
+			detected_key_marker_names.append(flp.score.getMarker(m).name)
+
+if not is_there_key_marker:
+	flp.Utils.ShowMessage("There are no key markers!")
+else:		
+	def find_closest_allowed_key(note_num,current_marker,n):
+		for i in range(12):
+			temp = note_num + i
+			new_key = temp if temp < 12 else temp - 12 
+			if new_key in key_markers_intervals[current_marker]:
+				diff_up = i
+				break
+		for i in range(12):
+			temp = note_num - i
+			new_key = temp if temp >= 0 else temp + 12 
+			if new_key in key_markers_intervals[current_marker]:
+				diff_down = i
+				break
+		if diff_up <= diff_down: 
+			return diff_up
+		return -diff_down
+		
+	for n in range(flp.score.noteCount):
+		note = flp.score.getNote(n)
+		current_note_time = note.time
+		for i, marker_time in enumerate(key_markers_times_in_ticks):
+			if not i and current_note_time < marker_time: # Notes before the first marker
+				before_markers_flag = True
+				break
+			elif current_note_time >= marker_time:
+				before_markers_flag = False
+				current_marker = i
+		if before_markers_flag:
+			continue
+	
+		note_num = note.number % 12
+		if note_num not in key_markers_intervals[current_marker]:
+			note.number += find_closest_allowed_key(note_num,current_marker,n)
+
+
+					
+    
+
+
+

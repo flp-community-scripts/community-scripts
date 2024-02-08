@@ -1,0 +1,161 @@
+"""flp
+Title: Randomize properties v1.1
+Author: Pierre Sosa
+Category: Archive
+Version: v1.1
+
+Description: 
+This script allows you to randomize the properties of notes in the FL Studio piano roll. It can be used to "humanize" the score or create more extreme randomizations. The latest version (v1.1) includes a "Seed for RNG" knob and more "Reset before processing" modes.
+
+Changelog:
+2023-08-09 (Randomize properties v1.1) - Added "Seed for RNG" knob instead of 'change seed' checkbox - Added more 'Reset before processing' modes
+"""
+import flpianoroll as flp
+import _random
+
+seed_for_RNG_max = 999
+notes_org = []
+number_of_groups = 0
+
+for note in range(flp.score.noteCount): 
+	notes_org.append(note)
+	if flp.score.getNote(note).group > number_of_groups:
+		number_of_groups = flp.score.getNote(note).group
+
+notes_properties = ['velocity', 'pan', 'release', 'fcut', 'fres', 'pitchofs','time','length','number','color', 'group', 'slide', 'porta', 'muted', 'selected']
+default_min_for_controls = [-1, -1, -1, -1, -1, -240, -flp.score.length, -flp.score.length, -131, -15, 0]
+default_max_for_controls = [1, 1, 1, 1, 1, 240, flp.score.length, flp.score.length, 131, 15, (number_of_groups+1)]
+modes = ["Unipolar","Unipolar (bypass 'reset before processing')","Bipolar","Bipolar (bypass 'reset before processing')","Off","Off (bypass 'reset before processing')"] 
+default_values = [0.78125, 0.5, 0.5, 0.5, 0.5, 0, 0, 0, 60, 0, 0, False, False, False, False]
+
+# Randomizer
+def random_generator(seed):
+	x = _random.Random()
+	x.seed(seed) if seed > 0 else x.seed()
+	while True:
+		yield x.random()
+	
+def random_value(return_int, range_min, range_max):
+	random_value = next(rng) * (range_max - range_min) + range_min  # convert value to fit between min and max range
+
+	if return_int:  # convert value to integer
+		return round(random_value)
+	return random_value	
+
+def createDialog():
+	Form = flp.ScriptDialog("Randomize properties v1.1", "Probability knob = percent of notes to affect (when 'Apply to' is set to 'Random notes').\r\n" + 
+	"\r\n" + 
+	"Seed for RNG knob = if it's set to 0 then the seed for random values is changed in each execution of the script. If it's set to a positive value then the seed is keeped. \r\n" +
+	"\r\n" + 	
+	"*** Script by Pierre Sosa ***")
+	Form.AddInputCombo("Apply to","All (selected) notes,Random Notes",0)		
+	Form.AddInputKnob('Probability', 50, 0, 100)
+	Form.AddInputKnobInt("Seed for RNG", 0, 0, seed_for_RNG_max)
+	Form.AddInputCombo("Reset before processing","All notes and all properties,All notes and only altered properties,Only altered notes and all properties,Only altered notes and only altered properties,Off",4)	
+	Form.AddInputCheckbox("Global Multiplier", True)
+	Form.AddInputKnob("Global Multiplier Value", 1, 0, 2)
+	for i in range(5):
+		Form.AddInputCombo(notes_properties[i].capitalize() + " mode",[mode for mode in modes],5)
+		Form.AddInputKnob(notes_properties[i].capitalize() + " range",0,default_min_for_controls[i],default_max_for_controls[i])
+	for i in range(5,11):
+		Form.AddInputCombo(notes_properties[i].capitalize() + " mode",[mode for mode in modes],5)
+		Form.AddInputKnobInt(notes_properties[i].capitalize() + " range",0,default_min_for_controls[i],default_max_for_controls[i])
+	for i in range(11, len(notes_properties)):
+		Form.AddInputCombo(notes_properties[i].capitalize() + " mode","On,On (bypass 'reset before processing'),Off,Off (bypass 'reset before processing')",3)
+	return Form
+
+def apply(Form):
+	
+	# Checks if there are notes in the score
+	if flp.score.noteCount == 0: 
+		flp.Utils.ShowMessage("There are no notes!")
+		return	
+
+	seed = Form.GetInputValue("Seed for RNG")
+	global rng
+	rng = random_generator(seed)		
+	
+	# Create a list of notes indexes with a random order
+	def randomize_notes():
+		notes = notes_org.copy()
+		for i in range(len(notes)):
+			max = len(notes)-1
+			random_int = random_value(True, 0, max) # Generate random note index
+			notes_to_alter.append(notes[random_int]) # Add generated note index to the list
+			notes.pop(random_int)		
+	
+	notes_to_alter = []		
+	randomize_notes()
+
+	probability = Form.GetInputValue("Probability") / 100
+	reset_mode = Form.GetInputValue("Reset before processing")
+
+	ranges = []
+	for i,property in enumerate(notes_properties):
+		if i > 10:
+			break
+		ranges.append(Form.GetInputValue(property.capitalize() + " range"))
+		
+	selected_modes = []	
+	for property in notes_properties:
+		selected_modes.append(Form.GetInputValue(property.capitalize() + " mode"))		
+
+	for n in range(flp.score.noteCount):
+		note = flp.score.getNote(n)
+		if reset_mode == 0: # Reset all notes and all properties
+			for i,property in enumerate(notes_properties):
+				if (i < 11 and not selected_modes[i] % 2) or (i > 10 and not selected_modes[i] % 2):
+					setattr(note,property,default_values[i])					
+		elif reset_mode == 1: # Reset all notes and only altered properties
+			for i,property in enumerate(notes_properties):
+				if (i < 11 and ranges[i] != 0 and not selected_modes[i] % 2 and selected_modes[i] != 4) or (i > 10 and selected_modes[i] == 0):
+					setattr(note,property,default_values[i])	
+	
+		if Form.GetInputValue("Apply to"):
+			if notes_to_alter.index(n) >= probability * len(notes_to_alter):
+				continue
+			
+		for i,property in enumerate(notes_properties):
+			if i < 11:
+				if selected_modes[i] == 5: # Off (bypass 'reset before processing')
+					continue
+				if reset_mode == 2 and not selected_modes[i] % 2: # Reset only altered notes and all properties
+					setattr(note,property,default_values[i])	
+				if selected_modes[i] == 0 or selected_modes[i] == 1: # Unipolar
+					random_factor = random_value(False,0,1)
+				elif selected_modes[i] == 1 or selected_modes[i] == 2: # Bipolar
+					random_factor = random_value(False,-1,1) 
+				else: # Off
+					continue 
+				if reset_mode == 3 and ranges[i] != 0 and not selected_modes[i] % 2: # Reset only altered notes and only altered properties
+					setattr(note,property,default_values[i])					
+				if Form.GetInputValue("Global Multiplier"):
+					random_factor = random_factor * Form.GetInputValue("Global Multiplier Value")
+			else: # 'slide', 'porta', 'muted', 'selected'
+				if selected_modes[i] == 3: # Off (bypass 'reset before processing')
+					continue
+				if reset_mode == 2 and not selected_modes[i] % 2: # Reset only altered notes and all properties
+					setattr(note,property,default_values[i])		
+				if selected_modes[i] == 2: # Off
+					continue
+				if reset_mode == 3 and not selected_modes[i] % 2: # Reset only altered notes and only altered properties
+					setattr(note,property,default_values[i])					
+				random_factor = random_value(True,0,1) 
+			
+			if i < 5: # for: 'velocity', 'pan', 'release', 'fcut', 'fres'
+				setattr(note,property,(max(0,min(1,getattr(note,property) + random_factor * ranges[i]))))
+			elif i == 5: # for: 'pitchofs'	
+				setattr(note,property,(max(-120,min(120,getattr(note,property) + round(random_factor * ranges[i])))))
+			elif i < 8: # for: 'time','length'
+				setattr(note,property,(max(0,min(flp.score.length,getattr(note,property) + round(random_factor * ranges[i])))))
+			elif i == 8: # for:'number'
+				setattr(note,property,(max(0,min(131,getattr(note,property) + round(random_factor * ranges[i])))))
+			elif i == 9: # for: 'color',
+				setattr(note,property,(max(0,min(15,getattr(note,property) + round(random_factor * ranges[i])))))
+			elif i == 10: # for: 'group'
+				setattr(note,property,(max(0,min((number_of_groups+1),getattr(note,property) + round(random_factor * ranges[i])))))
+			elif i > 10: # for: 'slide', 'porta', 'muted', 'selected'
+				if random_factor == 0:
+					setattr(note,property,False)
+				else: setattr(note,property,True)
+		

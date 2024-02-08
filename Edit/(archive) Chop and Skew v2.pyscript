@@ -1,0 +1,142 @@
+"""flp
+Title: Chop and Skew v2
+Author: Pierre Sosa
+Category: Edit
+Version: v2
+
+Description: 
+This script allows you to chop a note or multiple notes and then skew the starting points of the chops to create an accelerating or decelerating roll of notes. The latest version includes improved note length calculation and an option to allow or disallow infinite note lengths.
+
+Changelog:
+2023-07-19 (Chop and Skew v2)
+- Improved note length calculation
+- Added option to allow/don't allow infinite note lengths
+
+no changelog for the old (first) version
+"""
+import flpianoroll as flp
+
+beat = flp.score.PPQ # PPQ = ticks per beat. So PPQ equals ticks in beat.
+step = int(beat / 4)
+notes_properties = ['velocity', 'release', 'pan', 'fcut', 'fres', 'pitchofs','time','length','number','color', 'group', 'slide', 'porta', 'muted', 'selected']
+
+def createDialog():
+	Form = flp.ScriptDialog("Chop and Skew v2","Allow inf. length: allows notes with infinite (zero) length. If it's off it will set the length of such notes to 1 tick. \r\n" +
+	"Toggle 'Chop mode' setting to activate the 'Number of notes' or 'Chop length' knobs.\r\n" + 
+	"Chop length knob unit = 1/4 step.\r\n" +
+	"*** Script by Pierre Sosa ***")
+	Form.AddInputKnob("Skew", 0, -1, 1)
+	Form.AddInputCombo("Skew mode","Exp,Exp (Skew x10),Power,Power (Skew x10),Power (Skew x100),Power Inverted",0)
+	Form.AddInputCheckbox("Allow inf. length",False)	
+	Form.AddInputCombo("Chop mode","Number of notes,Chop length",0)
+	Form.AddInputKnobInt("Number of notes", 8, 1, 128) 
+	Form.AddInputKnobInt("Chop length", 4, 1, 64)
+	Form.AddInputCheckbox("Delete orig. notes?",True)    
+	return Form
+
+def apply(Form):
+
+	# Checks if there are notes in the score
+	if flp.score.noteCount == 0: 
+		flp.Utils.ShowMessage("There are no notes to chop!")
+		return
+		
+	org_notes = [flp.score.getNote(n) for n in range(flp.score.noteCount)]
+
+	flp.score.clear(True) 
+	
+	for org_note in org_notes:
+		
+		if Form.GetInputValue("Chop mode") == 0:
+			num_of_notes = Form.GetInputValue("Number of notes")
+			new_notes_length = round(org_note.length / num_of_notes)
+		else:
+			new_notes_length = Form.GetInputValue("Chop length") * step / 4
+			num_of_notes = round(org_note.length / new_notes_length)
+   
+		sum_of_notes_length = 0
+		note_len = org_note.length
+		
+		for i in range(num_of_notes):
+			new_note = flp.Note()
+			for property in notes_properties:
+				setattr(new_note,property,getattr(org_note,property))
+      		
+			skew = -abs(Form.GetInputValue("Skew"))
+			x = ((i+1))/(num_of_notes)
+			
+			if skew != 0:
+				# Exp skew
+				if Form.GetInputValue("Skew mode") < 2:
+					if Form.GetInputValue("Skew mode") == 1:
+						skew = skew *10
+					y = (pow(2,-skew*10*x)-1)/(pow(2,-skew*10)-1)
+					if i == 0:
+						new_note.length = y * note_len
+					else: new_note.length = y * note_len - sum_of_notes_length
+					
+				# Power skew
+				elif Form.GetInputValue("Skew mode") < 5:
+					if Form.GetInputValue("Skew mode") == 3:
+						skew = skew *10
+					elif Form.GetInputValue("Skew mode") == 4:
+						skew = skew *100
+					
+					if skew > 0:
+						y = 1 - (pow((1-x),(abs(skew+1))))
+					else: y = pow(x,(abs(1-skew)))
+					
+					if type(y) == complex: # for last note/s the 'y' is/can be a complex number, so it needs to be changed to 1 
+						y = 1	
+					if i == 0:
+						new_note.length = y * note_len
+					else: new_note.length = y * note_len - sum_of_notes_length				
+
+				# Power inwerted
+				elif Form.GetInputValue("Skew mode") == 5:	
+
+					if skew == -1:
+						skew = -0.9999 
+
+					if skew > 0:
+						y = pow(x,(abs(1-skew)))
+					else: y = 1 - (pow((1-x),(abs(skew+1))))
+					
+					if type(y) == complex: # for last note/s the 'y' is/can be a complex number, so it needs to be changed to 1 
+						y = 1
+					if i == 0:
+						new_note.length = y * note_len
+					else: new_note.length = y * note_len - sum_of_notes_length	
+
+			else: new_note.length = new_notes_length # skew == 0
+			
+			
+			if new_note.length <= 0:
+				if Form.GetInputValue("Allow inf. length") == False:
+					new_note.length = 1
+				else: new_note.length = 0
+			
+			if i == 0:
+				new_note.time = org_note.time
+			else: new_note.time = last_note_start + last_note_length
+
+			last_note_start = new_note.time
+			if new_note.length <= 0:
+				last_note_length = 1
+			else: last_note_length = new_note.length
+			sum_of_notes_length += last_note_length
+
+			flp.score.addNote(new_note)
+			
+		if Form.GetInputValue("Skew") > 0: # Reverse order
+			for i in reversed(range(num_of_notes)):
+				i = i + num_of_notes * (org_notes.index(org_note))
+				if i == num_of_notes + num_of_notes * org_notes.index(org_note) - 1:
+					flp.score.getNote(i).time = org_note.time 
+				elif flp.score.getNote(i+1).length < 1:
+					flp.score.getNote(i).time = flp.score.getNote(i+1).time + 1
+				else: flp.score.getNote(i).time = flp.score.getNote(i+1).time + flp.score.getNote(i+1).length
+		
+	if Form.GetInputValue("Delete orig. notes?") == False:
+		for org_note in org_notes:
+			flp.score.addNote(org_note)

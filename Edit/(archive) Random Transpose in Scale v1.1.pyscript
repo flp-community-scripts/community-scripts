@@ -1,0 +1,334 @@
+"""flp
+Title: Random Transpose in Scale v1.1
+Author: Pierre Sosa
+Category: Edit
+Version: v1.1
+
+Description: 
+This script allows you to randomly transpose notes within a given scale and range. It includes features such as a seed for the random number generator, additional built-in scales, and bug fixes.
+
+Changelog:
+2023-08-09 (Random transpose in scale v1.1)
+- added "Seed for RNG" knob
+- added more built-in scales
+- some bug-fixes
+"""
+import flpianoroll as flp
+import _random
+
+org_notes_numbers = []
+for n in range(flp.score.noteCount):
+	org_notes_numbers.append(flp.score.getNote(n).number)
+
+seed_for_RNG_max = 999
+leave = 0
+first_run = True
+randomized_notes_numbers = []
+
+notes_names = ("C","C#","D","D#","E","F","F#","G","G#","A","A#","B")
+scales_names = (
+	"Major (Ionian)",
+	"Minor Natural (Aeolian)",
+	"Major Pentatonic",
+	"Minor Pentatonic",
+	"Minor Harmonic",	
+	"Minor Melodic",
+	"Minor Hungarian",
+	"Minor Neapolitan",
+	"Minor Romanian",
+	"Minor Polymode",
+	"Major Bulgarian",
+	"Major Persian",
+	"Major Hexatonic",
+	"Major Bebop",
+	"Major Polymode",
+	"Neapolitan",
+	"Arabic",
+	"Dorian",
+	"Phrygian",
+	"Phrygian Dominant",
+	"Lydian",
+	"Mixolydian",
+	"Locrian",
+	"Locrian Super",
+	"Blues",
+	"Blues Nonatonic",
+	"Bebop Dominant",
+	"Diminished",
+	"Eastern",
+	"Egyptian",
+	"Hirajoshi",
+	"Iwato",
+	"Japanese Insen",
+	"Piongio",
+	"Prometheus",
+	"Enigmatic",
+	"Whole Tone"
+)
+
+scales_intervals = [
+	[0, 2, 4, 5, 7, 9, 11], # Major (Ionian) Intervals
+	[0, 2, 3, 5, 7, 8, 10], # Minor Natural (Aeolian) Intervals  
+	[0, 2, 4, 7, 9], # Major Pentatonic Intervals
+	[0, 3, 5, 7, 10], # Minor Pentatonic Intervals	
+	[0, 2, 3, 5, 7, 8, 11], # Minor Harmonic Intervals	
+	[0, 2, 3, 5, 7, 9, 11], # Minor Melodic Intervals  
+	[0, 2, 3, 6, 7, 8, 11], # Minor Hungarian Intervals  
+	[0, 1, 3, 5, 7, 8, 11], # Minor Neapolitan Intervals  
+	[0, 2, 3, 6, 7, 9, 10], # Minor Romanian Intervals 
+	[0, 1, 2, 4, 5, 7, 8, 10], # Minor Polymode Intervals	
+	[0, 2, 5, 6, 8, 9, 11], # Major Bulgarian Intervals  
+	[0, 1, 4, 5, 6, 8, 11], # Major Persian Intervals
+	[0, 2, 4, 5, 7, 9], # Major Hexatonic Intervals
+	[0, 2, 4, 5, 7, 8, 9, 11], # Major Bebop Intervals
+	[0, 2, 3, 5, 6, 8, 10, 11], # Major Polymode Intervals
+	[0, 1, 3, 5, 7, 9, 11], # Neapolitan Intervals  
+	[0, 1, 4, 5, 7, 8, 11], # Arabic Intervals  
+	[0, 2, 3, 5, 7, 9, 10], # Dorian Intervals  
+	[0, 1, 3, 5, 7, 8, 10], # Phrygian Intervals  
+	[0, 1, 4, 5, 7, 8, 10], # Phrygian Dominant Intervals  
+	[0, 2, 4, 6, 7, 9, 11], # Lydian Intervals
+	[0, 2, 4, 5, 7, 9, 10], # Mixolydian Intervals  
+	[0, 1, 3, 5, 6, 8, 10], # Locrian Intervals
+	[0, 1, 3, 4, 6, 8, 10], # Locrian Super Intervals
+	[0, 3, 5, 6, 7, 10], # Blues Intervals
+	[0, 2, 3, 4, 5, 6, 7, 9, 10], # Blues Nonatonic Intervals
+	[0, 2, 4, 5, 7, 9, 10, 11], # Bebop Dominant Intervals
+	[0, 2, 3, 5, 6, 8, 9, 11], # Diminished Intervals
+	[0, 2, 3, 5, 7, 8, 10, 11], # Eastern Intervals
+	[0, 2, 5, 7, 10], # Egyptian Intervals
+	[0, 2, 3, 7, 8], # Hirajoshi Intervals
+	[0, 1, 5, 6, 10], # Iwato Intervals
+	[0, 1, 5, 7, 10], # Japanese Insen Intervals
+	[0, 2, 5, 7, 9, 10], # Piongio Intervals
+	[0, 2, 4, 6, 9, 10], # Prometheus Intervals
+	[0, 1, 4, 6, 8, 10, 11], # Enigmatic Intervals
+	[0, 2, 4, 6, 8, 10] # Whole Tone Intervals
+]
+
+is_there_key_marker = False
+if flp.score.markerCount > 0:
+
+	key_marker_scale_roots = []
+	key_marker_scale_helpers = []
+	markers_times = []
+	for m in range(flp.score.markerCount):
+		marker = flp.score.getMarker(m)
+		if marker.mode == 12:
+			is_there_key_marker = True
+			marker_root = flp.score.getMarker(m).scale_root
+			marker_helper = flp.score.getMarker(m).scale_helper
+			temp_helper = marker_helper.split(",")
+			intervals = [j for j in range(len(temp_helper)) if temp_helper[j] == '0']			
+			key_marker_scale_roots.append(marker_root)
+			key_marker_scale_helpers.append(intervals)			
+			markers_times.append(marker.time)
+
+	if is_there_key_marker == True:
+		notes_indexes = [[] for i in range(len(markers_times))]
+		notes_before_first_scale_marker_indexes = []
+
+		for n in range(flp.score.noteCount):
+			if flp.score.getNote(n).time < markers_times[0]:
+				notes_before_first_scale_marker_indexes.append(n)
+				continue
+			for t in markers_times:
+				if flp.score.getNote(n).time >= t:
+					x = markers_times.index(t)
+			notes_indexes[x].append(n)	
+
+# Randomizer
+def random_generator(seed):
+	x = _random.Random()
+	x.seed(seed) if seed > 0 else x.seed()
+	while True:
+		yield x.random()
+	
+def random_value(return_int, range_min, range_max):
+	random_value = next(rng) * (range_max - range_min) + range_min  # convert value to fit between min and max range
+
+	if return_int:  # convert value to integer
+		return round(random_value)
+	return random_value	
+
+def coin_flip():
+	random_value = next(rng)
+	if random_value >= 0.5: 
+		return True
+	return False 
+
+def createDialog():
+	Form = flp.ScriptDialog("Random transpose in scale v1.1","Randomly transposes notes in scale in a given min-max range.\r\n" +  
+	"\r\n" + 
+	"'Scale mode' drop down menu determines whether notes are going to be transposed in the scale selected by the 'Root note' and 'Scale' drop down menus or determined by key marker(s). In 'Key markers' mode the 'Root note' and 'Scale' drop down menus are doing nothing.\r\n" +
+	"\r\n" + 
+	"Before using the script make sure that all notes are inside the scale that has been selected. \r\n" + 
+	"\r\n" + 
+	"Seed for RNG knob = if it's set to 0 then the seed for random values is changed in each execution of the script. If it's set to a positive value then the seed is keeped. \r\n" +
+	"\r\n" +
+  	"Probability knob: defines how many notes are going to be transposed. \r\n" +
+	"\r\n" +	
+	"Transpose max and min range values are accurate for scales with seven degrees. For scales with a lower number of degrees transpose ranges are shrinked accordingly to a number of scale degrees. E.g. in pentatonic scale sixth transpose range will result in octave transpose. \r\n" + 
+	"\r\n" + 
+	"*** Script by Pierre Sosa ***")
+	Form.AddInputCombo("Scale mode", "Script selectors,Key markers", is_there_key_marker)
+	Form.AddInputKnobInt("Seed for RNG", 0, 0, seed_for_RNG_max)
+	Form.AddInputCombo("Root Note", notes_names, 0)
+	Form.AddInputCombo("Scale", scales_names, 0)	
+	Form.AddInputKnob("Probability", 50, 0, 100)	
+	Form.AddInputCombo("T. direction","Up,Down,Both",2)
+	Form.AddInputCombo("T. max range","Second,Third,Fourth,Fifth,Sixth,Seventh,Octave",6)
+	Form.AddInputCombo("T. min range","None,Second,Third,Fourth,Fifth,Sixth,Seventh,Octave",0)
+	Form.AddInputCombo("Leave","None,First,Root",0)
+	return Form
+
+def apply(Form):
+	
+	# Checks if there are notes in the score
+	if not flp.score.noteCount: 
+		flp.Utils.ShowMessage("There are no notes!")
+		return
+	
+	seed = Form.GetInputValue("Seed for RNG")
+	global rng
+	rng = random_generator(seed)	
+	
+	# Scale markers mode
+	if (scale_mode := Form.GetInputValue("Scale mode")):			
+		if not is_there_key_marker:
+			flp.Utils.ShowMessage("There are no key markers!")
+			return		
+		
+		scales_from_key_markers_extended = []
+		for marker_intervals in key_marker_scale_helpers:
+			intervals = marker_intervals.copy()
+			r = len(intervals)
+			for octave in range(1,11):
+				intervals.extend([intervals[i]+12*octave for i in range(r)])
+			scales_from_key_markers_extended.append(intervals)
+
+		for n in range(flp.score.noteCount):
+			if n in notes_before_first_scale_marker_indexes:
+				continue
+			note = flp.score.getNote(n)
+			for i, t in enumerate(markers_times):
+				if note.time >= t:
+					x = i
+			if not note.number in scales_from_key_markers_extended[x]:
+				flp.Utils.ShowMessage("At least one of the notes is outside the scale!")
+				return	
+				
+	# Scale defined in script mode
+	else: 
+		# Convert scale intervals to include shift from root note
+		root = Form.GetInputValue("Root Note")
+		scale_intervals_temp = scales_intervals[Form.GetInputValue("Scale")].copy()
+		
+		for i in range(len(scale_intervals_temp)):
+			scale_intervals_temp[i] += root
+			if scale_intervals_temp[i] > 11:
+				scale_intervals_temp[i] = scale_intervals_temp[i] - 12
+		scale_intervals_temp.sort()
+
+		# Extends intervals to 11 octaves
+		intervals = scale_intervals_temp
+		r = len(intervals)
+		for octave in range(1,11):
+			intervals.extend([intervals[i]+12*octave for i in range(r)])
+			
+		# Checks if all notes are in the scale
+		for n in range(flp.score.noteCount):
+			if intervals.count(flp.score.getNote(n).number) == 0:
+				flp.Utils.ShowMessage("At least one of the notes is outside the scale!")
+				return				
+
+	# To not change the seed while tweaking leave control
+	global first_run	
+	global leave
+
+	if first_run == True:
+		leave = Form.GetInputValue("Leave")
+		first_run = False
+	
+	global first_note_rand_num
+	global randomized_notes_numbers
+	
+	if leave != Form.GetInputValue("Leave"):
+		leave = Form.GetInputValue("Leave")
+		for n in range(flp.score.noteCount):
+			flp.score.getNote(n).number = randomized_notes_numbers[n]
+			if leave and scale_mode:
+				for t in markers_times:
+					if flp.score.getNote(n).time >= t:
+						x = markers_times.index(t)
+				if leave == 1 and n == notes_indexes[x][0]:
+					flp.score.getNote(n).number = org_notes_numbers[n]
+				elif leave == 2 and (org_notes_numbers[n] - key_marker_scale_roots[x]) % 12 == 0:
+					flp.score.getNote(n).number = org_notes_numbers[n]
+			elif leave and not scale_mode:
+				if leave == 1 and n == 0:
+					flp.score.getNote(n).number = org_notes_numbers[n]
+				elif leave == 2 and (org_notes_numbers[n] - root) % 12 == 0:
+					flp.score.getNote(n).number = org_notes_numbers[n]
+		return
+	
+	# Create a list of notes indexes with a random order
+	def randomize_notes():
+		notes = [note for note in range(flp.score.noteCount)]
+		for i in range(len(notes)):
+			max = len(notes)-1
+			random_int = random_value(True, 0, max) # Finds random index from the list of notes indexes
+			notes_to_alter.append(notes[random_int]) # Add random note index to the list
+			notes.pop(random_int) # Removes note index from the list of notes indexes	 
+	
+	notes_to_alter = []	
+	randomize_notes()		
+
+	if Form.GetInputValue("T. max range") + 1 < Form.GetInputValue("T. min range"):
+		flp.Utils.ShowMessage("Transpose minimum range can't be lower than transpose maximum range!")
+		return			
+	
+	transpose_max_range = Form.GetInputValue("T. max range") + 1
+	transpose_min_range = Form.GetInputValue("T. min range")
+	transpose_mode = Form.GetInputValue("T. direction")
+	leave = Form.GetInputValue("Leave")
+	probability = Form.GetInputValue("Probability") / 100
+
+
+	for i in range(round(len(notes_to_alter) * probability)):
+		if transpose_mode == 0:
+			transpose = random_value(True, transpose_min_range, transpose_max_range)
+		elif transpose_mode == 1:
+			transpose = random_value(True, - transpose_max_range, - transpose_min_range)
+		else: 
+			if coin_flip() == True:
+				transpose = random_value(True, transpose_min_range, transpose_max_range)
+			else: transpose = random_value(True, - transpose_max_range, - transpose_min_range)
+			
+		n = notes_to_alter[i]
+		
+		if scale_mode: # key markers mode
+			if n in notes_before_first_scale_marker_indexes:
+				continue
+
+			for t in markers_times:
+				if flp.score.getNote(n).time >= t:
+					x = markers_times.index(t)
+			if leave == 1 and n == notes_indexes[x][0]:
+				continue
+			if leave == 2 and (flp.score.getNote(n).number - key_marker_scale_roots[x]) % 12 == 0:
+				continue
+			i = scales_from_key_markers_extended[x].index(flp.score.getNote(n).number)
+			flp.score.getNote(n).number = scales_from_key_markers_extended[x][i + transpose]
+		else:
+			if leave == 1 and n == 0:
+				continue		
+			if leave == 2 and (flp.score.getNote(n).number - root) % 12 == 0:
+				continue		
+			i = intervals.index(flp.score.getNote(n).number)
+			flp.score.getNote(n).number = intervals[i + transpose]
+
+	randomized_notes_numbers = []
+	for n in range(flp.score.noteCount):
+		randomized_notes_numbers.append(flp.score.getNote(n).number)
+	

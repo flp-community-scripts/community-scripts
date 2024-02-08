@@ -1,0 +1,139 @@
+"""flp
+Title: Randomize Melody v1.1
+Author: Pierre Sosa
+Category: Archive
+Version: v1.1
+
+Description: 
+This script allows you to randomize the keys of existing notes in the piano roll. It has a "w/o repetition" mode that preserves the rhythm by keeping the notes' length order. The latest version (v1.1) includes a "Seed for RNG" knob.
+
+Changelog:
+2023-08-09 (Randomize melody v1.1) - added "Seed for RNG" knob
+"""
+import flpianoroll as flp
+import _random
+
+org_notes_numbers = []
+for n in range(flp.score.noteCount):
+	org_notes_numbers.append(flp.score.getNote(n).number)
+
+seed_for_RNG_max = 999
+leave_flag = 0
+first_run = True
+randomized_notes_numbers = []
+
+# Randomizer
+def random_generator(seed):
+	x = _random.Random()
+	x.seed(seed) if seed > 0 else x.seed()
+	while True:
+		yield x.random()
+	
+def random_value(return_int, range_min, range_max):
+	random_value = next(rng) * (range_max - range_min) + range_min  # convert value to fit between min and max range
+
+	if return_int:  # convert value to integer
+		return round(random_value)
+	return random_value	
+
+def createDialog():
+	Form = flp.ScriptDialog("Randomize melody v1.1","Randomizes notes keys on the basis of existing notes. \r\n" + 
+	"\r\n" +
+	"Mode:\r\n" + 
+	"-w/ repetition: old (existing) keys can be used multiple times as a new key.\r\n" + 
+	"-w/o repetition: each old (existing) key will be used exactly one time as a new key.\r\n" + 
+	"\r\n" +
+	"Random keys (for use when 'Probability knob' is set to less than 100%, so only some (random) notes are going to be altered):\r\n" + 
+	"-from all: new keys for altered notes can be taken from any note, even those which are not going to be altered.\r\n" + 
+	"-from random: new keys for altered notes can be taken only from those altered notes.\r\n" +
+	"\r\n" +
+	"Seed for RNG knob = if it's set to 0 then the seed for random values is changed in each execution of the script. If it's set to a positive value then the seed is keeped. \r\n" +
+	"\r\n" +
+  	"Probability knob: defines how many notes are going to be altered. \r\n" +
+	"\r\n" +		
+	"*** Script by Pierre Sosa ***")
+	Form.AddInputKnobInt("Seed for RNG", 0, 0, seed_for_RNG_max)
+	Form.AddInputKnob('Probability (%)', 100, 0, 100)
+	Form.AddInputCombo("Mode", "w/ repetition,w/o repetition", 1)
+	Form.AddInputCombo("Random keys","from all,from random",1)
+	Form.AddInputCombo("Leave","None,First",0)
+	return Form
+
+def apply(Form):
+	
+	# Checks if there are notes in the score
+	if flp.score.noteCount == 0: 
+		flp.Utils.ShowMessage("There are no notes!")
+		return
+		
+	seed = Form.GetInputValue("Seed for RNG")
+	global rng
+	rng = random_generator(seed)		
+		
+	global first_run	
+	global leave_flag
+
+	if first_run == True:
+		leave_flag = Form.GetInputValue("Leave")
+		first_run = False
+	
+	global first_note_rand_num
+	global randomized_notes_numbers
+
+	if leave_flag != Form.GetInputValue("Leave"):
+		leave_flag = Form.GetInputValue("Leave")
+		for n in range(flp.score.noteCount):
+			flp.score.getNote(n).number = randomized_notes_numbers[n]
+		if leave_flag:
+			flp.score.getNote(0).number = org_notes_numbers[0]
+		return
+	
+	# Create a list of notes indexes with a random order
+	def randomize_notes():
+		notes = [note for note in range(flp.score.noteCount)]
+		for i in range(len(notes)):
+			max = len(notes)-1
+			random_int = random_value(True, 0, max) # Finds random index from the list of notes indexes
+			notes_to_alter.append(notes[random_int]) # Add random note index to the list
+			notes.pop(random_int) # Removes note index from the list of notes indexes	 
+	
+	notes_to_alter = []	
+	randomize_notes()				
+	probability = Form.GetInputValue("Probability (%)") / 100
+
+	all_notes_numbers = []
+	for n in range(flp.score.noteCount):
+		all_notes_numbers.append(flp.score.getNote(n).number)
+
+	rand_notes_numbers = []
+	for i in range(round(len(notes_to_alter) * probability)):
+		n = notes_to_alter[i]
+		rand_notes_numbers.append(flp.score.getNote(n).number)
+
+	all_notes_numbers_c = all_notes_numbers.copy()
+	rand_notes_numbers_c = rand_notes_numbers.copy()
+	mode = Form.GetInputValue("Mode")
+	random_keys = Form.GetInputValue("Random keys")
+
+	for i in range(len(rand_notes_numbers)):
+		n = notes_to_alter[i]
+		if mode == 0 and random_keys == 0: # w/ repetition, from all
+			flp.score.getNote(n).number = all_notes_numbers[random_value(True, 0, len(all_notes_numbers)-1)]
+		elif mode == 0 and random_keys == 1: # w/ repetition, from random
+			flp.score.getNote(n).number = rand_notes_numbers[random_value(True, 0, len(rand_notes_numbers)-1)]
+		elif mode == 1 and random_keys == 0: # w/o repetition, from all
+			rand = random_value(True, 0, len(all_notes_numbers_c)-1)
+			flp.score.getNote(n).number = all_notes_numbers_c[rand] 
+			all_notes_numbers_c.pop(rand)
+		else: # w/o repetition, from random
+			rand = random_value(True, 0, len(rand_notes_numbers_c)-1)
+			flp.score.getNote(n).number = rand_notes_numbers_c[rand] 
+			rand_notes_numbers_c.pop(rand)
+	
+
+	randomized_notes_numbers = []
+	for n in range(flp.score.noteCount):
+		randomized_notes_numbers.append(flp.score.getNote(n).number)
+	
+	if leave_flag:
+		flp.score.getNote(0).number	= org_notes_numbers[0]			

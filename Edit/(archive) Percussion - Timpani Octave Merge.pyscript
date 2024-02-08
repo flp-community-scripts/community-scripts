@@ -1,0 +1,196 @@
+"""flp
+Title: Percussion - Timpani Octave Merge
+Author: Blaeh
+Category: Edit
+Version: (n/a)
+
+Description: 
+This script automates the process of merging extra right or left hand samples above the regular Timpani register with the regular range for MIDI export. It resolves conflicts on C4 (C5 in FLS) by allowing users to select from "Merge" or "Leave" options. Notes above or below the register can be set to MIDI channel 10 or moved to A#1. The script is a combination of stolen parts from other users' scripts and the "Remove overlaps" code from Iboibo.
+
+Changelog:
+no changelog
+"""
+# A terribly amateurish script by Blae to prepare MIDI notation for importing into Sibelius: Timpani L&R Hand Octave Merge for proper import in Sibelius
+#
+# Using the "Remove overlaps and duplication" script by Iboibo to fix overlaps and duplicates,
+# a part of the code from "Selection scripts" by MuuSer to select notes above and below the timpani register, and then
+# a variation on the "Move all notes to C5" tool by djxfade to move and set to MIDI channel 10 those selected out of register notes.
+
+from flpianoroll import *
+def MergConflict():
+    for i in range(score.noteCount):
+        if score.getNote(i).number == 60:
+            score.getNote(i).number = 36
+
+def MoveOOR():
+    for i in range(score.noteCount):
+        if score.getNote(i).number > 84:
+                score.getNote(i).number = 34
+                score.getNote(i).color = 9
+        if score.getNote(i).number <= 35:
+            score.getNote(i).number = 34
+            score.getNote(i).color = 9
+
+def TimpaniComp():
+
+    for i in range(score.noteCount) :
+        if score.getNote(i).number == 84:
+            score.getNote(i).number = 60
+
+        if score.getNote(i).number == 83:
+            score.getNote(i).number = 59
+
+        if score.getNote(i).number == 82:
+            score.getNote(i).number = 58
+
+        if score.getNote(i).number == 81:
+            score.getNote(i).number = 57
+
+        if score.getNote(i).number == 80:
+            score.getNote(i).number = 56
+
+        if score.getNote(i).number == 79:
+            score.getNote(i).number = 55
+
+        if score.getNote(i).number == 78:
+            score.getNote(i).number = 54
+
+        if score.getNote(i).number == 77:
+            score.getNote(i).number = 53
+
+        if score.getNote(i).number == 76:
+            score.getNote(i).number = 52
+
+        if score.getNote(i).number == 75:
+            score.getNote(i).number = 51
+
+        if score.getNote(i).number == 74:
+            score.getNote(i).number = 50
+
+        if score.getNote(i).number == 73:
+            score.getNote(i).number = 49
+
+        if score.getNote(i).number == 72:
+            score.getNote(i).number = 48
+
+        if score.getNote(i).number == 71:
+            score.getNote(i).number = 47
+
+        if score.getNote(i).number == 70:
+            score.getNote(i).number = 46
+
+        if score.getNote(i).number == 69:
+            score.getNote(i).number = 45
+
+        if score.getNote(i).number == 68:
+            score.getNote(i).number = 44
+
+        if score.getNote(i).number == 67:
+            score.getNote(i).number = 43
+
+        if score.getNote(i).number == 66:
+            score.getNote(i).number = 42
+
+        if score.getNote(i).number == 65:
+            score.getNote(i).number = 41
+
+        if score.getNote(i).number == 64:
+            score.getNote(i).number = 40
+
+        if score.getNote(i).number == 63:
+            score.getNote(i).number = 39
+
+        if score.getNote(i).number == 62:
+            score.getNote(i).number = 38
+
+        if score.getNote(i).number == 61:
+            score.getNote(i).number = 37
+
+        
+        if score.getNote(i).number > 84:
+            score.getNote(i).color = 9
+
+        if score.getNote(i).number <= 35:
+            score.getNote(i).color = 9
+
+label = 'Note end time option'
+label2 = 'LH/RH conflict'
+label3 = 'Out of range notes'
+
+def createDialog():
+    form = ScriptDialog('Remove Overlaps and fix LH/RH conflict', '''
+        When a note A "covers" a note B of the same pitch (i.e. note A begins before note B and ends after note B), you can choose whether the end time of B will be A's or B's.
+        If you choose "Max", it will be the end time of A. And if you select "Leave", it will be the end time of B.
+        Whichever you choose, if the notes start at the same time, the longer ones will remain and the shorter ones will be deleted.
+        
+        LH/RH conflicts: C4 can (depending on sample library) be either right hand for C2, or its own pitch. Select if you want to merge notes from C4 on C2, or leave notes on C4.
+
+        Notes that are out of the timpani register can either be set to MIDI channel 10 and left at their position or set to MIDI channel 10 and moved to A#1.
+    '''.replace('        ', '  '))
+    form.AddInputCombo(label, ['Max','Leave'], 0)
+    form.AddInputCombo(label2, ['Merge','Leave'], 0)
+    form.AddInputCombo(label3, ['MIDI Ch.10','A#1 and MIDI Ch.10'], 0)
+    return form
+
+
+
+def apply(form):
+    
+    TimpaniComp()
+    if form.GetInputValue(label2) == 0:
+        MergConflict()
+    if form.GetInputValue(label3) == 1:
+        MoveOOR()
+
+    noteListByNumber = {}
+
+    class Note1:
+        def __init__(self, start, end, idx):
+            self.start = start
+            self.end = end
+            self.idx = idx
+
+    length = []
+
+    
+    for i in range(score.noteCount):
+        note = score.getNote(i)
+        length.append(note.length)
+        note1 = Note1(note.time,
+                      note.time + note.length,
+                      i)
+        if note.number in noteListByNumber:
+            noteListByNumber[note.number].append(note1)
+        else:
+            noteListByNumber[note.number] = [note1]
+
+
+    for n in noteListByNumber.values():
+        n.sort(key=lambda x: x.start)
+        def setLength(i): length[n[i].idx] = n[i].end - n[i].start
+        for i in range(len(n)-1):
+            if n[i].end <= n[i+1].start:
+                continue
+            elif n[i].start == n[i+1].start:
+                length[n[i].idx] = -1
+                n[i+1].end = max(n[i].end, n[i+1].end)
+                setLength(i+1)
+            else:
+                if form.GetInputValue(label) == 0: # max
+                    n[i+1].end = max(n[i].end, n[i+1].end)
+                    setLength(i+1)
+                n[i].end = n[i+1].start
+                setLength(i)
+
+    notes = []
+    for i in range(score.noteCount):
+        if length[i] == -1: continue
+        notes.append(score.getNote(i))
+        notes[-1].length = length[i]
+
+    score.clearNotes("True")
+    for note in notes:
+        score.addNote(note)
+
+
+    return
