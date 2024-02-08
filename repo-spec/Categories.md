@@ -10,4 +10,5 @@ Total list of categories (not in alpha order):
 - Generative (rhythm)
 - Generative (creative)
 - Utility
+- Select
 - Packages? (Conditional, based on what solution we pick)
