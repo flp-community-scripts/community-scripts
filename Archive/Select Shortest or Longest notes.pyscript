@@ -1,0 +1,83 @@
+"""flp
+Title: Select Shortest or Longest notes
+Author: Pierre Sosa
+Category: Archive
+Version: (n/a)
+
+Description: 
+This script allows you to select the shortest or longest notes in the piano roll. It provides advanced selection options and is based on an idea by donkeytugger.
+
+Changelog:
+no changelog
+"""
+import flpianoroll as flp
+
+beat = flp.score.PPQ # PPQ equals how many ticks there are in a beat
+
+length_list = []
+	
+if flp.score.noteCount > 0:
+
+	for note in range(flp.score.noteCount): 
+		flp.score.getNote(note).selected = False  
+		if length_list.count(flp.score.getNote(note).length) == 0:
+			length_list.append(flp.score.getNote(note).length)
+			
+	length_list.sort()	
+	reversed_length_list = length_list.copy()
+	reversed_length_list.reverse()
+
+else: length_list = [0,1]
+		
+def createDialog():
+	Form = flp.ScriptDialog("Select shortest or longest notes", "'Margin' knob: active in 'Shortest', 'Longest', and 'From both sides' modes. \r\n" +
+	"'X' and 'X unit' knobs: active in 'Shorter than X' and 'Longer than X' modes. \r\n" +
+	"*** Script by Pierre Sosa ***")
+	Form.AddInputCombo("Mode","Shortest,Longest,From both Sides,Shorter than X,Longer than X",0)
+	Form.AddInputKnobInt("Margin", 0, 0, len(length_list)-1)
+	Form.AddInputKnobInt("X", 1, 1, length_list[len(length_list)-1])
+	Form.AddInputCombo("X unit","Tick,1/4 Step,Step,Beat,Bar",2)
+	return Form
+
+def apply(Form):
+
+	if flp.score.noteCount == 0:
+		flp.Utils.ShowMessage("There is no notes!")
+		return	
+	
+	margin = Form.GetInputValue("Margin")
+	
+	if Form.GetInputValue("X unit") == 0:
+		unit = 1
+	elif Form.GetInputValue("X unit") == 1:
+		unit = beat / 16
+	elif Form.GetInputValue("X unit") == 2:
+		unit = beat / 4
+	elif Form.GetInputValue("X unit") == 3:
+		unit = beat
+	else: unit = beat * 4
+
+	x = Form.GetInputValue("X") * unit
+	
+	if Form.GetInputValue("Mode") == 0:
+		for n in range(flp.score.noteCount):
+			if flp.score.getNote(n).length <= length_list[margin]: 
+				flp.score.getNote(n).selected = True 
+	elif Form.GetInputValue("Mode") == 1:
+		for n in range(flp.score.noteCount):			
+			if flp.score.getNote(n).length >= reversed_length_list[margin]:
+				flp.score.getNote(n).selected = True    		
+	elif Form.GetInputValue("Mode") == 2:
+		for n in range(flp.score.noteCount):			
+			if flp.score.getNote(n).length <= length_list[margin]: 
+				flp.score.getNote(n).selected = True  
+			if flp.score.getNote(n).length >= reversed_length_list[margin]: 
+				flp.score.getNote(n).selected = True 				
+	elif Form.GetInputValue("Mode") == 3:
+		for n in range(flp.score.noteCount):
+			if flp.score.getNote(n).length < x: 
+				flp.score.getNote(n).selected = True 
+	else:
+		for n in range(flp.score.noteCount):			
+			if flp.score.getNote(n).length > x:
+				flp.score.getNote(n).selected = True 				

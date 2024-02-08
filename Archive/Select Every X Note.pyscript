@@ -1,0 +1,67 @@
+"""flp
+Title: Select Every X Note
+Author: Pierre Sosa
+Category: Archive
+Version: (n/a)
+
+Description: 
+This script allows you to select every X note in the piano roll. It provides options to select all notes horizontally, horizontally for each key separately, and vertically.
+
+Changelog:
+no changelog
+"""
+import flpianoroll as flp
+
+def createDialog():
+    Form = flp.ScriptDialog("Select Every X Note", "Selects every X note. Use count start offset if needed.\r\n" +
+	"Count in modes: \r\n" +
+	"Horizontally all: all notes are counted from the left. \r\n" +
+	"Horizontally each key separately: notes are counted from the left, but notes in each key (e.g. C5) are counted separately. \r\n" +
+	"Vertically all: all notes are counted from the bottom. \r\n" +
+	"*** Script by Pierre Sosa ***")
+    Form.AddInputKnobInt('X', 2, 1, flp.score.noteCount)
+    Form.AddInputKnobInt('Count start offset', 0, 0, flp.score.noteCount)
+    Form.AddInputCombo("Count in", "Horizontally all,Hor. each key separately,Vertically",0)
+    return Form
+
+def apply(Form):
+ 
+	notes_keys = [] 
+	notes_indexes_in_each_key = {}
+	for n in range(flp.score.noteCount):
+		if Form.GetInputValue("Count in") == 1:		
+			if notes_indexes_in_each_key.get(flp.score.getNote(n).number) == None:
+				notes_indexes_in_each_key[flp.score.getNote(n).number] = []
+			notes_indexes_in_each_key[flp.score.getNote(n).number].append(n)
+		elif Form.GetInputValue("Count in") == 2:
+			notes_keys.append(flp.score.getNote(n).number)
+		flp.score.getNote(n).selected = False
+
+	if Form.GetInputValue("Count in") == 0: # Horizontally all
+		for n in range(Form.GetInputValue("Count start offset"), flp.score.noteCount):    
+			if (n - Form.GetInputValue("Count start offset")) % Form.GetInputValue("X") == 0:
+				flp.score.getNote(n).selected = True  
+	elif Form.GetInputValue("Count in") == 1: # Horizontally for each key separately
+		for key in notes_indexes_in_each_key:
+			for n in range(Form.GetInputValue("Count start offset"), len(notes_indexes_in_each_key[key])):  
+				if (n - Form.GetInputValue("Count start offset")) % Form.GetInputValue("X") == 0:
+					flp.score.getNote(notes_indexes_in_each_key[key][n]).selected = True  
+	else: # Vertically
+		notes_keys_copy = notes_keys.copy()
+		notes_keys_copy.sort()
+		for n in range(Form.GetInputValue("Count start offset"), len(notes_keys_copy)):
+			if (n - Form.GetInputValue("Count start offset")) % Form.GetInputValue("X") == 0:
+				key_of_n_note = notes_keys_copy[n]
+
+				if n - notes_keys_copy.index(key_of_n_note) != 0: # If notes are repeating in the same key
+					for i in range(n - notes_keys_copy.index(key_of_n_note)):
+						notes_keys[notes_keys.index(key_of_n_note)] = "counted"
+						notes_keys_copy[notes_keys_copy.index(key_of_n_note)] = "counted"
+				index_of_note_to_select = notes_keys.index(key_of_n_note)
+				flp.score.getNote(index_of_note_to_select).selected = True  	
+				notes_keys[index_of_note_to_select] = "counted"
+				notes_keys_copy[notes_keys_copy.index(key_of_n_note)] = "counted"
+
+
+
+

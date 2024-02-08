@@ -1,0 +1,941 @@
+"""flp
+Title: AutoHarmonizer v0.2
+Author: tfguss
+Category: Archive
+Version: v0.2
+
+Description: 
+This script automatically generates possible harmonies and countermelodies for selected notes within a given range. It ranks the harmonies based on various criteria such as eliminating parallel fifths and octaves, prioritizing imperfect consonances on weak beats, favoring contrary motion, and discouraging jumps. It then generates the harmony line with the highest score. The script also includes new "modes" for creating basic rhythmic harmonic lines and a feature that tracks note salience. The author is currently working on contextual/harmonic analysis to improve the tool's ability to find the right notes and generate chords automatically. Feedback and suggestions are welcome.
+
+Changelog:
+2021-XX-XX (v0.2) - Added new "modes" for creating basic rhythmic harmonic lines underneath a melody (quarter notes, half notes, a basic rave bassline). - Added a feature that keeps track of note "salience" or how prominent a note is in a melody, improving the backend and helping it find better notes. no changelog
+"""
+#                                .-'''-.                                                       .-'''-.                                                          
+#                               '   _    \                                                    '   _    \                                                        
+#                             /   /` '.   \    .                            __  __   ___    /   /` '.   \    _..._   .--.                __.....__              
+#                            .   |     \  '  .'|                           |  |/  `.'   `. .   |     \  '  .'     '. |__|            .-''         '.            
+#                         .| |   '      |  '<  |                   .-,.--. |   .-.  .-.   '|   '      |  '.   .-.   ..--.           /     .-''"'-.  `. .-,.--.  
+#    __                 .' |_\    \     / /  | |             __    |  .-. ||  |  |  |  |  |\    \     / / |  '   '  ||  |          /     /________\   \|  .-. | 
+# .:--.'.     _    _  .'     |`.   ` ..' /   | | .'''-.   .:--.'.  | |  | ||  |  |  |  |  | `.   ` ..' /  |  |   |  ||  |.--------.|                  || |  | | 
+#/ |   \ |   | '  / |'--.  .-'   '-...-'`    | |/.'''. \ / |   \ | | |  | ||  |  |  |  |  |    '-...-'`   |  |   |  ||  ||____    |\    .-------------'| |  | | 
+#`" __ | |  .' | .' |   |  |                 |  /    | | `" __ | | | |  '- |  |  |  |  |  |               |  |   |  ||  |    /   /  \    '-.____...---.| |  '-  
+# .'.''| |  /  | /  |   |  |                 | |     | |  .'.''| | | |     |__|  |__|  |__|               |  |   |  ||__|  .'   /    `.             .' | |      
+#/ /   | |_|   `'.  |   |  '.'               | |     | | / /   | |_| |                                    |  |   |  |     /    /___    `''-...... -'   | |      
+#\ \._,\ '/'   .'|  '/  |   /                | '.    | '.\ \._,\ '/|_|                                    |  |   |  |    |         |                   |_|      
+# `--'  `"  `-'  `--'   `'-'                 '---'   '---'`--'  `"                                        '--'   '--'    |_________|                           
+# Author: Thomas Guss
+# CHANGES v0.2: 
+# Started calculating a total "salience" score to track how important notes are in the melody, based on melodic contour and metric accents.
+# added several "modes" generating rhythmic harmonies.  The salience mode reveals what notes in a melody the tool finds salient (needs work!)
+# 
+# COMING NEXT: Contextual Analysis!
+# 1. Adding vertical and horizontal harmonic accents to the salience score, improving salience calculations.
+# 2. Guessing chords from melody- BIG feature to add.  Looks scary.
+# 3. Auto-generating guessed chords underneath melody.
+# 4. Improving countermelody notes based on salience and guessed chords
+# 5. Multi-voice harmonies!
+
+import flpianoroll as flp
+import math
+
+def create_scale_intervals():
+    """
+    Create a list of common scale intervals including Major, Minor, and their modal variations.
+    
+    Returns:
+        scales_intervals: A list of lists where each inner list contains the intervals of a scale.
+    """
+    
+    # Predefined intervals for Major, Minor, Minor Harmonic, and Minor Melodic scales
+    scales_intervals = [
+        [0, 2, 4, 5, 7, 9, 11],  # Major Intervals
+        [0, 2, 3, 5, 7, 8, 10],  # Minor Intervals  
+        [0, 2, 3, 5, 7, 8, 11],  # Minor Harmonic Intervals  
+        [0, 2, 3, 5, 7, 9, 11]   # Minor Melodic Intervals  
+    ]
+    
+    # Modes shift defines the relative shift for generating modes like Dorian, Phrygian, etc., based on Major scale
+    modes_shift = (2, 4, 5, 7, 11)  # Dorian, Phrygian, Lydian, Mixolydian, Locrian shifts from Major Intervals
+    
+    # Calculate the modal scales based on the Major scale
+    for mode in modes_shift:
+        mode_scale = []
+        for i in scales_intervals[0]:
+            i -= mode if i - mode >= 0 else (mode - 12)
+            mode_scale.append(i)
+            mode_scale.sort()
+        scales_intervals.append(mode_scale)
+    
+    return scales_intervals
+
+# Create the scales_intervals variable to be used in other functions
+scales_intervals = create_scale_intervals()
+
+def calculate_scale_notes(scale_intervals, root_midi):
+    """
+    Calculate scale notes and actual intervals for the selected scale and root note.
+    
+    Args:
+        scale_intervals: List of intervals defining the scale.
+        root_midi: The MIDI note number for the root note of the scale.
+        
+    Returns:
+        actual_scale_intervals: The actual scale intervals based on the root note.
+        scale_notes_between: A list of MIDI note numbers that fall within the scale.
+    """
+    
+    # Calculate the actual scale intervals based on the root note
+    actual_scale_intervals = [(root_midi + interval) % 12 for interval in scale_intervals]
+    
+    # Generate all MIDI notes in the given scale across the 0-127 MIDI note range
+    scale_notes_between = []
+    for i in range(128):  # MIDI note range
+        if i % 12 in actual_scale_intervals:
+            scale_notes_between.append(i)
+            
+    return actual_scale_intervals, scale_notes_between
+
+def find_closest_scale_note(note_number, scale_notes):
+    """
+    Find closest valid note in the scale for a given MIDI note number.
+    
+    Args:
+        note_number: The MIDI note number for which to find the closest scale note.
+        scale_notes: List of MIDI note numbers in the scale.
+        
+    Returns:
+        closest_scale_note: The closest note in the scale to the given MIDI note number.
+    """
+    return min(scale_notes, key=lambda x: abs(x - note_number))
+
+def get_consonance_score(note1, note2):
+    """
+    Score the consonance of an interval based on research for the subjective consonance of intervals.
+    
+    Args:
+        note1, note2 (MIDI notes)
+        
+    Returns:
+        score: Score of the interval's consonance
+    """
+    interval = abs(note2 - note1) % 12  # We take modulo 12 to get it into a single octave range
+    
+    # Map intervals to their corresponding consonance scores
+    consonance_scores = {
+        0: 1375,  # Perfect Octave (and its multiples)
+        7: 735,   # Perfect Fifth
+        5: 595,   # Perfect Fourth
+        9: 499,   # Major Sixth
+        4: 498,   # Major Third
+        3: 132,   # Minor Third
+        8: 106,   # Minor Sixth
+        2: 77,    # Major Second
+        11: 62,   # Major Seventh
+        10: 55,   # Minor Seventh
+        1: 38,    # Minor Second
+        6: 10     # Tritone
+    }
+    
+    # Get the consonance score of the interval
+    score = consonance_scores.get(interval, 0)  # If the interval is not in the map, return 0
+    
+    return score
+
+
+
+class BeatAnalysis:
+    def __init__(self):
+        self.PPQ = flp.score.PPQ
+        self.notesCnt = flp.score.noteCount
+        self.notes = sorted([flp.score.getNote(i) for i in range(self.notesCnt)], key=lambda x: x.time)
+        self.M = 2.0
+        self.S = 1.65
+        self.k = 1.0
+        self.notes = sorted([flp.score.getNote(i) for i in range(self.notesCnt)], key=lambda x: x.time)
+        self.prev_note_lengths = []
+        self.phrases = []  # List to hold phrases, each phrase is a list of notes
+        self.M = 2.0  # Mean of Gaussian function
+        self.S = 1.65  # Standard deviation of Gaussian function
+        self.k = 1.0  # Constant salience value
+
+    
+    def calculate_running_mean(self, index):
+        last_10_notes = self.notes[max(0, index-9):index+1]
+        length = len(last_10_notes)
+        return sum(note.number for note in last_10_notes) / length if length else 0
+    
+
+    def calculate_CS1(self, pitch_diff):
+        return pitch_diff if pitch_diff > 0 else 0.7 * pitch_diff
+
+    def calculate_CS2(self, prev_interval):
+        return prev_interval if prev_interval > 0 else 0.2 * prev_interval
+    
+    def snap_to_grid(self, note_time):
+        # Snap to the nearest 1/32 note
+        snap_value = self.PPQ // 32
+        return round(note_time / snap_value) * snap_value
+
+    def calculate_salience(self, pulse_period):
+        # Calculate the salience using the Gaussian function
+        exponent = -0.5 * ((math.log(pulse_period) - math.log(self.M)) / math.log(self.S)) ** 2
+        salience = self.k * math.exp(exponent)
+        return salience   
+
+    def calculate_p_accents(self):
+        """
+        This function calculates and returns the salience values of melodic/pitch accents for each note in the piano roll.
+        It should be used to analyze notes in the context of their melodic significance.
+
+        Returns:
+        - A list of dictionaries, where each dictionary represents a note and its calculated salience value.
+          Each dictionary has the format {'note': NoteObject, 'salience': float}.
+        """
+        if self.notesCnt == 0:
+            return "No notes in the piano roll."
+        
+        N = 2.5  # normalization factor
+        saliences = []
+
+        # Start from 0 to include the first note
+        for i in range(len(self.notes)):
+            if i == 0:  # Special case for the first note
+                saliences.append(0)
+                continue
+
+            mean_pitch = self.calculate_running_mean(i)
+            I1 = self.notes[i].number - mean_pitch
+            I2 = self.notes[i].number - self.notes[i-1].number
+
+            CS1 = self.calculate_CS1(I1)
+            CS2 = self.calculate_CS2(I2)
+
+            under_root = CS1 * CS2 / N  # Value under the square root
+
+            # Check for math domain error
+            if under_root >= 0:
+                CS = math.sqrt(under_root)
+                if CS > 5:  # saturation rule
+                    CS = 5
+            else:
+                CS = 0  # Default value for negative under_root
+
+            saliences.append(CS)
+
+        return saliences
+
+    
+    def calculate_m_accents(self):
+        """
+        This function calculates and returns the salience values of metrical accents for each note in the piano roll.
+        It should be used to analyze notes in the context of their metrical significance.
+
+        Returns:
+        - A list of dictionaries, where each dictionary represents a note and its calculated salience value.
+          Each dictionary has the format {'note': NoteObject, 'salience': float}.
+        """
+        if self.notesCnt == 0:
+            return "No notes in the piano roll."
+        
+        levels = {
+            0: self.PPQ // 2,
+            1: self.PPQ,
+            2: self.PPQ * 2,
+            3: self.PPQ * 4
+        }
+
+        tolerance_ticks = self.PPQ // 32
+        salience_list = []
+
+        for note in self.notes:
+            note_time = self.snap_to_grid(note.time)
+            saliences = [
+                self.calculate_salience(period / self.PPQ) 
+                for level, period in levels.items() 
+                if abs(note_time % period) <= tolerance_ticks
+            ]
+            total_salience = sum(saliences)
+            salience_list.append({'note': note, 'salience': total_salience})
+
+        return salience_list
+
+    def analyze_phrases(self):
+        # Initialize list to hold phrases
+        self.phrases = []
+
+        # Fetch the notes and sort them by their time attribute
+        notes = [flp.score.getNote(i) for i in range(self.notesCnt)]
+        notes = sorted(notes, key=lambda x: x.time)
+
+        current_phrase = []
+        prev_note = None
+
+        i = 0
+        while i < len(notes):
+            note = notes[i]
+
+            # Initialize if it's the first note
+            if prev_note is None:
+                current_phrase.append(note)
+            else:
+                # Rule 1: Equal note lengths maintain the current rhythmic pattern
+                if note.length == prev_note.length:
+                    current_phrase.append(note)
+                # Rule 2: Increase in note duration indicates a new phrase
+                elif note.length > prev_note.length:
+                    # Exception 1a and 1b
+                    if i + 1 < len(notes):
+                        next_next_note = notes[i + 1]
+
+                        # Extend the phrase to the next note
+                        if next_next_note.length >= note.length:
+                            current_phrase.append(note)
+                            # Exception 1a: End the phrase if the next note has the same length
+                            if next_next_note.length == note.length:
+                                current_phrase.append(next_next_note)
+                                self.phrases.append(current_phrase)
+                                current_phrase = []
+                            # Otherwise, just add the note to the current phrase and continue
+                            else:
+                                current_phrase.append(next_next_note)
+
+                            # Skip the next_next_note in the next loop iteration
+                            i += 1
+                        else:
+                            # End the current phrase and start a new one
+                            current_phrase.append(note)
+                            self.phrases.append(current_phrase)
+                            current_phrase = []
+                    else:
+                        # If it's the last note, add it to the current phrase
+                        current_phrase.append(note)
+                        self.phrases.append(current_phrase)
+                        current_phrase = []
+
+            prev_note = note
+            i += 1
+
+        # If there's any leftover phrase, append it
+        if current_phrase:
+            self.phrases.append(current_phrase)
+
+
+        
+    def display_phrases(self):
+        for idx, phrase in enumerate(self.phrases):
+            message = f"Phrase {idx+1}:\n"
+            for note in phrase:
+                message += f"  Note: {note.number}\n"
+            flp.Utils.ShowMessage(message)
+
+        
+
+    def calculate_v_accents(self):
+        scaled_velocities = []
+        
+        for note in self.notes:
+            # Apply the sigmoid function
+            scaled_velocity = 1 / (1 + math.exp(-20 * (note.velocity - 0.5)))
+            
+            # Normalize the scaled value to be between 0 and 2
+            scaled_velocity *= 1
+            
+            scaled_velocities.append(scaled_velocity)
+        
+        return scaled_velocities
+
+
+    def calculate_accents(self):
+        if self.notesCnt == 0:
+            return "No notes in the piano roll."
+        
+        # Get metrical accents
+        m_accent_saliences = self.calculate_m_accents()
+
+        # Get contour accents
+        c_accent_saliences = self.calculate_p_accents()
+
+        v_accent_saliences = self.calculate_v_accents()
+
+        # Combine m_accents and c_accents
+        combined_saliences = []
+
+        for i in range(len(m_accent_saliences)):
+            m_salience = m_accent_saliences[i]['salience']
+            c_salience = c_accent_saliences[i]
+            v_salience = v_accent_saliences[i]
+
+            # Combine them in a simple sum
+            combined_salience = ((m_salience+1)*1) + ((c_salience+1) * 1 )
+            
+            # Store the result
+            combined_saliences.append({'note': m_accent_saliences[i]['note'], 'salience': combined_salience})
+            
+        for i in range(len(combined_saliences)):
+            combined_saliences[i]['salience'] *= v_accent_saliences[i]
+
+
+
+        return combined_saliences
+
+
+def get_concurrent_notes(time, note_length):
+    concurrent_notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)
+                        if flp.score.getNote(i).time == time and flp.score.getNote(i).length == note_length
+                        and not flp.score.getNote(i).selected]
+    return concurrent_notes
+
+
+# Function to calculate possible harmonies with consonance score for all melody notes
+def calculate_all_possible_harmonies(melody_notes, scale_notes):
+    all_possible_harmonies = {}
+    for melody_note in melody_notes:
+        possible_harmonies = {}
+        for note in scale_notes:
+            score = get_consonance_score(melody_note, note)
+            if note == melody_note:
+                score = 0
+            if 100 <= score and score != 595:  # Updated consonance score limits
+                possible_harmonies[note] = score
+        all_possible_harmonies[melody_note] = possible_harmonies
+    return all_possible_harmonies
+
+#determine if melodic motion is upwards, downwards, or the same
+def categorize_motion(a, b):
+    if a > b:
+        return 1
+    elif a < b:
+        return -1
+    else:
+        return 0
+    
+def calculate_motion_scores(filtered_harmonies, melody_note, prev_melody_note, previous_harmony_note, prev_prev_melody_note, prev_prev_harmony_note):
+    motion_score = {}
+    consecutive_imperfect_consonances = 0  # Track consecutive imperfect consonances
+    imperfect_consonances = {9, 4, 3, 8}
+    perfect_consonances = {0, 7}
+    # Prepare a set of all possible harmonic note numbers to use for look-up
+    possible_harmonic_notes = set(filtered_harmonies.keys())
+    last_harmonic_leap = None  # Stores the magnitude and direction of the last harmonic leap
+
+    # Define allowed melodic leaps
+    allowed_leaps = {3, 4, 5, 7, 8, 12}  # 3rds, 4ths, 5ths, ascending minor 6ths (8 semitones), and 8ves (12 semitones)
+    forbidden_leaps = {6, 9, 10, 11, 13}  # Tritone (6 semitones) and 7th (10 semitones)
+
+    prev_harmony_note_default = previous_harmony_note if previous_harmony_note is not None else melody_note
+
+    for k, v in filtered_harmonies.items():
+        prev_harmony_note = prev_harmony_note_default
+        
+        harmonic_leap = abs(k - prev_harmony_note)
+
+        melodic_motion = categorize_motion(melody_note, prev_melody_note)
+        harmonic_motion = categorize_motion(k, prev_harmony_note)
+        
+        prev_melodic_motion = categorize_motion(prev_melody_note, prev_prev_melody_note) if prev_prev_melody_note is not None else 0
+        prev_harmonic_motion = categorize_motion(previous_harmony_note, prev_prev_harmony_note) if prev_prev_harmony_note is not None else 0
+
+        # Restrict leaps greater than 3 semitones unless certain conditions are met
+        if harmonic_leap > 3:
+            if prev_harmony_note is not None:
+                # Calculate what the note would be if it moved 2 semitones in the opposite direction
+                opposite_note = prev_harmony_note - 2 if harmonic_motion == 1 else prev_harmony_note + 2
+                
+                # Check if the opposite note exists in the filtered harmonies
+                if opposite_note not in possible_harmonic_notes:
+                    motion_score[k] = -100000  # or some other large penalty value
+
+        harmonic_leap = k - prev_harmony_note  # Leap can be negative, 0, or positive
+        
+        # Enforce that after a leap, the next note must move in the opposite direction by 2 semitones or less
+        if last_harmonic_leap is not None:
+            if (last_harmonic_leap > 3 and harmonic_leap * last_harmonic_leap > 0) or (abs(harmonic_leap) > 2):
+                motion_score[k] = -10000000  # or some other large penalty value
+            elif last_harmonic_leap > 3:
+                if harmonic_leap * last_harmonic_leap >= 0 or abs(harmonic_leap) > 2:
+                    motion_score[k] = -10000000  # or some other large penalty value
+        
+        # Update last_harmonic_leap for the next iteration
+        last_harmonic_leap = harmonic_leap
+
+        # Initialize motion score for this harmony
+        motion_score[k] = 0
+
+        interval = abs(k - melody_note) % 12  # Calculate the interval modulo 12 only once
+
+        melodic_leap = abs(melody_note - prev_melody_note)
+        prev_harmonic_leap = abs(previous_harmony_note - prev_prev_harmony_note) if prev_prev_harmony_note is not None else 0
+        
+        # Contrary Motion
+        if melodic_motion == -harmonic_motion:
+            motion_score[k] += 4000
+
+        # Oblique Motion (if melody oblique)
+        if prev_melody_note is not None and melody_note == prev_melody_note and k == previous_harmony_note:
+            motion_score[k] += 10000000000
+
+        # Consecutive Imperfect Consonances
+        if interval in imperfect_consonances:
+            consecutive_imperfect_consonances += 1
+            if consecutive_imperfect_consonances >= 3:
+                motion_score[k] = 0  # Reset score
+
+        # Direct Fifths/Octaves
+        if melody_note != prev_melody_note:
+            if melodic_motion == harmonic_motion and interval in perfect_consonances:
+                motion_score[k] = 0  # Reset score
+
+        # Similar Motion with Leaps
+        if melodic_motion == harmonic_motion and (melodic_leap > 4 or abs(k - prev_harmony_note) > 4):
+            motion_score[k] -= 5500
+
+        # Smooth stepwise motion (reward)
+        if melodic_leap <= 2 and abs(k - prev_harmony_note) <= 2:
+            motion_score[k] += 1000
+
+        # Consistent direction in melody and harmony (reward)
+        if melodic_motion == prev_melodic_motion and harmonic_motion == prev_harmonic_motion:
+            motion_score[k] += 4000
+
+        # Forbidden melodic leaps
+        if melodic_leap in forbidden_leaps:
+            motion_score[k] = -1000000000  # Reset score
+        
+        #flp.Utils.ShowMessage(f"{melodic_leap}")
+
+        # Allowed melodic leaps
+        if melodic_leap in allowed_leaps:
+            # You may want to change the score, or implement a count for 'occasional' leaps
+            motion_score[k] += -10000
+
+        # Enforce that after a leap, the next note must move in the opposite direction by 2 semitones or less
+        if last_harmonic_leap is not None:
+            if last_harmonic_leap > 3:
+
+                # Calculate what the note would be if it moved 2 semitones in the opposite direction
+                opposite_note_after_leap = k - 2 if last_harmonic_leap > 0 else k + 2
+                opposite_note_after_leap2 = k - 1 if last_harmonic_leap > 0 else k + 1
+                
+                # Apply the penalty only if the opposite note exists in the filtered harmonies
+                if opposite_note_after_leap in possible_harmonic_notes or opposite_note_after_leap2 in possible_harmonic_notes :
+                    if harmonic_leap * last_harmonic_leap >= 0 or abs(harmonic_leap) > 2:
+                        motion_score[k] = -10000000000  # or some other large penalty value
+                
+        
+    return motion_score
+
+
+
+def filter_harmonies_based_on_range(possible_harmonies, min_range, max_range):
+    return {k: v for k, v in possible_harmonies.items() if min_range <= k <= max_range}
+
+def calculate_closeness_scores(filtered_harmonies, previous_harmony_note):
+    closeness_score = {}
+    for k in filtered_harmonies.keys():
+        if previous_harmony_note != None:
+            distance_to_previous = abs(k - previous_harmony_note)
+            if distance_to_previous == 0:
+                closeness_score[k] = 0
+            elif distance_to_previous <= 2:
+                closeness_score[k] = 3000
+            elif distance_to_previous <= 4:
+                closeness_score[k] = 2000
+            else:
+                closeness_score[k] = 0
+        else:
+            closeness_score[k] = 0
+    return closeness_score
+
+def remove_parallel_fifths(filtered_harmonies, melody_note, previous_melody_note, previous_harmony_note):
+    keys_to_remove = []
+    prev_interval_fifth = abs(previous_melody_note - previous_harmony_note) % 12 == 7
+    is_compound_octave = abs(melody_note - previous_melody_note) % 12 == 0
+
+    if prev_interval_fifth and not (melody_note == previous_melody_note or is_compound_octave):
+        for k, v in filtered_harmonies.items():
+            if abs(melody_note - k) % 12 == 7:
+                keys_to_remove.append(k)
+    
+    for key in keys_to_remove:
+        del filtered_harmonies[key]
+
+def adjust_consonance_scores(filtered_harmonies, melody_note, melody_note_index, aBeat):
+    perfect_consonances = {0: 1375, 7: 735, 5: 595}
+    imperfect_consonances = {9: 499, 4: 498, 3: 132, 8: 106}
+
+    # Use the melody_note_index to find the corresponding beat strength ('strong', 'semi', or 'weak') in aBeat's index list
+    beat_strength = [d['salience'] for d in aBeat][melody_note_index]
+    # Calculate the mean average of the beat strengths
+    mean_beat_strength = sum([d['salience'] for d in aBeat]) / len(aBeat) if aBeat else 0
+
+
+    # Apply the bonuses depending on beat strength and interval consonance
+    for k, v in filtered_harmonies.items():
+        interval = abs(k - melody_note) % 12
+        if interval in perfect_consonances:
+            # Extremely penalize perfect consonances on weak beats
+            if beat_strength < mean_beat_strength:
+                filtered_harmonies[k] = v * -1000  # Extremely penalizing factor
+                continue  # Skip the rest of this loop iteration
+
+            # Bonus for perfect consonances on strong and semi-strong beats
+            if beat_strength >= mean_beat_strength:
+                filtered_harmonies[k] = v * 0.5
+            
+            if interval == 0:
+                filtered_harmonies[k] = v * -3
+                
+        elif interval in imperfect_consonances:
+            # Bonus for imperfect consonances on weak beats
+            if beat_strength < mean_beat_strength:
+                if interval == 3 or interval == 8:
+                    filtered_harmonies[k] = v * 40
+                else:
+                    filtered_harmonies[k] = v * 1
+
+def has_next_harmony_within_two_semitones(potential_harmony, harmonies_list):
+    for harmony in harmonies_list:
+        if abs(harmony - potential_harmony) <= 3:
+            return True
+    return False
+
+previous_intervals = []
+
+def harmonize_note(selectedNotes, melody_note, previous_harmony_note, previous_melody_note, prev_prev_harmony_note, 
+                   prev_prev_melody_note, all_possible_harmonies, harmony_range, range_width, aBeat, idx):
+    
+    global previous_intervals  # To keep track of intervals between melody and harmony notes
+    
+    possible_harmonies = all_possible_harmonies[melody_note]
+    min_range = harmony_range
+    max_range = min_range + range_width
+
+    filtered_harmonies = filter_harmonies_based_on_range(possible_harmonies, min_range, max_range)
+    
+    # Save a copy for fallback
+    original_filtered_harmonies = filtered_harmonies.copy()
+
+    # Adjust consonance score
+    adjust_consonance_scores(filtered_harmonies, melody_note, idx, aBeat)
+    
+    if not filtered_harmonies:
+        return None, 0
+    
+    if previous_harmony_note is not None and previous_melody_note is not None:
+        remove_parallel_fifths(filtered_harmonies, melody_note, previous_melody_note, previous_harmony_note)
+    
+    # Remove potential harmonies that would result in 4 consecutive thirds or sixths,
+    # including compound thirds and sixths.
+    #if len(previous_intervals) >= 3:
+    #    last_three_intervals = [interval % 12 for interval in previous_intervals[-3:]]  # Modulo 12 to simplify compound intervals
+    #    if all(interval in [3, 4] for interval in last_three_intervals):
+    #        filtered_harmonies = {k: v for k, v in filtered_harmonies.items() if (abs(k - melody_note) % 12) not in [3, 4]}
+    #    elif all(interval in [8, 9] for interval in last_three_intervals):
+    #        filtered_harmonies = {k: v for k, v in filtered_harmonies.items() if (abs(k - melody_note) % 12) not in [8, 9]}
+    
+    # Revert back to original_filtered_harmonies if filtered_harmonies is empty
+    #if not filtered_harmonies:
+    #    filtered_harmonies = original_filtered_harmonies 
+
+    closeness_score = calculate_closeness_scores(filtered_harmonies, previous_harmony_note)
+    motion_score = calculate_motion_scores(
+        filtered_harmonies, melody_note, previous_melody_note, previous_harmony_note, prev_prev_melody_note, prev_prev_harmony_note)
+
+    final_scores = {
+        k: v / 5 + motion_score.get(k, 0) * 0.9 + closeness_score.get(k, 0) * 100
+        for k, v in filtered_harmonies.items()
+    }
+
+    #flp.Utils.ShowMessage(f"{motion_score}")
+    
+    chosen_harmony = max(final_scores, key=final_scores.get)
+    final_score = final_scores[chosen_harmony]
+    
+    # Update previous_intervals
+    new_interval = abs(chosen_harmony - melody_note)
+    previous_intervals.append(new_interval)
+    
+    return chosen_harmony, final_score
+
+
+
+
+# Previous and next harmony notes, initialized to None
+previous_harmony_note = None
+previous_melody_note = None
+next_harmony_note = None
+
+class Note:
+    def __init__(self, 
+                 number=None, 
+                 time=None, 
+                 length=None, 
+                 group=0, 
+                 pan=0.5, 
+                 velocity=0.8, 
+                 release=0.0, 
+                 color=0, 
+                 fcut=0.5, 
+                 fres=0.5, 
+                 pitchofs=0, 
+                 slide=False, 
+                 porta=False, 
+                 muted=False, 
+                 selected=False):
+        
+        self.number = number  # note number (MIDI standard)
+        self.time = time  # ticks
+        self.length = length  # ticks
+        self.group = group  # group number this note belongs to
+        self.pan = pan  # 0.0 to 1.0, default 0.5
+        self.velocity = velocity  # 0.0 to 1.0, default 0.8
+        self.release = release  # 0.0 to 1.0
+        self.color = color  # 0 to 15, default 0. Color group / MIDI channel.
+        self.fcut = fcut  # 0.0 to 1.0, default 0.5
+        self.fres = fres  # 0.0 to 1.0, default 0.5
+        self.pitchofs = pitchofs  # -120 to 120
+        self.slide = slide  # True/False
+        self.porta = porta  # True/False
+        self.muted = muted  # True/False
+        self.selected = selected  # True/False
+
+
+
+def get_melody_notes_from_selected_notes(score, note_division=.5):
+    selected_notes = [score.getNote(i) for i in range(score.noteCount) if score.getNote(i).selected]
+    
+
+    
+    if note_division != 0:
+        ppq = score.PPQ  # Pulses Per Quarter note
+        adjusted_ppq = int(ppq / note_division)  # Adjust PPQ based on note_division
+        # Clone the selected notes so we don't modify the originals
+        cloned_notes = [Note(note.number, note.time, note.length, note.group, note.pan, note.velocity, note.release, note.color, note.fcut, note.fres, note.pitchofs, note.slide, note.porta, note.muted, note.selected) for note in selected_notes]
+
+        # Create a set to hold the time positions of the notes
+        note_times = set()
+        
+        # Initialize variable to hold the pitch of the last note
+        last_note_pitch = None
+
+        # Snap each cloned note to the nearest note position on the grid
+        for note in cloned_notes:
+            original_time = note.time
+            # Calculate the nearest note position in ticks
+            nearest_note = round(original_time / adjusted_ppq) * adjusted_ppq
+
+            # Skip the note if it would be moved forward in time
+            if nearest_note > original_time:
+                continue
+
+            note.time = nearest_note
+            note.length = adjusted_ppq  # Setting the length to the adjusted PPQ
+            note_times.add(note.time)
+            last_note_pitch = note.number
+
+        # Create a list to hold the final sequence of notes
+        final_notes = []
+
+        # Scan the timeline for missing notes
+        min_time = min(note_times) if note_times else 0
+        max_time = max(note_times) if note_times else 0
+        for time in range(min_time, max_time + adjusted_ppq, adjusted_ppq):
+            if time > max_time:  # Prevent exceeding the original timeline
+                break
+
+            if time not in note_times:
+                if last_note_pitch is not None:
+                    # Create a new note with the pitch of the last note
+                    new_note = Note()
+                    new_note.time = time
+                    new_note.length = adjusted_ppq
+                    new_note.number = last_note_pitch
+                    new_note.selected = True  # Select the new note
+                    final_notes.append(new_note)
+                note_times.add(time)  # Add time to set to prevent duplicates
+            else:
+                # Append the note at this time position from the cloned notes
+                for note in cloned_notes:
+                    if note.time == time:
+                        final_notes.append(note)
+                        break
+    else:
+        final_notes = selected_notes
+
+    # Return the sequence of notes and melody notes
+    return final_notes, [note.number for note in final_notes]
+
+
+
+# This function replaces the block that finds the best first harmony note
+def find_best_first_harmony(selected_notes, all_possible_harmonies, harmony_range, range_width, aBeat):
+    highest_melody_score = 0
+    best_first_harmony = None
+
+    for potential_first_harmony in range(harmony_range, harmony_range + range_width):
+        temp_previous_harmony_note = potential_first_harmony
+        total_melody_score = 0
+        for idx, note in enumerate(selected_notes[1:], start=1):  # Skip the first note
+            prev_melody_note = selected_notes[idx - 1].number if idx > 0 else 0
+
+            chosen_harmony, final_score = harmonize_note(
+                selected_notes, note.number, temp_previous_harmony_note,
+                prev_melody_note, None, None,
+                all_possible_harmonies, harmony_range, range_width, aBeat, idx
+            )
+            
+            if chosen_harmony is not None:
+                total_melody_score += final_score
+                temp_previous_harmony_note = chosen_harmony
+
+        if total_melody_score > highest_melody_score:
+            highest_melody_score = total_melody_score
+            best_first_harmony = potential_first_harmony
+            
+    return best_first_harmony
+
+# Fetch form input values
+def get_form_inputs(form):
+    return {
+        'harmony_range': form.GetInputValue("Harmony Range"),
+        'root_note_idx': form.GetInputValue("Root Note"),
+        'range_width': form.GetInputValue("Range Width"),
+        'scale_idx': form.GetInputValue("Scale Type"),
+        'mode': form.GetInputValue("Mode")
+    }
+
+# Create a new harmony note based on a melody note
+def create_harmony_note(note, chosen_harmony):
+    new_note = flp.Note()
+    new_note.number = chosen_harmony
+    new_note.time = note.time
+    new_note.length = note.length
+    new_note.velocity = note.velocity * 0.8  # Modulate velocity for the harmony note
+    return new_note
+
+# Main harmonization loop function
+def harmonization_loop(selected_notes, previous_harmony_note, all_possible_harmonies, harmony_range, range_width, aBeat, rhythm):
+    prev_prev_harmony_note = None
+    prev_prev_melody_note = None
+    added_harmony_notes = []  # List to keep track of added harmony notes
+
+    for idx, note in enumerate(selected_notes):
+        # Find the previous melody note if available
+        prev_melody_note = selected_notes[idx - 1].number if idx > 0 else 0
+
+        chosen_harmony, _ = harmonize_note(
+            selected_notes, note.number, previous_harmony_note,
+            prev_melody_note, prev_prev_harmony_note, prev_prev_melody_note,
+            all_possible_harmonies, harmony_range, range_width, aBeat, idx
+        )
+
+        if chosen_harmony is None:
+            continue
+
+        if rhythm == 2:
+            new_note = create_harmony_note(note, chosen_harmony)
+            added_harmony_notes.append(new_note)  # Add the new note to the tracking list
+            flp.score.addNote(new_note)
+
+            # Update the length of the previous harmony note to touch the start of this note
+            if len(added_harmony_notes) > 1:
+                prev_harmony_note = added_harmony_notes[-2]
+                prev_harmony_note.length = new_note.time - prev_harmony_note.time
+
+        elif rhythm == 1:
+            new_note = create_harmony_note(note, chosen_harmony)
+            q_length = new_note.length // 8
+
+            for i in range(8):
+                is_octave_up = i % 2
+                new_note_i = create_harmony_note(note, chosen_harmony + (12 * is_octave_up))
+                new_note_i.length = q_length
+                new_note_i.time = note.time + (i * q_length)
+                flp.score.addNote(new_note_i)
+        
+        else:
+            new_note = create_harmony_note(note, chosen_harmony)
+            flp.score.addNote(new_note)  
+
+        # Update previous notes
+        prev_prev_harmony_note = previous_harmony_note
+        prev_prev_melody_note = prev_melody_note
+        previous_harmony_note = chosen_harmony
+
+    return previous_harmony_note, prev_prev_harmony_note, prev_prev_melody_note
+
+
+
+
+
+# Function to create the form dialog
+def createDialog():
+    while True:
+        form = flp.ScriptDialog("AutoHarmonizer v0.2", "Automatically create harmony notes for a melody."  + 
+	    "\r\n\r\n" + 
+        "Still under development! Contextual/harmonic analysis will be added soon, \r\ngreatly improving this tool's ability to find the 'right' notes!")
+        form.AddInputKnobInt("Harmony Range", 56, 15, 120)
+        form.AddInputCombo("Root Note", "C,C#,D,D#,E,F,F#,G,G#,A,A#,B", 0)
+        form.AddInputKnobInt("Range Width", 7, 6, 15)
+        form.AddInputCombo("Scale Type", "Major,Minor,Minor Harmonic,Minor Melodic,Dorian,Phrygian,Lydian,Mixolydian,Locrian", 0)
+        form.AddInputCombo("Mode", "Normal,Rave,Salience (Experimental),1/4 Notes,1/2 Notes,1/1 Notes", 0)
+        xtra_panel = form.GetInputValue("Mode")
+        if xtra_panel == 1:
+            form.AddInputCombo("Template", "Normal,Quarter Notes", 0)
+        if form:
+            break
+    return form
+
+# Main apply function
+def apply(form):
+    # Fetch input values from the form
+    inputs = get_form_inputs(form)
+
+    if inputs['mode'] == 1:
+        note_division = 0.25
+    elif inputs['mode'] == 3:
+        note_division = 1
+    elif inputs['mode'] == 4:
+        note_division = 0.5
+    elif inputs['mode'] == 5:
+        note_division = 0.25
+    else:
+        note_division = 0
+
+
+    # Create and calculate scale intervals
+    scales_intervals = create_scale_intervals()
+    _, scale_notes_between = calculate_scale_notes(scales_intervals[inputs['scale_idx']], inputs['root_note_idx'])
+
+    # Get selected and melody notes from the score
+    selected_notes, melody_notes = get_melody_notes_from_selected_notes(flp.score, note_division)
+
+    # Perform beat analysis
+    analysis = BeatAnalysis()
+    #analysis.analyze_phrases()
+    aBeat = analysis.calculate_accents()
+    if inputs['mode'] == 2:
+        # Generate list of beat strengths
+        beat_strength_list = [d['salience'] for d in aBeat]
+        
+        # Calculate the mean average of the saliences
+        mean_salience = sum(beat_strength_list) / len(beat_strength_list) if beat_strength_list else 0
+
+        # Filter out selected_notes based on beat_strength, ignoring the first note
+        selected_notes = [selected_notes[0]] + [note for idx, note in enumerate(selected_notes[1:], start=1) if beat_strength_list[idx] >= mean_salience]
+
+
+
+    # Calculate all possible harmonies based on melody notes and scale
+    all_possible_harmonies = calculate_all_possible_harmonies(melody_notes, scale_notes_between)
+
+    # Find the best starting point for harmonization
+    best_first_harmony = find_best_first_harmony(selected_notes, all_possible_harmonies, inputs['harmony_range'], inputs['range_width'], aBeat)
+    
+    # Initialize previous note placeholders
+    previous_harmony_note = best_first_harmony
+
+    # Run the main harmonization loop
+    harmonization_loop(selected_notes, previous_harmony_note, all_possible_harmonies, inputs['harmony_range'], inputs['range_width'], aBeat, inputs['mode'])
+
+

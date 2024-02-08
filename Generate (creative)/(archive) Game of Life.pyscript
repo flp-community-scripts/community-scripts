@@ -1,0 +1,129 @@
+"""flp
+Title: Game of Life
+Author: Harmar
+Category: Generative (creative)
+Version: FL64_2023-08-14_18-59-15
+
+Description: 
+This script implements Conway's Game of Life in the FL Studio piano roll. You can draw notes and run the simulation by pressing Ctrl+Alt+Y. The playable area is from C2 to C9 in height and an equal number of quarter notes in width. There is a debug mode that can be activated by placing a note in the top left corner, which opens a dialog box for input. Note that the preview mode may slow down rendering. Enjoy this fun implementation!
+
+Changelog:
+no changelog
+"""
+from flpianoroll import *
+import math
+
+NOTE_B10 = 131
+HIGH_NOTE = 108
+LOW_NOTE = 24
+GRID_SIZE = HIGH_NOTE - LOW_NOTE
+NOTE_SIZE = score.PPQ / 4
+
+dialog_enabled = False
+apply_count = 0
+
+
+# Show dialog to enable testing many iterations of simulation without polluting undo history
+# (Can't update as quickly as without the dialog though)
+for i in range(score.noteCount):
+  note = score.getNote(i)
+  if note.number == NOTE_B10 and note.time == 0:
+    dialog_enabled = True
+
+
+if dialog_enabled:
+  def createDialog():
+    form = ScriptDialog('Game Of Life', 'Make sure "Preview" is enabled, and type any character into the text input to advance simulation.')
+    form.AddInputText('Text', '')
+    return form
+
+
+  def apply(form):
+    global grid
+    global apply_count
+    
+    if apply_count == 0:
+      seedGridFromScore(grid)
+    else:
+      grid = runSimulation(grid)
+      drawGrid(grid)
+    apply_count += 1
+
+
+def runSimulation(grid):
+  next_grid = createGrid()
+
+  for i in range(GRID_SIZE):
+    for j in range(GRID_SIZE):
+      nearby_alive_count = getNearbyAliveCount(grid, i, j)
+
+      alive = grid[i][j]
+      if alive and nearby_alive_count < 2:
+        next_grid[i][j] = False # dies from underpopulation
+      elif alive and nearby_alive_count > 3:
+        next_grid[i][j] = False # dies from overpopulation
+      elif not alive and nearby_alive_count == 3:
+        next_grid[i][j] = True # born from reproduction
+      else:
+        next_grid[i][j] = grid[i][j]
+
+  return next_grid
+
+
+def getNearbyAliveCount(grid, i, j):
+  nearby_alive_count = 0
+  for a in range(-1, 2):
+    for b in range(-1, 2):
+      if a == 0 and b == 0:
+        continue # don't count current grid coordinate
+
+      if isOutOfBounds(i + a, j + b):
+        continue
+
+      if grid[i + a][j + b]:
+        nearby_alive_count += 1
+  return nearby_alive_count
+
+
+def isOutOfBounds(x, y):
+  x_out_of_bounds = x < 0 or x >= GRID_SIZE
+  y_out_of_bounds = y < 0 or y >= GRID_SIZE
+  return x_out_of_bounds or y_out_of_bounds
+
+
+def drawGrid(grid):
+  score.clearNotes(True)
+  for column_index, column in enumerate(grid):
+    for item_index, item in enumerate(column):
+      if grid[column_index][item_index]:
+        addNote(note_number=HIGH_NOTE - item_index,
+                note_time=NOTE_SIZE * column_index)
+
+  if dialog_enabled:
+    addNote(note_number=NOTE_B10)
+
+
+def addNote(note_number=HIGH_NOTE, note_time=0, note_length=NOTE_SIZE):
+  note = Note()
+  note.number = note_number
+  note.time = note_time
+  note.length = note_length
+  score.addNote(note)
+
+
+def createGrid():
+  return [[False for i in range(GRID_SIZE)] for j in range(GRID_SIZE)]
+
+
+def seedGridFromScore(grid):
+  for i in range(score.noteCount):
+    note = score.getNote(i)
+    x = math.floor(note.time / NOTE_SIZE)
+    y = abs(note.number - HIGH_NOTE)
+    grid[x][y] = True
+
+
+grid = createGrid()
+if not dialog_enabled:
+  seedGridFromScore(grid)
+  drawGrid(runSimulation(grid))

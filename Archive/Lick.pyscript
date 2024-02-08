@@ -1,0 +1,54 @@
+"""flp
+Title: Lick
+Author: Eminem2000
+Category: Archive
+Version: (n/a)
+
+Description: 
+This Python program allows you to control the overall length of all MIDI notes to be proportionally longer or shorter. The main logic of the program is as follows: 1. Get the end time of the last note, which serves as the original length. 2. Calculate the total length after scaling. 3. For each note, calculate its proportion of the original length and its starting position. 4. Calculate the scaled length and starting position based on the ratio.
+
+Changelog:
+no changelog
+"""
+from flpianoroll import *
+
+def scale_note_lengths(scale_factor):
+    # Get the last note's end time as the original length
+    last_note = score.getNote(score.noteCount - 1)
+    original_length = last_note.time + last_note.length
+
+    # Calculate the scaled total length
+    scaled_total_length = original_length * scale_factor
+
+    # Iterate through all notes and adjust their lengths and positions proportionally
+    for i in range(score.noteCount):
+        note = score.getNote(i)
+        note_start = note.time
+        note_end = note_start + note.length
+
+        # Calculate the note's position and length within the original length
+        position_ratio = (note_start + note_end) / (2 * original_length)
+        length_ratio = note.length / original_length
+
+        # Calculate the new length and start position based on the scaled total length and ratios
+        new_length = length_ratio * scaled_total_length
+        new_start = position_ratio * scaled_total_length - new_length / 2
+
+        # Update the note's length and start position
+        note.length = new_length
+        note.time = new_start
+
+# Create the dialog form
+def createDialog():
+    form = ScriptDialog('Scale Note Lengths', 'Scale the lengths of all MIDI notes')
+    form.AddInputKnob('Scale Factor', 1.0, 0.1, 10.0)
+    return form
+
+# Apply the scaling
+def apply(form):
+    scale_factor = form.GetInputValue('Scale Factor')
+    scale_note_lengths(scale_factor)
+
+# Show the dialog
+form = createDialog()
+form.Execute()

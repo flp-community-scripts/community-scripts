@@ -1,0 +1,188 @@
+"""flp
+Title: Glissando Tool
+Author: tfguss
+Category: Archive
+Version: (n/a)
+
+Description: 
+This tool allows you to connect two notes with a glissando effect, creating various patterns for runs up the scale. It is still a work in progress, with some bugs related to adjusting note length. The developer plans to expand the pattern bank and categorize it by style in the future. Despite its current state, the tool is already cool and useful.
+
+Changelog:
+no changelog
+"""
+import flpianoroll as flp
+
+patterns_matrix = [
+    [+1, +1], # Pattern 0
+    [+2, -1], # Pattern 1
+    [-1, +2], # Pattern 2
+    [+1, -2, +2],
+    [+1, +2, -2],
+    [+2, -2, +1],
+    [-2, +2, +1],
+    [+2, +1, -2],
+    [-2, +1, +2],
+    [+1, +1, -1],
+    [+1, +1, -2, +1],
+    # ... more patterns
+]
+
+root_notes_names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
+scales_names = ["Major","Minor","Minor Harmonic","Minor Melodic","Dorian","Phrygian","Lydian","Mixolydian","Locrian"]
+
+# Scales intervals
+scales_intervals = [
+    [0, 2, 4, 5, 7, 9, 11], # Major Intervals
+    [0, 2, 3, 5, 7, 8, 10], # Minor Intervals  
+    [0, 2, 3, 5, 7, 8, 11], # Minor Harmonic Intervals  
+    [0, 2, 3, 5, 7, 9, 11]  # Minor Melodic Intervals  
+]
+
+# Add modes
+modes_shift = (2,4,5,7,11) # Dorian, Phrygian, Lydian, Mixolydian, Locrian shift from Major Intervals
+
+for mode in modes_shift:
+    mode_scale = []
+    for i in scales_intervals[0]:
+        i -= mode if i - mode >= 0 else (mode - 12)
+        mode_scale.append(i)
+        mode_scale.sort()
+    scales_intervals.append(mode_scale)
+
+
+def createDialog():
+    form = flp.ScriptDialog("Glissando Tool", "Create a series of notes connecting two selected notes." + "\r\n\r\nby FL Presets - v0.1 (beta)")
+    form.AddInputKnobInt('Note Length', 1, 1, 16)
+    form.AddInputCombo('Root note', root_notes_names, 0)
+    form.AddInputKnobInt('Pattern', 0, 0, len(patterns_matrix) - 1) # Range based on the number of patterns
+    form.AddInputCombo('Scale', scales_names, 0)
+    form.AddInputCombo('Cut options', ['Normal', 'Cut First', 'Cut Last', 'Cut Both'], 0) # Add the new combobox
+    return form
+
+
+def apply(form):
+    lengthOfNewNotes32nds = form.GetInputValue('Note Length')
+    root_note_idx = form.GetInputValue('Root note')
+    scale_idx = form.GetInputValue('Scale')
+    pattern_idx = form.GetInputValue('Pattern')
+    cut_option = form.GetInputValue('Cut options') # Get the selected cut option
+
+    cut_first = cut_option == 1 or cut_option == 3
+    cut_last = cut_option == 2 or cut_option == 3
+    pattern = patterns_matrix[pattern_idx]
+    selected_scale_intervals = scales_intervals[scale_idx]
+    # Find the MIDI number for the selected root note
+    scale_root_midi = (root_note_idx + 12) % 12
+
+
+    
+
+    # Get selected notes
+    selectedNotes = [flp.score.getNote(i) for i in range(flp.score.noteCount) if flp.score.getNote(i).selected]
+    if len(selectedNotes) < 2:
+        flp.Utils.ShowMessage('Please select at least two notes')
+        return
+
+    # Get the first and last selected notes
+    firstNote = selectedNotes[0]
+    lastNote = selectedNotes[-1]
+
+    # Calculate length of 1/64th note in ticks
+    length64th = flp.score.PPQ / 16
+
+    # Calculate length of new notes in ticks
+    newNoteLength = length64th * lengthOfNewNotes32nds
+
+
+
+    # Calculate number of notes between the first and last selected notes using the scale
+    numberOfNotes = 0
+    for i in range(abs(lastNote.number - firstNote.number)):
+        if (scale_root_midi + i) % 12 in selected_scale_intervals:
+            numberOfNotes += 1
+
+    # If not enough time for new notes, show an error message
+    if numberOfNotes == 0 or (lastNote.time - newNoteLength) - (firstNote.time + firstNote.length) < newNoteLength * numberOfNotes:
+        flp.Utils.ShowMessage('Not enough space for the requested length of new notes')
+        return
+
+    # Calculate pitch increment for each new note
+    pitchDiff = (lastNote.number - firstNote.number) / (numberOfNotes + 1)
+
+    # Ensure that the patterns dictionary is defined in the scope
+
+
+
+    # Determine the direction of the pitch movement
+    pitch_direction = 1 if lastNote.number > firstNote.number else -1
+
+    # If the direction is descending, reverse the pattern
+    if pitch_direction == -1:
+        pattern = pattern[::-1]
+
+    # Calculate the actual intervals for the selected scale based on the root note
+    actual_scale_intervals = [(scale_root_midi + interval) % 12 for interval in selected_scale_intervals]
+
+
+    # Build a list of scale notes between first and last note
+    scale_notes_between = []
+    for i in range(128): # MIDI note range
+        if i % 12 in actual_scale_intervals:
+            scale_notes_between.append(i)
+
+    # Find closest valid note in the scale for a given MIDI note number
+    def find_closest_scale_note(note_number, scale_notes):
+        return min(scale_notes, key=lambda x: abs(x - note_number))
+
+    # Ensure that the first and last notes are within the scale
+    firstNote.number = find_closest_scale_note(firstNote.number, scale_notes_between)
+    lastNote.number = find_closest_scale_note(lastNote.number, scale_notes_between)
+
+    # Find indices of first and last note in the scale notes
+    first_index = scale_notes_between.index(firstNote.number)
+    last_index = scale_notes_between.index(lastNote.number)
+
+    # Continue with the rest of your code...
+
+
+
+    # Apply pattern to the indices of the scale notes
+    indices_with_pattern = [first_index]
+    current_index = first_index
+    pattern_idx = 0
+    above_last_counter = 0
+
+    while True:
+        pattern_step = pattern[pattern_idx % len(pattern)] * pitch_direction
+        current_index += pattern_step
+        current_index = max(0, min(len(scale_notes_between) - 1, current_index)) # Ensure within range
+        
+        # Check if the pattern went above the lastNote
+        if (pitch_direction == 1 and current_index > last_index) or (pitch_direction == -1 and current_index < last_index):
+            above_last_counter += 1
+            if above_last_counter > 1:
+                break
+        
+        indices_with_pattern.append(current_index)
+        pattern_idx += 1
+
+    # Convert indices back to MIDI note numbers and reverse the order
+    notes_with_pattern = [scale_notes_between[idx] for idx in indices_with_pattern][::-1]
+
+    # Prepare a list of notes to be added
+    notes_to_add = notes_with_pattern[1:]
+    if cut_first:
+        notes_to_add = notes_to_add[:-1]
+    if cut_last:
+        notes_to_add = notes_to_add[1:]
+
+    # Add the new notes from the prepared list
+    for i, note_number in enumerate(notes_to_add, start=1):
+        note = flp.Note()
+        note.number = note_number
+        note.time = int(lastNote.time - i * newNoteLength) # Timing adjusted based on the index in the prepared list
+        note.length = newNoteLength
+        note.velocity = firstNote.velocity
+        flp.score.addNote(note)
+
+

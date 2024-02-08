@@ -1,0 +1,180 @@
+"""flp
+Title: Change properties of multiple notes v1.1
+Author: Pierre Sosa
+Category: Adjust
+Version: v1.1
+
+Description: 
+This script allows you to change the properties of multiple notes in the FL Studio piano roll. You can choose to change the properties of all or random notes. The script provides options to set the properties to fixed, scaled, random, inverted, or default values. It also includes a live preview feature. The latest version (v1.1) includes controls for the release property and a "Seed for RNG" knob.
+
+Changelog:
+2023-09-08 (Change properties of multiple notes v1.1)
+- Added "Seed for RNG" knob
+
+2023-07-27
+- Bug-fixes
+
+2023-07-23
+- Added controls for release property
+"""
+import flpianoroll as flp
+import _random
+
+seed_for_RNG_max = 999
+notes_org = []
+number_of_groups = 0
+
+for note in range(flp.score.noteCount): 
+	notes_org.append(note)
+	if flp.score.getNote(note).group > number_of_groups:
+		number_of_groups = flp.score.getNote(note).group
+
+notes_properties = ['velocity', 'pan', 'release', 'fcut', 'fres', 'pitchofs','time','length','number','color', 'group', 'slide', 'porta', 'muted', 'selected']
+default_values = [0.78125, 0.5, 0.5, 0.5, 0.5, 0, 1, 1, 60, 0, 0, False, False, False, False]
+default_min_for_controls = [0, 0, 0, 0, 0, -120, 0, 0, 0, 0, 0]
+default_max_for_controls = [1, 1, 1, 1, 1, 120, flp.score.length, flp.score.length, 131, 15, (number_of_groups+1)]
+modes = ["Don't change","Fixed Value","Scale","Random","Invert","Reset to default"] # for: 'velocity', 'pan', 'release', 'fcut', 'fres', 'pitchofs'
+modes_2 = ["Don't change","Fixed Value","Random","Reset to default"] # for: 'time','length','number','color', 'group'
+modes_3 = ["Don't change","Fixed Value","Random","Invert","Reset to default"] # for: 'slide', 'porta', 'muted', 'selected'
+
+# Randomizer
+def random_generator(seed):
+	x = _random.Random()
+	x.seed(seed) if seed > 0 else x.seed()
+	while True:
+		yield x.random()
+	
+def random_value(return_int, range_min, range_max):
+	random_value = next(rng) * (range_max - range_min) + range_min  # convert value to fit between min and max range
+
+	if return_int:  # convert value to integer
+		return round(random_value)
+	return random_value	
+
+def createDialog():
+	Form = flp.ScriptDialog("Change properties of multiple notes v1.1","Seed for RNG knob = if it's set to 0 then the seed for random values is changed in each execution of the script. If it's set to a positive value then the seed is keeped. \r\n" +
+	"\r\n" + 
+	"Probability knob = percent of notes to affect. Set to 100% to affect all notes.\r\n" + 
+	"\r\n" + 
+	"*** Script by Pierre Sosa ***")
+	Form.AddInputKnobInt("Seed for RNG", 0, 0, seed_for_RNG_max)
+	Form.AddInputKnob('Probability (%)', 100, 0, 100)
+	for i in range(5):
+		Form.AddInputCombo(notes_properties[i].capitalize() + " mode",[mode for mode in modes],0)
+		Form.AddInputKnob(notes_properties[i].capitalize() + " value",default_values[i],default_min_for_controls[i],default_max_for_controls[i])
+	for i in range(5,6):	
+		Form.AddInputCombo(notes_properties[i].capitalize() + " mode",[mode for mode in modes],0)
+		Form.AddInputKnobInt(notes_properties[i].capitalize() + " value",default_values[i],default_min_for_controls[i],default_max_for_controls[i])	
+	for i in range(6,11):
+		Form.AddInputCombo(notes_properties[i].capitalize() + " mode",[mode for mode in modes_2],0)
+		Form.AddInputKnobInt(notes_properties[i].capitalize() + " value",default_values[i],default_min_for_controls[i],default_max_for_controls[i])			
+	for i in range(11, len(notes_properties)):
+		Form.AddInputCombo(notes_properties[i].capitalize() + " mode",[mode for mode in modes_3],0)
+		Form.AddInputCombo(notes_properties[i].capitalize() + " value","False,True",0)
+	return Form
+
+def apply(Form):
+
+	# Checks if there are notes in the score
+	if flp.score.noteCount == 0: 
+		flp.Utils.ShowMessage("There are no notes!")
+		return	
+
+	seed = Form.GetInputValue("Seed for RNG")
+	global rng
+	rng = random_generator(seed)		
+	
+	values = []
+	modes = []
+
+	for i,property in enumerate(notes_properties):
+		value = Form.GetInputValue(property.capitalize() + " value")
+		mode = Form.GetInputValue(property.capitalize() + " mode")
+		if i > 5 and i < 11: 
+			if mode == 2:
+				mode = 3
+			elif mode == 3:
+				mode = 5	
+		elif i > 10:
+			if value == 0:
+				value = False
+			else: value = True
+			if mode > 1:
+				mode += 1
+
+		values.append(value)
+		modes.append(mode)
+		
+	probability = Form.GetInputValue("Probability (%)") / 100	
+
+	# Create a list of notes indexes with a random order
+	def randomize_notes():
+		notes = notes_org.copy()
+		for i in range(len(notes)):
+			max = len(notes)-1
+			random_int = random_value(True, 0, max) # Generate random note index
+			notes_to_alter.append(notes[random_int]) # Add generated note index to the list
+			notes.pop(random_int)		
+	
+	notes_to_alter = []		
+	randomize_notes()
+
+	for n in range(flp.score.noteCount):
+		if notes_to_alter.index(n) >= probability * len(notes_to_alter):
+			continue
+		note = flp.score.getNote(n)
+		for i,property in enumerate(notes_properties):
+			if modes[i] == 1: # Fixed
+				setattr(note,property,values[i])
+			elif modes[i] == 2: # Scale
+				v = values[i]				
+				if i < 5:
+					if values[i] >= 0.5: 
+						v = getattr(note,property) + (values[i] * (1+1) - 1) * (1 - getattr(note,property))
+					else: v = getattr(note,property) + (values[i] * (1+1) - 1) * (getattr(note,property))
+				elif i == 5: # pitchofs				
+					if values[i] >= 0:
+						v = getattr(note,property) + (values[i] / 120) * (120 - getattr(note,property))
+					else: v = getattr(note,property) - ((-1 * values[i]) / 120) * (120 + getattr(note,property))			
+				setattr(note,property,v)
+			elif modes[i] == 3: # Random
+				if i < 5:
+					setattr(note,property,random_value(False,0,1))
+				elif i == 5:	
+					setattr(note,property,random_value(True,-120,120))
+				elif i < 8:
+					setattr(note,property,random_value(True,0,flp.score.length))
+				elif i == 8:
+					setattr(note,property,random_value(True,0,131))
+				elif i == 9:
+					setattr(note,property,random_value(True,0,15))
+				elif i == 10:
+					setattr(note,property,random_value(True,0,number_of_groups+1))
+				elif i > 10:
+					rand_v = random_value(True,0,1)
+					if rand_v == 0:
+						setattr(note,property,False)
+					else: setattr(note,property,True)					
+					
+			elif modes[i] == 4: # Invert
+				if i < 5:
+					v = getattr(note,property)
+					setattr(note,property,1 - v)
+				if i == 5:
+					v = getattr(note,property)
+					setattr(note,property,(v * -1))
+				elif i > 10:						
+					if getattr(note,property) == True:
+						setattr(note,property,False)
+					else: setattr(note,property,True)
+			elif modes[i] == 5: # Default
+				setattr(note,property,default_values[i])
+
+
+	
+
+
+    
+
+
+

@@ -1,0 +1,324 @@
+"""flp
+Title: Melody Jam
+Author: Pierre Sosa
+Category: Generative (melody)
+Version: v1.2
+
+Description: 
+This script generates notes in a chosen scale or scales detected from key markers in the Piano Roll. You can choose the interval between each note, and the number of notes of different lengths in the loop is randomized. There are two versions of the script, one with normal option names and one with symbols as option names. The script has been updated with bug fixes and additional features based on user suggestions.
+
+Changelog:
+2023-09-08 (v1.2)
+- Added "Seed for RNG" knob
+- Added "start note" drop down menu
+
+2023-08-27 (v1.1)
+- Added Melody Jam v1.1 with introduced suggestions by cowpatmat from the comments below and some bug-fixes
+"""
+# *** FL Studio Piano Roll script by Pierre Sosa ***
+
+import flpianoroll as flp
+import _random
+ 
+# Script Global Variables Section
+
+# Defaults
+default_root_note = 6
+default_scale = 1
+default_start_octave = 5
+default_rhythm_units = [16, 0, 0, 0]
+
+# Grid units
+beat = flp.score.PPQ # PPQ equals how many ticks there are in a beat
+bar = beat * 4
+step = beat / 4
+
+# For random
+launch_flag = True
+global_rhythm_units = [] 
+randomized_notes_lengths = []
+
+# Strings lists
+root_notes_names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"]
+scales_names = ["Major","Minor","Minor Harmonic","Minor Melodic","Dorian","Phrygian","Lydian","Mixolydian","Locrian"]
+rhythm_units_for_control = ["2 Steps","4 steps","6 Steps","8 Steps"]
+
+# Scales intervals
+scales_intervals = [
+	[0, 2, 4, 5, 7, 9, 11], # Major Intervals
+	[0, 2, 3, 5, 7, 8, 10], # Minor Intervals  
+	[0, 2, 3, 5, 7, 8, 11], # Minor Harmonic Intervals  
+	[0, 2, 3, 5, 7, 9, 11]  # Minor Melodic Intervals  
+]
+
+# Add modes
+modes_shift = (2,4,5,7,11) # Dorian, Phrygian, Lydian, Mixolydian, Locrian shift from Major Intervals
+
+for mode in modes_shift:
+	mode_scale = []
+	for i in scales_intervals[0]:
+		i -= mode if i - mode >= 0 else (mode - 12)
+		mode_scale.append(i)
+	mode_scale.sort()
+	scales_intervals.append(mode_scale)
+
+# Markers detection
+detected_key_marker = "none"
+is_there_key_marker = 0
+key_markers_times_in_ticks = []
+key_markers_intervals = []
+key_markers_roots = []
+detected_key_marker_names = []
+if flp.score.markerCount > 0:
+	first_key_marker_root = True	
+	for m in range(flp.score.markerCount):
+		marker = flp.score.getMarker(m)
+		if marker.mode == 12:	# Key marker detection		
+			is_there_key_marker = 1
+			default_root_note = 12
+			default_scale = len(scales_names)
+			key_markers_times_in_ticks.append(marker.time)
+			if first_key_marker_root == True: 
+				default_root_note = marker.scale_root
+				first_key_marker_root = False
+			scale_helper = marker.scale_helper
+			temp_helper = scale_helper.split(",")
+			marker_intervals = [i for i in range(len(temp_helper)) if temp_helper[i] == '0']
+			
+			for i in range(len(marker_intervals)):
+				marker_intervals[i] -= marker.scale_root if marker_intervals[i] - marker.scale_root >= 0 else (marker.scale_root - 12)
+			marker_intervals.sort()
+			key_markers_intervals.append(marker_intervals)
+			key_markers_roots.append(marker.scale_root)
+			detected_key_marker_names.append(flp.score.getMarker(m).name)
+if is_there_key_marker == 1:
+	key_markers_list_str = ", ".join(detected_key_marker_names)
+else: key_markers_list_str = "none"
+	
+# Randomizer
+def random_value(return_int, range_min, range_max):
+	x = _random.Random()
+	x.seed()
+	random_value = x.random()
+	random_value = random_value * (range_max - range_min) + range_min  # convert value to fit between min and max range
+
+	if return_int == True:  # convert value to integer
+		return round(random_value)
+	return random_value	
+
+# Script GUI Section
+def createDialog():
+	Form = flp.ScriptDialog(
+	"Melody Jam", "Detected key marker(s): " + key_markers_list_str + "." + 
+	"\r\n" + 
+	"\r\n" + 
+	"This script can detect key markers in Piano Roll and use them as scale(s) for notes. To use detected scale(s) select 'Key marker(s)' in scale selector. Root note from key marker(s) can be overridden."+ 
+	"\r\n" + 
+	"\r\n" + 
+	"'Num. of X steps' selectors determine how many notes of given lengths will happen in the loop. The lengths order is randomized. To reshuffle the order change one of the 'Num. of X steps' selectors and bring it back to the preferred value. \r\n" + 
+	"\r\n" + 
+	"*** script by Pierre Sosa ***"
+	)
+	
+	Form.AddInputCombo("Root Note", root_notes_names + ["Key Marker(s)"], default_root_note)
+	Form.AddInputCombo("Scale", scales_names + ["Key Marker(s)"], default_scale)
+	Form.AddInputCombo("Start Octave", [str(i) for i in range(11)], default_start_octave)
+	Form.AddInputCombo("Pattern length", "1 Bar,2 Bars,3 Bars,4 Bars",3)
+	Form.AddInputCombo("Loop length", [str(i*2) + " Steps" for i in range(2,17)],6)
+	Form.AddInputCombo("Note length", "-2 Steps,-1.5 Step,-1 Step,-1/2 Step,Full,+1/2 Step,+1 Step,+1.5 Step,+2 Steps", 4)
+	for i in range(4):
+		Form.AddInputCombo("Num. of " + rhythm_units_for_control[i], [str(j) for j in range(0,(int((16)/(i+1))+1))], default_rhythm_units[i])
+	for i in range(1,17):
+		Form.AddInputCombo("Interval #" + str(i), [str(j) for j in range(-8,9)],(9 if i == 1 else 10))
+	return Form   
+    
+# Script Main Function Section    
+def apply(Form):
+
+	GIV = lambda x : Form.GetInputValue(x)
+	
+	root_note = GIV("Root note")
+	scale = GIV("Scale")
+	if root_note == 12 and scale != len(scales_names):
+		flp.Utils.ShowMessage("Key marker(s) mode for root note can be selected only if the scale is in key markers mode!")
+		return
+	start_octave = GIV("Start octave")
+	
+	# Expands scale intervals to 11 octaves	
+	if scale < len(scales_names):
+		intervals = scales_intervals[scale].copy()
+		intervals_length_at_start = len(intervals)
+		for octave in range(1,11):
+			intervals.extend([intervals[i]+12*octave for i in range(intervals_length_at_start)])		
+	else: 
+		if is_there_key_marker == 0:
+			flp.Utils.ShowMessage("There are no key markers!")
+			return
+		else:
+			expanded_key_markers_intervals = []
+			for marker in key_markers_intervals:
+				intervals = marker.copy()
+				intervals_length_at_start = len(marker)
+				for octave in range(1,11):
+					intervals.extend([intervals[i]+12*octave for i in range(intervals_length_at_start)])			
+				expanded_key_markers_intervals.append(intervals)
+	
+	pattern_length_in_ticks = (GIV("Pattern length") + 1) * bar
+	loop_length_in_ticks = (GIV("Loop length") + 2) * 2 * step
+	if loop_length_in_ticks > pattern_length_in_ticks:
+		loop_length_in_ticks = pattern_length_in_ticks
+	
+	num_of_loops = int(pattern_length_in_ticks / loop_length_in_ticks)
+	loop_remainder_in_ticks = pattern_length_in_ticks % loop_length_in_ticks
+	loop_remainder_flag = 1 if loop_remainder_in_ticks > 0 else 0 
+
+	rhythm_units = [] # Possible note lengths in ticks
+	max_loop_length_in_ticks = 0
+	for u in range(4):
+		for i in range(GIV("Num. of " + rhythm_units_for_control[u])):
+			unit = int((u+1) * step * 2)
+			rhythm_units.append(unit)
+			max_loop_length_in_ticks += unit
+	
+	if not rhythm_units: return
+	
+	global launch_flag
+	global global_rhythm_units
+	global randomized_notes_lengths
+	
+	def randomize_notes_lengths():
+		randomized_notes_lengths.clear()
+		rhythm_units_copy = rhythm_units.copy()
+		for i in range(len(rhythm_units)):
+			index = random_value(True,0,len(rhythm_units_copy)-1)
+			randomized_notes_lengths.append(rhythm_units_copy[index])
+			rhythm_units_copy.pop(index)	
+	
+	if launch_flag == True:
+		global_rhythm_units = rhythm_units.copy()
+		randomize_notes_lengths()
+		launch_flag = False
+	elif global_rhythm_units != rhythm_units:
+		global_rhythm_units = rhythm_units.copy()
+		randomize_notes_lengths()
+
+	global_notes_length = (GIV("Note length") - 4) * step * 1/2
+	
+	# Intervals
+	notes_intervals = []
+	for l in range(1,17):
+		interval = GIV("Interval #" + str(l)) - 8
+		if interval == 0:
+			notes_intervals.append("Off")
+			continue
+		notes_intervals.append(interval)
+		
+	notes = []
+	final_intervals = [] # Without "off"
+	last_notes_in_loops = []
+	notes_count = 0
+	
+	# Add notes	
+	for loop in range(num_of_loops+loop_remainder_flag):
+		previous_note_time = loop * loop_length_in_ticks # Start note
+		loop_end = loop_length_in_ticks * (loop+1)
+		if loop_remainder_flag == 1 and loop == num_of_loops:
+			loop_end = loop_length_in_ticks * num_of_loops + loop_remainder_in_ticks
+		for n in range(len(randomized_notes_lengths)):
+			new_note = flp.Note()
+			
+			if n == 0: new_note.time = previous_note_time # First note in the loop
+			else: new_note.time = previous_note_time + randomized_notes_lengths[n-1]
+			previous_note_time = new_note.time
+			if new_note.time >= loop_end:
+				break
+			if notes_intervals[n] == "Off":
+				continue	
+			final_intervals.append(notes_intervals[n]) 	
+			notes_count += 1
+			new_note.number = 60
+			new_note.length = randomized_notes_lengths[n]
+			notes.append(new_note)
+			if new_note.time + new_note.length > loop_end:
+				new_note.length = loop_end - new_note.time
+			new_note.length += global_notes_length
+		last_notes_in_loops.append(notes_count-1)	
+	
+	# Notes numbers
+	notes_numbers = []
+	if scale == len(scales_names): # Start note 
+		previous_note_number_as_interval_index = expanded_key_markers_intervals[0].index(start_octave * 12)
+	else: previous_note_number_as_interval_index = intervals.index(start_octave * 12) 
+	i = 0
+	previous_note_marker = 0
+	for note in notes:
+	
+		if scale == len(scales_names): # Key markers mode
+			if key_markers_times_in_ticks[0] > 0: # When first key marker is not at the beginning of the piano roll
+				note.time += key_markers_times_in_ticks[0]
+			
+			current_note_time = note.time
+			m = 0
+			for marker_time in key_markers_times_in_ticks:
+				if note.time >= marker_time:
+					current_marker = m
+				m += 1
+			intervals = expanded_key_markers_intervals[current_marker]
+			intervals_length_at_start = len(key_markers_intervals[current_marker])
+			if GIV("Root note") == 12: # Key Marker Mode
+				root_note = key_markers_roots[current_marker]
+			if previous_note_marker	!= current_marker:
+				intervals_match = 0
+				try_count = 0
+				while intervals_match == 0 and try_count > - len(intervals) and try_count < len(intervals):
+					try: 
+						previous_note_number_as_interval_index = intervals.index(new_note_number-root_note+try_count)
+						intervals_match = 1
+					except:
+						try_count += 1
+						if final_intervals[i] < 0: 
+							try_count = try_count * -1
+				if intervals_match == 0 and try_count > 0:
+					previous_note_number_as_interval_index = len(intervals)
+				elif intervals_match == 0 and try_count < 0:
+					previous_note_number_as_interval_index = -1
+				previous_note_marker = current_marker
+
+		
+		interval = final_intervals[i]
+		if interval > 0: interval -= 1
+		else: interval += 1
+			
+		number_as_intervals_index = previous_note_number_as_interval_index + interval
+		
+		if number_as_intervals_index >= len(intervals) + intervals_length_at_start:
+			new_note_number = 132
+		elif number_as_intervals_index >= len(intervals):
+			new_note_number = intervals[number_as_intervals_index-intervals_length_at_start] + root_note + 12
+		elif number_as_intervals_index < - intervals_length_at_start:
+			new_note_number = -1
+		elif number_as_intervals_index < 0:
+			new_note_number = intervals[number_as_intervals_index+intervals_length_at_start] + root_note - 12
+		else: new_note_number = intervals[number_as_intervals_index] + root_note
+				
+		note.number = new_note_number
+		
+		previous_note_number_as_interval_index = number_as_intervals_index
+		for last_note in last_notes_in_loops: # Reset note number when new loop starts
+			if i == last_note:
+				previous_note_number_as_interval_index = intervals.index(start_octave * 12) 
+				
+		i += 1
+
+	last_note_number = -1
+	last_note_end = 0
+	i = 0
+	for note in notes:
+		if last_note_number == note.number: # Prevent overlapping
+			if last_note_end > note.time:
+				notes[i-1].length = note.time - notes[i-1].time 
+		if note.number >= 0 and note.number <= 131:
+			flp.score.addNote(note)
+		last_note_number = note.number
+		last_note_end = note.time + note.length
+		i += 1

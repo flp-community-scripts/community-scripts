@@ -1,0 +1,52 @@
+"""flp
+Title: Select Highest or Lowest Notes
+Author: Pierre Sosa
+Category: Archive
+Version: (n/a)
+
+Description: 
+This script allows you to select the highest or lowest notes in a piano roll. It provides advanced selection options and was inspired by an idea from Trancit.
+
+Changelog:
+no changelog
+"""
+import flpianoroll as flp
+
+
+number_list = []
+for note in range(flp.score.noteCount): 
+	flp.score.getNote(note).selected = False  
+	if number_list.count(flp.score.getNote(note).number) == 0:
+		number_list.append(flp.score.getNote(note).number)
+		
+number_list.sort()	
+reversed_number_list = number_list.copy()
+reversed_number_list.reverse()
+
+		
+def createDialog():
+	Form = flp.ScriptDialog("Select highest or lowest notes", "*** Script by Pierre Sosa ***")
+	Form.AddInputCombo("Mode","Lowest,Highest,From both Sides",1)
+	Form.AddInputKnobInt("Margin", 0, 0, len(number_list)-1) 
+
+	return Form
+
+def apply(Form):
+
+	margin = Form.GetInputValue("Margin")
+	
+	if Form.GetInputValue("Mode") == 0:
+		for n in range(flp.score.noteCount):
+			if flp.score.getNote(n).number <= number_list[margin]: 
+				flp.score.getNote(n).selected = True 
+	elif Form.GetInputValue("Mode") == 1:
+		for n in range(flp.score.noteCount):			
+			if flp.score.getNote(n).number >= reversed_number_list[margin]:
+				flp.score.getNote(n).selected = True    		
+	else: 
+		for n in range(flp.score.noteCount):			
+			if flp.score.getNote(n).number <= number_list[margin]: 
+				flp.score.getNote(n).selected = True  
+			if flp.score.getNote(n).number >= reversed_number_list[margin]: 
+				flp.score.getNote(n).selected = True 				
+				

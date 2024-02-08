@@ -1,0 +1,35 @@
+"""flp
+Title: Reset notes to default
+Author: Pierre Sosa
+Category: Adjust
+Version: (n/a)
+
+Description: 
+This script resets the release property of notes to its default value.
+
+Changelog:
+2023-07-23
+- Resets release property (initial version)
+"""
+import flpianoroll as flp
+
+if flp.score.noteCount == 0: 
+	flp.Utils.ShowMessage("There are no notes!")
+
+notes_properties = ['velocity', 'release', 'pan', 'fcut', 'fres', 'pitchofs','slide', 'porta']
+default_values = [0.78125, 0.5, 0.5, 0.5, 0.5, 0, False, False]
+
+for n in range(flp.score.noteCount):
+	i = 0
+	for property in notes_properties:
+		setattr(flp.score.getNote(n),property,default_values[i])
+		i += 1
+
+
+	
+
+
+    
+
+
+

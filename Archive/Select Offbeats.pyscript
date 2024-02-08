@@ -1,0 +1,34 @@
+"""flp
+Title: Select Offbeats
+Author: teetow
+Category: Archive
+Version: (n/a)
+
+Description: 
+This script selects and deselects notes based on their rhythmic strength. It targets notes that are not on a strong beat, specifically those not on the "1-and-2-and-3-and-4" grid. It accomplishes this by using a simple method of taking the note position and modulo it with the current PPQ value divided by two. If the result is larger than 10, the note is selected; otherwise, it is deselected. This script is useful for differentiating strong and weak beats in order to build a good groove. While a parameters dialog could be added, the current implementation is considered less clunky to use.
+
+Changelog:
+no changelog
+"""
+from time import time
+import flpianoroll as flp
+
+"""
+Select Off-Beats
+
+Selects note not on a strong beat
+
+by teetow
+"""
+
+
+
+ppq = flp.score.PPQ
+
+for n in range(flp.score.noteCount):
+    note = flp.score.getNote(n)
+    periodicity = note.time % int(ppq / 2)
+    if periodicity > 10:
+        note.selected = True
+    else:
+        note.selected = False

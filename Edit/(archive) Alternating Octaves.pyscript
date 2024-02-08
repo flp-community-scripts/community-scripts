@@ -1,0 +1,88 @@
+"""flp
+Title: Alternating Octaves
+Author: emgoz
+Category: Edit
+Version: (n/a)
+
+Description: 
+This script allows you to convert long notes into alternating octaves or other intervals commonly used in dance music basslines. Enjoy experimenting with different intervals!
+
+Changelog:
+no changelog
+"""
+import flpianoroll as flp
+
+lengthValues = [32,16,8,4,2,1]
+lengthValuesStr = ['1/32','1/16','1/8','1/4','1/2','1/1']
+intervalValuesStr = ['unison','minor 2nd', 'major 2nd', 'minor 3rd', 'major 3rd', '4th', 'tritone', '5th', 'minor 6th', 'major 6th', 'minor 7th', 'major 7th', 'octave']
+
+noteLengthCtrl = 'Note Length'
+upDownCtrl = 'Up / down'
+tripletCtrl = 'Triplet'
+intervalCtrl = 'Interval'
+
+
+def createDialog():
+    form = flp.ScriptDialog("Alternating Octave Generator", "Turns notes into alternating octaves (or different intervals).\r\n" + 
+                            "\r\nScript by emgoz\r\n")
+                            
+    form.AddInputCombo(noteLengthCtrl, lengthValuesStr, 2)
+    form.AddInputCheckbox(tripletCtrl, False)
+    form.AddInputCombo(intervalCtrl, intervalValuesStr, 12)
+    form.AddInputCombo(upDownCtrl, "Up,Down", 0)
+    return form
+    
+    
+def apply(form):  
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+  lengthIndex = form.GetInputValue(noteLengthCtrl)
+  lengthTicks = (flp.score.PPQ * 4) / lengthValues[lengthIndex]
+  if form.GetInputValue(tripletCtrl):
+    lengthTicks *= 2/3
+
+  pitchShift = form.GetInputValue(intervalCtrl)
+  if form.GetInputValue(upDownCtrl):
+    pitchShift *= -1
+  
+  for n in range(len(notes)):   
+      thisNote = notes[n]
+      # quantize start time: round to nearest multiple of lengthTicks
+      indexWithinSequence = round(thisNote.time/lengthTicks)
+      thisNote.time = indexWithinSequence*lengthTicks
+      
+      # quantize length
+      numNotes = round(thisNote.length/lengthTicks)
+      thisNote.length = lengthTicks
+      
+      # make copies
+      for i in range(1,numNotes):
+        newNote = cloneNote(thisNote)
+        newNote.time += lengthTicks*i
+        if (indexWithinSequence+i) % 2 == 1:
+          newNote.number += pitchShift 
+        flp.score.addNote(newNote)
+        
+      # correct pitch of first note
+      if indexWithinSequence%2 == 1:
+        thisNote.number += pitchShift
+      
+  return
+    
+def cloneNote(note):
+    newNote = flp.Note()
+    newNote.number   = note.number      # midi note number
+    newNote.time     = note.time        # ticks
+    newNote.length   = note.length      # ticks
+    newNote.group    = note.group       # group number this note belongs to
+    newNote.pan      = note.pan         # 0.0 - 1.0, default 0.5
+    newNote.velocity = note.velocity    # 0.0 - 1.0, default 0.8
+    newNote.color    = note.color       # 0 - 15, default 0. Color group / MIDI channel.
+    newNote.fcut     = note.fcut        # 0.0 - 1.0, default 0.5
+    newNote.fres     = note.fres        # 0.0 - 1.0, default 0.5
+    newNote.pitchofs = note.pitchofs    # -120 to 120
+    newNote.slide    = note.slide       # true/false
+    newNote.porta    = note.porta       # true/false
+    newNote.muted    = note.muted       # true/false
+    newNote.selected = note.selected    # true/false
+    return newNote
+    

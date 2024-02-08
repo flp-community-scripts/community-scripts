@@ -1,0 +1,83 @@
+"""flp
+Title: Select Notes with the Same Property Values
+Author: Pierre Sosa
+Category: Archive
+Version: (n/a)
+
+Description: 
+This script allows you to select notes in the piano roll that have the same property value, such as velocity. It includes bug fixes and an added release property.
+
+Changelog:
+2023-07-23 - Added release property 2023-07-02 - Bug-fixes
+"""
+import flpianoroll as flp
+
+notes_properties = ['velocity', 'pan', 'release', 'fcut', 'fres', 'pitchofs','length', 'time', 'number', 'color', 'group', 'slide', 'porta', 'muted']
+
+min_number = 127
+max_number = 0
+number_of_groups = 0
+
+if flp.score.noteCount > 0:
+	for note in range(flp.score.noteCount): 
+		flp.score.getNote(note).selected = False  
+		if flp.score.getNote(note).number > max_number:
+			max_number = flp.score.getNote(note).number
+		if flp.score.getNote(note).number < min_number:
+			min_number = flp.score.getNote(note).number
+		if flp.score.getNote(note).group > number_of_groups:
+			number_of_groups = flp.score.getNote(note).group
+		
+def createDialog():
+	Form = flp.ScriptDialog("Select notes with the same property value", "Reference modes:\r\n" +
+	"- All: all notes that has a value of the given property the same as any other note will be selected.\r\n" +
+	"- Note: choose one note that all other notes will be compared to.\r\n" +
+	"- Value: set a fixed value that all other notes properties values will be compared to. Scaled depending on property selection. \r\n" +
+	"Tolerance: values with a difference less than this knob value will be treated as the same value. Scaled depending on property selection. For length and time properties use 'Tolerance in ticks' knob. \r\n" +
+	"*** Script by Pierre Sosa ***")
+	Form.AddInputCombo("Property",[str(property.capitalize()) for property in notes_properties],0)
+	Form.AddInputCombo('Reference mode',"All,Note,Value",1)
+	Form.AddInputKnobInt('Note reference', 1, 1, flp.score.noteCount) 
+	Form.AddInputKnob('Value reference', 0.5, 0, 1)
+	Form.AddInputKnob('Tolerance', 0, 0, 1) 
+	Form.AddInputKnobInt('Tolerance in ticks', 0, 0, flp.score.length) 
+	return Form
+
+def apply(Form):
+
+	if flp.score.noteCount == 0:
+		flp.Utils.ShowMessage("There is no notes!")
+		return
+		
+	tolerance = Form.GetInputValue("Tolerance")
+	value_reference = Form.GetInputValue("Value reference")
+	
+	if Form.GetInputValue("Property") == 5:
+		tolerance = tolerance * 240
+		value_reference = value_reference * 240 - 120
+	elif Form.GetInputValue("Property") == 6 or Form.GetInputValue("Property") == 7:
+		tolerance = Form.GetInputValue("Tolerance in ticks")
+		value_reference = value_reference * flp.score.length
+	elif Form.GetInputValue("Property") == 8:
+		tolerance = tolerance * (max_number - min_number)	
+		value_reference = value_reference * 127	
+	elif Form.GetInputValue("Property") == 9:
+		tolerance = tolerance * 15	
+		value_reference = value_reference * 15	
+	elif Form.GetInputValue("Property") == 10:		
+		tolerance = tolerance * number_of_groups
+		value_reference = value_reference * number_of_groups
+		
+	def compare(value,note):
+		for n in range(flp.score.noteCount):
+			compared_note_value = getattr(flp.score.getNote(n), notes_properties[Form.GetInputValue("Property")])
+			if note != n and value + tolerance >= compared_note_value and value - tolerance <= compared_note_value:
+				flp.score.getNote(n).selected = True    
+
+	if Form.GetInputValue("Reference mode") == 0:
+		for note in range(flp.score.noteCount): 
+			compare(getattr(flp.score.getNote(note), notes_properties[Form.GetInputValue("Property")]),note)
+	elif Form.GetInputValue("Reference mode") == 1:
+		flp.score.getNote(Form.GetInputValue("Note reference")-1).selected = True 
+		compare(getattr(flp.score.getNote(Form.GetInputValue("Note reference")-1), notes_properties[Form.GetInputValue("Property")]),Form.GetInputValue("Note reference")-1)		
+	else: compare(value_reference,-1)

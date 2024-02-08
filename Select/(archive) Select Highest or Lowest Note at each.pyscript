@@ -1,0 +1,78 @@
+"""flp
+Title: Select Highest or Lowest Note at each
+Author: Pierre Sosa
+Category: Select
+Version: (n/a)
+
+Description: 
+This script allows you to select the highest or lowest (or middle) notes at each selected time unit. It can be useful for selecting specific notes in chords. However, it may not work well with chords that have notes that don't entirely time-overlap, such as strummed chords. The script has been updated to work with selections and a bug has been fixed when there are no notes at the 'scan unit'.
+
+Changelog:
+2023-12-15
+- Works also with selection now
+- Fixed a bug occurring when there are no notes at the 'scan unit'
+"""
+import flpianoroll as flp
+import math
+
+beat = flp.score.PPQ  # PPQ equals how many ticks there are in a beat
+bar = beat * 4
+step = beat / 4
+score_len = flp.score.length
+scan_units_str = ['Tick','Half Beat','Odd Beat','Half Bar','Odd Bar']
+scan_units = [1,step*2,beat,beat*2,bar]
+		
+if not flp.score.noteCount: 
+	flp.Utils.ShowMessage("There are no notes!")
+else: 
+	def createDialog():
+		Form = flp.ScriptDialog("Select highest or lowest note at each", "*** Script by Pierre Sosa ***")
+		Form.AddInputCombo("Select note","Highest,Lowest,Middle",0)
+		Form.AddInputCombo("Scan at each",[scan_units_str[unit] for unit in range(len(scan_units_str)) if scan_units[unit]<score_len],0)
+		return Form
+	
+	def apply(Form):
+		notes_starts = []
+		notes_ends = []
+		for note in range(flp.score.noteCount): 
+			flp.score.getNote(note).selected = False
+			note_start = flp.score.getNote(note).time
+			note_length = flp.score.getNote(note).length
+			if note_length > 0:
+				note_end = note_start + note_length - 1
+			else: note_end = note_start
+			notes_starts.append(note_start)
+			notes_ends.append(note_end)
+			
+		score_len = flp.score.length
+		scan_unit = scan_units[Form.GetInputValue("Scan at each")]
+		
+		if Form.GetInputValue("Scan at each") > 0:
+			num_of_scans = math.ceil((score_len/scan_unit)/2)
+		else: num_of_scans = flp.score.length # Scan at each tick
+		
+		for t in range(num_of_scans):
+			if Form.GetInputValue("Scan at each") > 0:
+				t = (((t+1)*2)-1)*scan_unit
+			notes_in_each_t = []
+			for note in range(flp.score.noteCount): 
+				if t >= notes_starts[note] and t <= notes_ends[note]:
+					notes_in_each_t.append(note)
+			notes_numbers = []
+			if len(notes_in_each_t) < 2:
+				continue
+			for note in notes_in_each_t:
+				notes_numbers.append(flp.score.getNote(note).number)
+				if Form.GetInputValue("Select note") == 2: # Middle
+					flp.score.getNote(note).selected = True
+				if flp.score.getNote(note).number >= max(notes_numbers):
+					i_of_max = note
+				if flp.score.getNote(note).number <= min(notes_numbers):
+					i_of_min = note
+			if Form.GetInputValue("Select note") == 0: # Highest
+				flp.score.getNote(i_of_max).selected = True
+			elif Form.GetInputValue("Select note") == 1: # lowest	
+				flp.score.getNote(i_of_min).selected = True
+			else: # Middle
+				flp.score.getNote(i_of_max).selected = False
+				flp.score.getNote(i_of_min).selected = False

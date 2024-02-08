@@ -1,0 +1,82 @@
+"""flp
+Title: Select Overlapping Notes
+Author: Pierre Sosa
+Category: Select
+Version: (n/a)
+
+Description: 
+This script allows you to select overlapping notes with more customization. It can select notes at different keys, but only if they have time overlap. There was a bug fix in the latest update.
+
+Changelog:
+2023-08-27
+- Bug-fix: Fixed a bug related to selecting overlapping notes.
+"""
+import flpianoroll as flp
+
+def createDialog():
+    Form = flp.ScriptDialog("Select Overlapping Notes", "Mode determines which of the overlapping notes are selected: \r\n" + 
+    "All: self explanatory. Selects all overlapping notes. \r\n"  + 
+    "From left: selects only those notes that overlap with notes beggining right to them.\r\n" + 
+    "From right: selects only those notes that overlap with notes beggining left to them. \r\n" + 
+    "First one: selects only those notes that don't overlap with any notes beggining left to them. \r\n" + 
+    "Last one: selects only those notes that don't overlap with any notes beggining right to them. \r\n" +
+    "Same start determines what to do with notes starting at the same point. \r\n" +
+    "Key determines if the notes need to be at the same key (eg. C5) to be considered as overlapping notes.\r\n" + 
+    "*** Script by Pierre Sosa ***")
+    Form.AddInputCombo("Mode", "All,From left,From right,First one,Last one",0)
+    Form.AddInputCombo("Same start", "None,One,All but one,All",2)
+    Form.AddInputCombo("Overlap", "Time and Key,Time",0)
+    return Form
+
+def apply(Form):
+ 
+    notes_starts = []
+    notes_lengths = []
+    notes_ends = []
+    notes_numbers = []
+    for n in range(flp.score.noteCount):
+        notes_starts.append(flp.score.getNote(n).time)
+        notes_lengths.append(flp.score.getNote(n).length)
+        notes_ends.append(flp.score.getNote(n).time + flp.score.getNote(n).length)
+        notes_numbers.append(flp.score.getNote(n).number)
+        flp.score.getNote(n).selected = False
+        
+    if Form.GetInputValue("Mode") == 3:
+        for note in reversed(range(flp.score.noteCount)):
+            for n in range(flp.score.noteCount):                    
+                if notes_numbers[note] == notes_numbers[n] or Form.GetInputValue("Overlap") == 1:
+                    if note != n and notes_starts[n] > notes_starts[note] and notes_starts[n] < notes_ends[note]:               
+                        flp.score.getNote(note).selected = True
+                        if notes_starts[n] > notes_starts[note]:
+                            flp.score.getNote(n).selected = False 
+    else:
+        for note in range(flp.score.noteCount):        
+            for n in range(flp.score.noteCount):
+                if notes_numbers[note] == notes_numbers[n] or Form.GetInputValue("Overlap") == 1:
+                    if note != n and notes_starts[n] > notes_starts[note] and notes_starts[n] < notes_ends[note]:
+                        if Form.GetInputValue("Mode") == 0:
+                            flp.score.getNote(note).selected = True                    
+                            flp.score.getNote(n).selected = True                  
+                        elif Form.GetInputValue("Mode") == 1:
+                            flp.score.getNote(note).selected = True
+                        elif Form.GetInputValue("Mode") == 2:
+                            flp.score.getNote(n).selected = True 
+                        elif Form.GetInputValue("Mode") == 4:
+                            flp.score.getNote(n).selected = True    
+                            flp.score.getNote(note).selected = False 
+
+    for note in range(flp.score.noteCount-1):
+        if notes_starts[note] == notes_starts[note+1]:
+            if notes_numbers[note] == notes_numbers[note+1] or Form.GetInputValue("Overlap") == 1:        
+                if Form.GetInputValue("Same start") == 0:
+                    flp.score.getNote(note).selected = False
+                    flp.score.getNote(note+1).selected = False
+                elif Form.GetInputValue("Same start") == 1:
+                    flp.score.getNote(note).selected = False
+                    flp.score.getNote(note+1).selected = True
+                elif Form.GetInputValue("Same start") == 2:
+                    flp.score.getNote(note).selected = True
+                    flp.score.getNote(note+1).selected = False
+                else:
+                    flp.score.getNote(note).selected = True
+                    flp.score.getNote(note+1).selected = True
