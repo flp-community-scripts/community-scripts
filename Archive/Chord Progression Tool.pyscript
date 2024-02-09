@@ -2,7 +2,7 @@
 Title: Chord Progression Tool
 Author: Pierre Sosa
 Category: Archive
-Version: v1.1
+Version: 1.1
 License: Unknown
 
 Description: 
@@ -14,7 +14,23 @@ types, as well as improvements and bug fixes. You can watch a video presentation
 of the script and download it from the provided links.
 
 Changelog:
-2023-08-27 (Chord Progression Tool v1.1) - Added Minor Hungarian, Minor Neapolitan, Minor Romanian, Major Bulgarian, Major Persian, Neapolitan, Arabic, Phrygian Dominant, Locrian Super scales. - Added Add9, Add11, Add13, Fifth 9th, 7add11, 7add13 and Single Note (root) chord types. - Added Random Keys and Poly (chop chords) arp modes. - Added more arpeggiator speed units. - Added "Seed for RNG" knob instead of "Change seed" checkbox. Read the script description for details of how to use. - Humanizer time maximum change is now relative to the chord duration setting. - Corrected Sixth chord. - Fixed random inversion mode randomizing values in too large range. Now it's doing it only in range of applicable inversions (depending on the number of notes in the chord). - Fixed creating wrong scale helpers for key markers. - Fixed humanizer affecting also notes existing in the score before running the script.
+2023-08-27 (Chord Progression Tool v1.1)
+- Added Minor Hungarian, Minor Neapolitan, Minor Romanian, Major Bulgarian,
+Major Persian, Neapolitan, Arabic, Phrygian Dominant, Locrian Super scales.
+- Added Add9, Add11, Add13, Fifth 9th, 7add11, 7add13 and Single Note (root)
+chord types.
+- Added Random Keys and Poly (chop chords) arp modes.
+- Added more arpeggiator speed units.
+- Added "Seed for RNG" knob instead of "Change seed" checkbox. Read the script
+description for details of how to use.
+- Humanizer time maximum change is now relative to the chord duration setting.
+- Corrected Sixth chord.
+- Fixed random inversion mode randomizing values in too large range. Now it's
+doing it only in range of applicable inversions (depending on the number of
+notes in the chord).
+- Fixed creating wrong scale helpers for key markers.
+- Fixed humanizer affecting also notes existing in the score before running the
+script.
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=310058
 """

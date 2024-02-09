@@ -9,8 +9,8 @@ Description:
 This script allows you to select individual voices from each chord in the piano
 roll. You can choose to include or exclude all notes below a given note. It is
 useful for selecting specific notes within chords or for instruments with
-articulation changes. The script provides a slick interface and allows you to
-dynamically change the maximum value of the voices parameter.
+articulation changes. The interface is designed to be slick, and the maximum
+value for the voices parameter is set to 10.
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=311564
 """

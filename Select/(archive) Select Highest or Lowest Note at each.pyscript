@@ -13,7 +13,9 @@ time-overlap, such as strummed chords. The script has been updated to work with
 selections and a bug has been fixed when there are no notes at the 'scan unit'.
 
 Changelog:
-2023-12-15 - Works also with selection now - Fixed a bug occurring when there are no notes at the 'scan unit'
+2023-12-15
+- Works also with selection now
+- Fixed a bug occurring when there are no notes at the 'scan unit'
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=308168
 """

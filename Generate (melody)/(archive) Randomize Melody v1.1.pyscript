@@ -7,11 +7,13 @@ License: Unknown
 
 Description: 
 This script allows you to randomize the keys of existing notes in the piano
-roll. It has a "w/o repetition" mode that preserves the rhythm by keeping the
-notes' length order. The latest version (v1.1) includes a "Seed for RNG" knob.
+roll. In "without repetition" mode, it randomizes the start times of the notes
+while preserving the rhythm by keeping the notes' length order. It also includes
+a "Seed for RNG" knob for setting the random number generator seed.
 
 Changelog:
-2023-08-09 (Randomize melody v1.1) - added "Seed for RNG" knob
+2023-08-09 (Randomize melody v1.1)
+- added "Seed for RNG" knob
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=308180
 """

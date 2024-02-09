@@ -12,7 +12,8 @@ names. It duplicates each note of each chord across all octaves and mutes all
 the notes. This creates a reference of all the notes of the currently played
 chord, which can be used to build bass tracks, arpeggios, melodies, etc. The
 script can also be used on a subset of selected notes to turn them into a chord.
-This script serves as a proof of concept for a chord track feature in FL Studio.
+The purpose of this script is to provide a "poor man's chord track" until a
+proper chord track feature is implemented in FL Studio.
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=320038
 """

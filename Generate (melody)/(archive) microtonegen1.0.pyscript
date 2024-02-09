@@ -8,11 +8,18 @@ License: Unknown
 Description: 
 This script generates equal tone scales. It allows you to specify the starting
 note, starting octave, note length, and spacing. The default starting note is
-'C', the default starting octave is 4, and the default number of tones to divide
-the octave into is 12.
+'C', starting octave is 4, and the default number of tones to divide the octave
+into is 12.
 
 Changelog:
-2021-03-XX (1.3) - Added starting time, octave, note length, spacing 2021-02-XX (1.2) - Fixed starting note names 2021-01-XX (1.1) - Added starting note
+2021-03-XX (1.3)
+- Added starting time, octave, note length, spacing
+
+2021-02-XX (1.2)
+- Fixed starting note names
+
+2021-01-XX (1.1)
+- Added starting note
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=322379
 """
