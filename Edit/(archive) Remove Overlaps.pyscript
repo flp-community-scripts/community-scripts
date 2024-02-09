@@ -2,13 +2,17 @@
 Title: Remove Overlaps
 Author: Iboibo
 Category: Edit
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script allows you to shrink overlapping notes in the FL Studio pianoroll. It provides an option to choose whether the end time of the overlapping note will be based on the note that covers it or the note itself. If the notes start at the same time, the longer ones will remain and the shorter ones will be deleted. Feedback is welcome.
+This script allows you to shrink overlapping notes in the FL Studio pianoroll.
+It provides an option to choose whether the end time of the overlapping note
+will be based on the note that covers it or the note itself. If the notes start
+at the same time, the longer ones will remain and the shorter ones will be
+deleted. Feedback is welcome.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=310353
 """
 from flpianoroll import *
 

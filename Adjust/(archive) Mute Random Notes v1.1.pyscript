@@ -3,16 +3,19 @@ Title: Mute Random Notes v1.1
 Author: Pierre Sosa
 Category: Adjust
 Version: v1.1
+License: Unknown
 
 Description: 
-This script allows you to mute random notes in the FL Studio piano roll. It has a probability knob that determines the percentage of notes to mute. You can also choose to unmute notes that were previously muted before running the script. It works on all notes if none are selected, or only on the selected notes. The script has been updated to include selection options and a "seed for RNG" knob.
+This script allows you to mute random notes in the FL Studio piano roll. It has
+a probability knob that determines the percentage of notes to mute. You can also
+choose to unmute notes that were previously muted before running the script. It
+works on all notes if none are selected, or only on the selected notes. The
+script has been updated to include selection options and a "seed for RNG" knob.
 
 Changelog:
-2023-08-27 (v.1.1)
-- Added 'seed for RNG' knob
+2023-08-27 (v.1.1) - Added 'seed for RNG' knob 2023-07-02 - Added selection options
 
-2023-07-02
-- Added selection options
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307307
 """
 import flpianoroll as flp
 import _random
@@ -25,7 +28,7 @@ def random_generator(seed):
 	x.seed(seed) if seed > 0 else x.seed()
 	while True:
 		yield x.random()
-
+	
 def random_value(return_int, range_min, range_max):
 	random_value = next(rng) * (range_max - range_min) + range_min  # convert value to fit between min and max range
 

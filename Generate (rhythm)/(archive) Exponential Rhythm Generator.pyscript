@@ -1,0 +1,94 @@
+"""flp
+Title: Exponential Rhythm Generator
+Author: XxINFERNOxX
+Category: Generate (rhythm)
+Version: Unknown
+License: Unknown
+
+Description: 
+This script generates exponential rhythms. It is based on code from the
+Appergiator script.
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=310839
+"""
+import flpianoroll as flp
+
+import time
+
+
+# ==================== Utility Functions ==================== #
+
+
+def makeNote(num, time, length, color=0, velocity=0.8):
+    """
+    make a new Note object
+
+    num: pitch
+    time: time in ticks
+    length: duration in ticks
+    color: int in [0: 16)
+    """
+    note = flp.Note()
+    note.number = int(num)
+    note.time = int(time)
+    note.length = max(1, int(length))
+    note.color = int(color)
+    note.velocity = velocity
+    return note
+
+
+# ==================== Scripting Functions ==================== #
+
+def createDialog():
+    """
+    This creates the Dialog Box to control the tool.  
+    """
+
+    message = "Number: sets the number of notes to add\n Multiplier: sets exponential rate of change for note start times\nInitial Length: sets the initial note length\nLength Multiplier: multiplies all the notes' lengths by a common factor\nLength Offset: offsets each notes length by a common number"
+    message2 = '''Number: sets the number of notes to add\r\n
+Multiplier: sets exponential rate of change for note start times\r\n
+Initial Length: sets the initial note length\r\n
+Length Multiplier: multiplies all the notes' lengths by a common factor\r\n
+Length Offset: offsets each notes length by a common number 
+    '''
+    form = flp.ScriptDialog("Exponential Rhythm Generator", message2)
+    form.AddInputKnobInt('Number', 10, 1, 20)
+    form.AddInputKnob('Multiplier', 1.5, 1.0, 2.0)
+    form.AddInputKnob('Initial Length', .05, .001, 1.0)
+    form.AddInputKnob('Length Multiplier', 1.0, .05, 2.0)
+    form.AddInputKnob('Length Offset', 0, -100, 100)
+    return form
+
+
+def apply(form):
+    """
+    This function contains the processing logic for your script.  
+
+    form: This function must accept only this parameter.  This is dealt with behind the 
+        scenes, and it is the same 'form' that was returned from the createDialog() above.  
+    """
+
+   
+    original_length = 2 ** (-3 + 1/64) * flp.score.PPQ
+    length = 2 ** (-3 + form.GetInputValue('Initial Length')) * flp.score.PPQ
+    time = 0
+    multiplier = form.GetInputValue('Multiplier')
+    number_of_notes = form.GetInputValue('Number')
+    new_notes = []
+
+    actual_length = 0
+    length_multiplier = form.GetInputValue('Length Multiplier')
+    length_offset = form.GetInputValue('Length Offset')
+    i = 0
+    while i < number_of_notes:
+                actual_length = length * length_multiplier + length_offset
+                new_notes.append(makeNote(60, time, actual_length))
+                time += length
+                length *= multiplier
+                i+= 1
+                
+    
+    # update notes
+    flp.score.clearNotes(False)
+    for note in new_notes:
+        flp.score.addNote(note)

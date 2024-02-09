@@ -3,15 +3,17 @@ Title: Random Transpose in Scale
 Author: Pierre Sosa
 Category: Edit
 Version: v1.1
+License: Unknown
 
 Description: 
-This script allows you to randomly transpose notes within a given scale and range. It includes features such as a seed for the random number generator, additional built-in scales, and bug fixes.
+This script allows you to randomly transpose notes within a given scale and
+range. It includes features such as a seed for the random number generator,
+additional built-in scales, and bug fixes.
 
 Changelog:
-2023-08-09 (Random transpose in scale v1.1)
-- added "Seed for RNG" knob
-- added more built-in scales
-- some bug-fixes
+2023-08-09 (Random transpose in scale v1.1) - added "Seed for RNG" knob - added more built-in scales - some bug-fixes
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=308224
 """
 import flpianoroll as flp
 import _random

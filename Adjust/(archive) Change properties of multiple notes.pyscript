@@ -3,19 +3,19 @@ Title: Change properties of multiple notes
 Author: Pierre Sosa
 Category: Adjust
 Version: v1.1
+License: Unknown
 
 Description: 
-This script allows you to change the properties of multiple notes in the FL Studio piano roll. You can choose to change all or random notes to fixed, scaled, random, inverted, or default values. The script also provides a live preview of the changes. The latest version (v1.1) includes controls for the release property and a "Seed for RNG" knob.
+This script allows you to change the properties of multiple notes in the FL
+Studio piano roll. You can choose to change all or random notes to fixed,
+scaled, random, inverted, or default values. The script also provides a live
+preview of the changes. The latest version (v1.1) includes controls for the
+release property and a "Seed for RNG" knob.
 
 Changelog:
-2023-09-08 (Change properties of multiple notes v1.1)
-- Added "Seed for RNG" knob
+2023-09-08 (Change properties of multiple notes v1.1) - Added "Seed for RNG" knob 2023-07-27 - Bug-fixes 2023-07-23 - Added controls for release property
 
-2023-07-27
-- Bug-fixes
-
-2023-07-23
-- Added controls for release property
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307691
 """
 import flpianoroll as flp
 import _random

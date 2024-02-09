@@ -2,13 +2,17 @@
 Title: Percussion - Timpani Octave Merge
 Author: Blaeh
 Category: Edit
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script automates the process of merging extra right or left hand samples above the regular Timpani register with the regular range for MIDI export. It resolves conflicts on C4 (C5 in FLS) by allowing users to select from "Merge" or "Leave" options. Notes above or below the register can be set to MIDI channel 10 or moved to A#1. The script is a combination of stolen parts from other users' scripts and the "Remove overlaps" code from Iboibo.
+This script automates the process of merging extra right or left hand samples
+above the regular Timpani register with the regular range for MIDI export. It
+handles conflicts on C4 (C5 in FLS) by allowing you to select whether to merge
+or leave the notes. Notes above or below the register can be set to MIDI channel
+10 or moved to A#1.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=313203
 """
 # A terribly amateurish script by Blae to prepare MIDI notation for importing into Sibelius: Timpani L&R Hand Octave Merge for proper import in Sibelius
 #

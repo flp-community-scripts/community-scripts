@@ -1,0 +1,40 @@
+"""flp
+Title: BBC / Celeste
+Author: phil.n
+Category: Archive
+Version: Unknown
+License: Unknown
+
+Description: 
+This script helps with selecting articulations for orchestral libraries. It adds
+expression keys to all notes in selected regions and removes duplicates. It has
+a working video and is available in versions for Abbey Road and BBC libraries.
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=317751
+"""
+# -*- coding: utf-8 -*-
+"""Celeste Articulation Selector with UI
+
+This script calls the UI for selecting the Articulation for BBC
+Symphonic Orchestra
+
+It needs the functions.py module in the same folder
+
+Classes:
+
+Functions
+
+Todo:
+    * 
+
+@author:         Philipp Noertersheuser
+@GIT Repository: 
+@License
+"""
+from flpianoroll import *
+from functions import createDialog, apply, configure
+import articulations
+
+Utils.log("Called Celeste.pyscript")
+
+configure(articulations.BBCSO.Celeste)

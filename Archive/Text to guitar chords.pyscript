@@ -1,0 +1,129 @@
+"""flp
+Title: Guitar Script / Text to guitar chords
+Author: DiscoKalle
+Category: Archive
+Version: Unknown
+License: Unknown
+
+Description: 
+This script allows you to convert text into guitar chords in the FL Studio piano
+roll. You can input chords and get them in guitar form. It also supports
+specifying the chord shape if you want it to be played differently. The script
+accounts for different ways of writing chords. If you encounter any issues or
+mistakes, please let the developer know. You can find more scripts on their
+GitHub page.
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=320828
+"""
+import flpianoroll as flp
+
+STRING_NOTES = [40, 45, 50, 55, 59, 64]  #E, A, D, G, B, E
+VALID_NOTES = ['A', 'Am', 'A#', 'A#m', 'B', 'Bm', 'C', 'Cm', 'C#', 'C#m', 'D', 'Dm', 'D#', 'D#m', 'E', 'Em', 'F', 'Fm', 'F#', 'F#m', 'G', 'Gm', 'G#', 'G#m']
+CHROMATIC_SCALE = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
+NATURAL_NOTES = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+
+SHAPES = { #Chord shapes
+    'A': [None, 0, 2, 2, 2, 0],
+    'Am': [None, 0, 2, 2, 1, 0],
+    'C': [None, 3, 2, 0, 1, 0],
+    'D': [None, None, 0, 2, 3, 2],
+    'Dm': [None, None, 0, 2, 3, 1],
+    'E': [0, 2, 2, 1, 0, 0],
+    'Em': [0, 2, 2, 0, 0, 0],
+    'F': [None, None, 3, 2, 1, 1],
+    'Fm': [None, None, 3, 1, 1, 1],
+    'G': [3, 2, 0, 0, 0, 3],
+}
+
+def createDialog():
+    form = flp.ScriptDialog('Text to Guitar Chords', 'Enter major or minor chords separated by commas, dashes or spaces. \r\n' +
+                            'Capo transposes chords (0 = no capo). Big values can yield unrealistic results. \r\n' +
+                            'Shapes can be specified in parenthesis or brackets without space, e.g. F(E). \r\n' +
+                            'Supported shapes: A, Am, C, D, Dm, E, Em, F, Fm, G. \r\n' +
+                            'Examples: "C, Am, Em, G(E)", "Fminor DbMajor[E] AbMajor[F] EbMajor", "Amaj-Emaj-F#min-Dmaj". ')
+    form.AddInputText('Chord Text', 'C, Am, Em, G(E)')
+    form.AddInputCombo('Clear piano roll','Yes,No', 0)
+    form.AddInputCombo('Muted strings','Open,Barre,Don\'t Include', 0)
+    form.AddInputKnobInt('Capo', 0, 0, 12)
+    form.AddInputKnobInt('Length',1,1,16)
+    return form
+
+def apply(form):
+    if form.GetInputValue('Clear piano roll') == 0:
+        flp.score.clear()
+    include_muted = form.GetInputValue('Muted strings')
+    chord_text = form.GetInputValue('Chord Text')
+    notes = process_chord_text(chord_text, include_muted)
+    for note in notes:
+        if note is not None:
+            note.number += form.GetInputValue('Capo')
+            note.length *= form.GetInputValue('Length')
+            note.time *= form.GetInputValue('Length')
+            flp.score.addNote(note)
+
+def process_chord_text(chord_text, include_muted):
+    chords = chord_text.replace(',', ' ').replace('-', ' ').split()
+    notes = []
+    for i, chord_str in enumerate(chords):
+        chord, shape = parse_chord_string(chord_str)
+        chord_notes = convert_chord_to_notes(chord, i, shape, include_muted)
+        notes.extend(chord_notes)
+    return notes
+
+def parse_chord_string(chord_str): #returns chord and specified shape
+    parts = (chord_str.replace('Ab', 'G#').replace('Bb', 'A#').replace('Cb', 'B').replace('Db', 'C#').replace('Eb', 'D#')   #Converts different forms into one consistent.
+                                        .replace('Fb', 'E').replace('Gb', 'F#').replace('E#', 'F').replace('B#', 'C').upper()
+                                        .replace('MAJOR', 'MAJ').replace('MAJ', '').replace('MINOR', 'MIN').replace("MIN", "m")
+                                        .replace('M', 'm').replace('[', '(').replace(']', ')').replace('{', '(').replace('}', ')').split('('))
+    if len(parts) == 1:
+        return parts[0], None
+    elif len(parts) == 2:
+        shape_part = parts[1].strip(')')
+        return parts[0], shape_part if shape_part else None
+    else:
+        return None, None
+
+def convert_chord_to_notes(chord_name, time_offset, shape, include_muted): #The magic
+    if chord_name in VALID_NOTES: #Chord makes sense
+        if shape not in SHAPES: #Shape not specified or doesnt exist. We need to default to some other shape.
+            if chord_name not in NATURAL_NOTES: #If chord is sharp or minor
+                if chord_name in ['Bm', 'Cm', 'C#m']:
+                    shape = 'Am'
+                elif chord_name in ['Gm', 'G#m']:
+                    shape = 'Em'
+                elif chord_name == 'G#m':
+                    shape = 'Em'
+                else:
+                    shape = chord_name.replace('#', '')
+            elif chord_name == 'B': #B chord defaults to A Shape
+                shape = 'A'
+            else: #Chord not specified, but we can use same shape as the chord name
+                shape = chord_name
+    else: #Open Strings if all else fails
+        shape = None
+
+    chord_mapping = generate_chord_mapping(shape)   
+    root_offset = chord_mapping.get(chord_name.replace('m', ''), 0) if chord_mapping is not None else 0
+    chord_notes = [string + root_offset + shape_offset if shape_offset is not None else None for string, shape_offset in zip(STRING_NOTES, SHAPES.get(shape, [0] * 6))] #Open strings if no shape.
+
+    notes = [flp.Note() if note is not None else None for note in chord_notes]
+    for i in range(len(chord_notes)):
+        if notes[i] is not None:
+            notes[i].number = chord_notes[i]
+            notes[i].time = flp.score.PPQ * time_offset
+            notes[i].length = flp.score.PPQ
+        elif include_muted < 2:
+            notes[i] = flp.Note()
+            notes[i].number = STRING_NOTES[i] if include_muted == 0 else STRING_NOTES[i] + root_offset
+            notes[i].time = flp.score.PPQ * time_offset
+            notes[i].length = flp.score.PPQ
+            notes[i].muted = True
+    return notes
+
+def generate_chord_mapping(rootNote): #For example E would yield E:0, F:1, F#:2, G:3, G#:4, A:5, A#6, B:7, C:8, C#:9, D:10, D#:11
+    if rootNote == None:
+        return None
+    else:
+        rootNote = rootNote.replace('m', '')
+        notes = CHROMATIC_SCALE
+        return {note: (i - notes.index(rootNote)) % 12 for i, note in enumerate(notes)}

@@ -1,18 +1,24 @@
 """flp
 Title: AutoHarmonizer v0.2
 Author: tfguss
-Category: Generative (melody)
+Category: Generate (melody)
 Version: v0.2
+License: Unknown
 
 Description: 
-This script automatically generates possible harmonies and countermelodies for selected notes within a given range. It ranks the harmonies based on various criteria such as eliminating parallel fifths and octaves, prioritizing imperfect consonances on weak beats, favoring contrary motion, and discouraging jumps. It then generates the harmony line with the highest score. The script also includes new "modes" for creating basic rhythmic harmonic lines and a feature that tracks note salience. The author is currently working on contextual/harmonic analysis to improve the tool's ability to find the right notes and generate chords automatically. Feedback and suggestions are welcome.
+This script generates possible harmonies and countermelodies for selected notes
+within a specified range. It ranks the harmonies based on various criteria such
+as eliminating parallel fifths and octaves, prioritizing imperfect consonances
+on weak beats, and favoring contrary motion. The script then generates the
+harmony line with the highest score. It also includes new modes for creating
+rhythmic harmonic lines and a feature that tracks note salience. The script is
+being further improved with contextual and harmonic analysis to enhance its
+ability to find the right notes and generate chords automatically.
 
 Changelog:
-2021-XX-XX (v0.2)
-- Added new "modes" for creating basic rhythmic harmonic lines underneath a melody (quarter notes, half notes, a basic rave bassline).
-- Added a feature that keeps track of note "salience" or how prominent a note is in a melody, improving the backend and helping it find better notes.
+2021-XX-XX (v0.2) - Added new "modes" for creating basic rhythmic harmonic lines underneath a melody (quarter notes, half notes, a basic rave bassline) - Added a feature that keeps track of note "salience" or how prominent a note is in a melody, improving the backend and helping it find better notes no changelog
 
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=312184
 """
 #                                .-'''-.                                                       .-'''-.                                                          
 #                               '   _    \                                                    '   _    \                                                        

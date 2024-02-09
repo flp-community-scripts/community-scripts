@@ -2,13 +2,15 @@
 Title: Custom Key Marker + Snap to Scale(s)
 Author: Pierre Sosa
 Category: Archive
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script combines the functionalities of the "Custom key marker" and "Snap to scale(s)" scripts. It allows you to create custom key markers and detects existing key markers to snap notes to the scale.
+This script combines the functionalities of the "Custom key marker" and "Snap to
+scale(s)" scripts. It allows you to create custom key markers and detects
+existing key markers to snap notes to the scale.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=311705
 """
 import flpianoroll as flp
 import _random

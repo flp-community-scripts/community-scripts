@@ -1,0 +1,24 @@
+"""flp
+Title: AbbeyRoadOne / 01_LongCS
+Author: phil.n
+Category: Archive
+Version: Unknown
+License: Unknown
+
+Description: 
+This script helps with selecting articulations for orchestral libraries. It adds
+expression keys to all notes in selected regions and removes duplicates. It is
+still a work in progress and may have some bugs.
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=317751
+"""
+from flpianoroll import *
+import sys
+
+scriptpath = sys.path[1]                    #get path of script
+parentpath = scriptpath.rsplit("\\", 2)     #split last folder
+sys.path.insert(0, parentpath[0])           #add parent path for loading libs from there
+
+from functions import update
+
+update(1, 5)

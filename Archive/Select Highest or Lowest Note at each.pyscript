@@ -2,13 +2,20 @@
 Title: Select Highest or Lowest Note at each
 Author: Pierre Sosa
 Category: Archive
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script allows you to select the highest or lowest (or middle) notes at each selected time unit. It can be useful for selecting specific notes in chords. However, it may not work well with chords that have notes that don't entirely time-overlap, such as strummed chords. The script has been updated to work with selections and a bug has been fixed when there are no notes at the 'scan unit'.
+This script allows you to select the highest or lowest (or middle) notes at each
+selected time unit. It can be useful for selecting specific notes in chords.
+However, it may not work well with chords that have notes that don't entirely
+time-overlap, such as strummed chords. The script has been updated to work with
+selections and a bug has been fixed when there are no notes at the 'scan unit'.
 
 Changelog:
 2023-12-15 - Works also with selection now - Fixed a bug occurring when there are no notes at the 'scan unit'
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=308168
 """
 import flpianoroll as flp
 import math

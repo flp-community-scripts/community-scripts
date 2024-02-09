@@ -2,13 +2,19 @@
 Title: Legato scripts / Legato for selected notes
 Author: Pierre Sosa
 Category: Archive
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script provides two legato functionalities that work differently from the built-in legato tool in FL Studio. There is no graphical user interface (GUI) for these scripts. 1) Legato for selected notes: This script considers only the timing of the selected notes when applying legato. 2) Legato for each key: This script treats notes in each key (e.g., C5) separately when applying legato. The script was inspired by D3Mens and the author welcomes suggestions for improvements or different behaviors.
+This script provides two legato functionalities that work differently from the
+built-in legato tool in FL Studio. There is no graphical user interface (GUI)
+for these scripts. 1) Legato for selected notes: This script considers only the
+timing of the selected notes when applying legato. 2) Legato for each key: This
+script treats notes in each key (e.g., C5) separately when applying legato. The
+script was inspired by D3Mens and is open to suggestions for improvements or
+different behaviors.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307988
 """
 import flpianoroll as flp
 import math

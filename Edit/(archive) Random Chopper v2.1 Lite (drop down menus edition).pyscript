@@ -1,0 +1,300 @@
+"""flp
+Title: Random Chopper v2.1 Lite (drop down menus edition)
+Author: Pierre Sosa
+Category: Edit
+Version: v2.1
+License: Unknown
+
+Description: 
+This script allows you to chop random notes into rolls of random chop lengths.
+It has been updated with bug fixes and the addition of Random Chopper v2, which
+slices notes into chops of random lengths. There are two versions of the script:
+"Lite" and "Full," each with different controls for controlling the chop
+lengths. The latest version, Random Chopper v2.1, includes a "seed for RNG" knob
+to control the randomness of the chops.
+
+Changelog:
+2023-08-26 (v2.1) - Added Random Chopper v2.1 with the 'seed for RNG' knob. If it's set to 0 then the seed is changed in each execution of the script. If it's set to a positive value then the seed is kept. The max value of the knob is 999 but you can modify it to a larger value by changing the value in the 4th line of the script file if needed. 2023-08-05 (v2) - Added Random Chopper v2 which chops the note(s) in two stages. First 'chopper' slices the note(s) into chops of random lengths. Second 'chopper' slices random notes (made by the first chopper or taken directly from the piano roll if the first 'chopper' is turned off). There are 2 versions of the script: - "Lite" version which controls the range of possible 2nd chopper chop lengths only with a min-max range set by knobs/drop down menus and checkboxes for allowing even and triplets units. - "Full" version which gives detailed control over each possible chop length with checkboxes. - Each version comes with 2 editions: one with knobs, and second with drop down menus for controlling the min-max range of the second 'chopper'. The editions work in the same way, it's just different controls type. 2023-10-07 - Bug-fix
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307714
+"""
+import flpianoroll as flp
+import _random
+
+seed_for_RNG_max = 999
+
+beat = flp.score.PPQ  # PPQ equals how many ticks there are in a beat
+bar = beat * 4
+step = beat / 4
+
+notes_properties = ('velocity', 'release', 'pan', 'fcut', 'fres', 'pitchofs', 'length', 'time', 'number', 'color', 'group', 'slide', 'porta', 'muted', 'selected')
+
+# Calculate units for the knobs of the second chopper 
+PPQ = flp.score.PPQ
+step_in_ticks = PPQ / 4
+
+units = []
+units_string = ""
+even_units = []
+triplets = []
+
+i = 0
+
+even_unit = 4 / pow(2, i)
+triplet = (16/6) / pow(2, i)
+
+while (step_in_ticks * even_unit) % 1 == 0:
+	units.append(even_unit)
+	even_units.append(even_unit)
+	i += 1
+	even_unit = 4 / pow(2, i)
+
+i = 0
+while (step_in_ticks * triplet) % 1 == 0:
+	units.append(triplet)
+	triplets.append(triplet)
+	i += 1
+	triplet = (16/6) / pow(2, i)
+
+tick_flag = False
+one_tick = 1/step_in_ticks
+if units.count(one_tick) == 0:
+	units.append(one_tick)
+	tick_flag = True
+
+units.sort()
+
+# For script description
+for unit in units:
+	if unit == 4:
+		units_string += ("1 beat.")	
+	elif unit == 2:
+		units_string += ("2 steps, ")
+	elif unit == 1:
+		units_string += ("1 step, ")
+	elif unit > 2:
+		units_string += ("1/" + str(int(16/unit)) + " bar, ")
+	elif unit > 0.5:
+		units_string += ("1/" + str(int(4/unit)) + " beat, ")
+	else: # unit <= 0.5
+		if tick_flag == True and unit == one_tick:
+			units_string += ("1 tick, ")
+		else: units_string += ("1/" + str(int(1/unit)) + " step, ")
+
+# For hints in the hint bar
+first_chop_min = 0
+first_chop_max = 0
+sec_chop_min = 0
+sec_chop_max = 0
+
+units_string_list = units_string.split(", ")
+units_string_list[len(units_string_list)-1] = units_string_list[len(units_string_list)-1].strip(".")
+
+for n in range(flp.score.noteCount):
+    flp.score.getNote(n).selected = False
+
+# Randomizer
+def random_generator(seed):
+	x = _random.Random()
+	x.seed(seed) if seed > 0 else x.seed()
+	while True:
+		yield x.random()
+	
+def random_value(return_int, range_min, range_max):
+	random_value = next(rng) * (range_max - range_min) + range_min  # convert value to fit between min and max range
+
+	if return_int:  # convert value to integer
+		return round(random_value)
+	return random_value	
+
+def createDialog():
+	Form = flp.ScriptDialog("Random Chopper v2.1 Lite",
+                            "Script chops the note(s) in two stages:\r\n" +
+                            "\r\n" +
+                            "First chopper slices the note(s) into chops of random lengths within a range set by '1st Chop Min' and '1st Chop Max' knobs. Odd units checkbox allows or disallows odd legths (eg. 1,3,5... etc. step(s)). 1st chopper can be disabled - only the second chopper is used in that case. \r\n" +
+                            "\r\n" +
+                            "Second chopper slices random notes (made by the first chopper or taken directly from the piano roll if the first chopper is turned off). For each sliced note it randomly chooses the length of chops from a range set by '2nd Chop Min' and '2nd Chop Max' drop down menus. Available units depends on PPQ.\r\n" +
+							"\r\n" +
+                            "Probability knob = percent of notes to slice by a second chopper. Set to 0 to disable the second chopper. \r\n" +
+							"\r\n" +
+                            "Seed for RNG knob = if it's set to 0 then the seed is changed in each execution of the script. If it's set to a positive value then the seed is keeped. \r\n" +
+							"\r\n" +
+                            "Minimum and maximum chop length values are automatically limited to the length of a chopped note if the value is higher.\r\n" +
+							"\r\n" +
+                            "Leave remainder: determines what to do with a last chop (from 2nd chopper) if it's not full length. E.g. beat note chopped to 1/6 bar (2/3 beat) chops will leave 1/3 beat reaminder. \r\n" +
+							"\r\n" +
+							"Detected PPQ: " + str(flp.score.PPQ) + "\r\n" +
+							"Second chopper menus units: " + units_string + "\r\n" +
+							"\r\n" +
+                            "*** Script by Pierre Sosa ***")
+	Form.AddInputCheckbox("1st Chop On", True)
+	Form.AddInputCheckbox("1st - odd units", True)
+	Form.AddInputKnobInt("1st Chop Min", 1,1,64)
+	Form.AddInputKnobInt("1st Chop Max", 4,1,64)
+	Form.AddInputKnob("Probability", 50, 0, 100)
+	Form.AddInputKnobInt("Seed for RNG",0,0,seed_for_RNG_max)	
+	Form.AddInputCombo("2nd Chop Min", [unit for unit in units_string_list], int(len(units)/2))
+	Form.AddInputCombo("2nd Chop Max", [unit for unit in units_string_list], len(units))
+	Form.AddInputCheckbox("2nd - even units", True)	
+	Form.AddInputCheckbox("2nd - triplets", True)
+	Form.AddInputCheckbox("Leave remainder", True)
+	Form.AddInputCheckbox("Fade in velocity", False)	
+	Form.AddInputCheckbox("Select chops after", True)
+	return Form
+
+
+def apply(Form):
+    	
+	# Checks if there are notes in the score
+	if flp.score.noteCount == 0: 
+		flp.Utils.ShowMessage("There are no notes to chop!")
+		return
+
+	seed = Form.GetInputValue("Seed for RNG")
+	global rng
+	rng = random_generator(seed)
+	
+	if Form.GetInputValue("Select chops after") == True:		
+		for note in range(flp.score.noteCount):
+			flp.score.getNote(note).selected = False
+	
+	global first_chop_min 
+	global first_chop_max
+		
+	# For 1st chopper
+	def calc_chop_lenght():
+		chop_length = min(note_len, (random_value(True, Form.GetInputValue('1st Chop Min'), Form.GetInputValue('1st Chop Max')) * step))
+		if Form.GetInputValue('1st - odd units') == False and chop_length % (2*step) != 0 and note_len > step:
+			chop_length = chop_length + step
+			if chop_length > min(note_len,(Form.GetInputValue('1st Chop Max') * step)):
+				chop_length = chop_length - 2*step
+		if chop_length == 0:
+			chop_length = step		
+		return chop_length
+
+	# 1st chopper
+	if Form.GetInputValue('1st Chop On') == True: 
+		if Form.GetInputValue('1st Chop Min') > Form.GetInputValue('1st Chop Max'):
+			flp.Utils.ShowMessage("1st Chopper: Minimum chop length can't be higher than maximum chop length!")
+			return
+
+		# Hint in the hint bar
+		if Form.GetInputValue('1st Chop Min') != first_chop_min:
+			first_chop_min = Form.GetInputValue('1st Chop Min')
+			if first_chop_min % 16 == 0:
+				in_beats = str(int(first_chop_min / 16)) + " bar(s)"
+			elif first_chop_min < 4:
+				in_beats = str(first_chop_min) + " step(s)"
+			elif first_chop_min % 4 == 0:
+				in_beats = str(int(first_chop_min / 4)) + " beat(s)"
+			else: in_beats = str(int(first_chop_min / 4)) + " beat(s) and " + str(int(first_chop_min % 4)) + " step(s)"
+			flp.Utils.ProgressMsg("1st Chop Min = " + in_beats,0,0)
+		if Form.GetInputValue('1st Chop Max') != first_chop_max:
+			first_chop_max = Form.GetInputValue('1st Chop Max')
+			if first_chop_max % 16 == 0:
+				in_beats = str(int(first_chop_max / 16)) + " bar(s)"
+			elif first_chop_max < 4:
+				in_beats = str(first_chop_max) + " step(s)"
+			elif first_chop_max % 4 == 0:
+				in_beats = str(int(first_chop_max / 4)) + " beat(s)"
+			else: in_beats = str(int(first_chop_max / 4)) + " beat(s) and " + str(int(first_chop_max % 4)) + " step(s)"
+			flp.Utils.ProgressMsg("1st Chop Max = " + in_beats,0,0)
+		
+		# Chop
+		for i in range(flp.score.noteCount):
+			note_len = flp.score.getNote(i).length
+			chop_length = calc_chop_lenght()
+			flp.score.getNote(i).length = chop_length
+			last_note_end = flp.score.getNote(i).time + flp.score.getNote(i).length
+			note_len -= chop_length
+			
+			while note_len > 0:
+				new_note = flp.Note()
+				for property in notes_properties:
+					setattr(new_note, property, getattr(flp.score.getNote(i), property))
+				chop_length = calc_chop_lenght()
+				new_note.time = last_note_end
+				new_note.length = chop_length
+				last_note_end = new_note.time + new_note.length
+				note_len -= chop_length
+				flp.score.addNote(new_note)			
+	
+	# 2nd chopper
+	global tick_flag
+
+	if Form.GetInputValue('2nd Chop Min') > Form.GetInputValue('2nd Chop Max'):
+		flp.Utils.ShowMessage("2nd Chopper: Minimum chop length can't be higher than maximum chop length!")
+		return
+
+	allowed_units = []
+	for i in range(Form.GetInputValue('2nd Chop Min'), Form.GetInputValue('2nd Chop Max')+1): # Lite
+		if triplets.count(units[i]) != 0:
+			if Form.GetInputValue("2nd - triplets") == True:
+				allowed_units.append(units[i]*step)		
+		elif even_units.count(units[i]) != 0:
+			if Form.GetInputValue("2nd - even units") == True:
+				allowed_units.append(units[i]*step)
+		elif i == 0 and tick_flag == True: # 1 tick
+			allowed_units.append(1)
+	allowed_units.sort()
+
+	if len(allowed_units) == 0:
+		flp.Utils.ShowMessage("2nd chopper: No unit in min-max range is allowed!")
+		return			
+	
+	def randomize_notes():
+		notes = [note for note in range(flp.score.noteCount)]
+		for i in range(len(notes)):
+			max = len(notes)-1
+			random_int = random_value(True, 0, max) # Finds random index from the list of notes indexes
+			notes_to_alter.append(notes[random_int]) # Add random note index to the list
+			notes.pop(random_int) # Removes note index from the list of notes indexes		
+
+	probability = Form.GetInputValue("Probability") / 100
+	notes_to_alter = []		
+	randomize_notes()
+
+	global sec_chop_min 
+	global sec_chop_max
+
+	# Hint in the hint bar (second chopper)
+	if Form.GetInputValue('2nd Chop Min') != sec_chop_min:
+		sec_chop_min = Form.GetInputValue('2nd Chop Min')
+		flp.Utils.ProgressMsg("2nd Chop Min = " + units_string_list[sec_chop_min],0,0)
+	if Form.GetInputValue("2nd Chop Max") != sec_chop_max:
+		sec_chop_max = Form.GetInputValue("2nd Chop Max")
+		flp.Utils.ProgressMsg("2nd Chop Max = " + units_string_list[sec_chop_max],0,0)
+
+	def copy_note(note, i):
+		new_note = flp.Note()
+		for property in notes_properties:
+			setattr(new_note, property, getattr(flp.score.getNote(note), property))
+		if Form.GetInputValue("Fade in velocity") == True:
+			vel = getattr(flp.score.getNote(note), "velocity") / (number_of_chops + 1)
+			setattr(new_note, "velocity", vel * (i + 1))
+		if i == number_of_chops - 1 and last_chop != 0:
+			setattr(new_note, "length", last_chop)
+		new_note.time = flp.score.getNote(note).time + chop_length * i
+		flp.score.addNote(new_note)
+
+	# Second chopper
+	for note in notes_to_alter:
+		if notes_to_alter.index(note) >= probability * len(notes_to_alter):
+			continue
+		if Form.GetInputValue("Select chops after") == True:	
+			flp.score.getNote(note).selected = True
+
+		chop_length = min(flp.score.getNote(note).length, allowed_units[random_value(True, 0, len(allowed_units) - 1)])
+		if chop_length == 0:
+			chop_length = 1
+		number_of_chops = int(flp.score.getNote(note).length / chop_length)
+
+		if flp.score.getNote(note).length % chop_length != 0 and Form.GetInputValue("Leave Remainder") == True:
+			number_of_chops += 1
+		last_chop = (flp.score.getNote(note).length % chop_length) * Form.GetInputValue("Leave Remainder")
+
+		flp.score.getNote(note).length = chop_length
+		for i in range(1, number_of_chops):
+			copy_note(note, i)
+		if Form.GetInputValue("Fade in velocity") == True:
+			setattr(flp.score.getNote(note), "velocity", getattr(flp.score.getNote(note), "velocity") / (number_of_chops + 1))

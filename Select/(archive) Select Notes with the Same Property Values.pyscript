@@ -1,18 +1,19 @@
 """flp
 Title: Select Notes with the Same Property Values
 Author: Pierre Sosa
-Category: Adjust
-Version: (n/a)
+Category: Select
+Version: Unknown
+License: Unknown
 
 Description: 
-This script allows you to select notes in the piano roll that have the same property value, such as velocity. It includes bug fixes and an added release property.
+This script allows you to select notes in the piano roll that have the same
+property value, such as velocity. It includes bug fixes and an added release
+property.
 
 Changelog:
-2023-07-23
-- Added release property
+2023-07-23 - Added release property 2023-07-02 - Bug-fixes
 
-2023-07-02
-- Bug-fixes
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307539
 """
 import flpianoroll as flp
 

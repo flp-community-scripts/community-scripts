@@ -1,14 +1,18 @@
 """flp
 Title: Glissando Tool
 Author: tfguss
-Category: Generative (melody)
-Version: (n/a)
+Category: Generate (melody)
+Version: Unknown
+License: Unknown
 
 Description: 
-This tool allows you to connect two notes with a glissando effect, creating various patterns for runs up the scale. It is still a work in progress, with some bugs related to adjusting note length. The developer plans to expand the pattern bank and categorize it by style in the future. Despite its current state, the tool is already cool and useful.
+This tool allows you to connect two notes with a glissando effect, creating
+various patterns for runs up the scale. It is still a work in progress, with
+some bugs related to adjusting note length. The developer plans to expand the
+pattern bank and categorize it by style in the future. Despite its current
+state, the tool is already cool and useful.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=311845
 """
 import flpianoroll as flp
 

@@ -2,13 +2,15 @@
 Title: Select Every X Note
 Author: Pierre Sosa
 Category: Archive
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script allows you to select every X note in the piano roll. It provides options to select all notes horizontally, horizontally for each key separately, and vertically.
+This script allows you to select every X note in the piano roll. It provides
+options to select all notes horizontally, horizontally for each key separately,
+and vertically.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307491
 """
 import flpianoroll as flp
 

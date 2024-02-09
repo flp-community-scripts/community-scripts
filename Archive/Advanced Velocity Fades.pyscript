@@ -2,13 +2,16 @@
 Title: Advanced Velocity Fades
 Author: Ind3x
 Category: Archive
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script allows you to create more complex velocity fades in FL Studio. It offers six settings: Velocity L/R for the leftmost/rightmost notes, Dynamic for overall note dynamic (with values over 1 increasing it), Dynamic Pinch to reduce dynamic towards the outer notes, Curve to add a fade curve, and Zero Velocity Protection to prevent notes from having a velocity of 0. The code is available on Github with comments for further explanation. Feel free to provide feedback or report any bugs to the author.
+This script allows you to create more complex velocity fades in FL Studio. It
+offers six settings, including velocity for leftmost/rightmost notes, overall
+dynamic, dynamic pinch, curve, and zero velocity protection. The script can be
+found on the author's Github, and any feedback or bug reports are welcome.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=311614
 """
 from flpianoroll import *
 
