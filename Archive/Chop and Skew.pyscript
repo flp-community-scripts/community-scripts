@@ -8,11 +8,15 @@ License: Unknown
 Description: 
 This script allows you to chop a note or multiple notes and then skew the
 starting points of the chops to create an accelerating or decelerating roll of
-notes. It has been updated with improved note length calculation and an option
-to allow or disallow infinite note lengths.
+notes. The latest version includes improved note length calculation and an
+option to allow or disallow infinite note lengths.
 
 Changelog:
-2023-07-19 (Chop and Skew v2) - Improved note length calculation - Added option to allow/don't allow infinite note lengths no changelog for previous versions.
+2023-07-19 (Chop and Skew v2)
+- Improved note length calculation
+- Added option to allow/don't allow infinite note lengths
+
+no changelog for previous versions.
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=307309
 """

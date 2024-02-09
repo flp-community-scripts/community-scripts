@@ -12,7 +12,11 @@ without a GUI for quick snapping. The script also includes a version that allows
 for the creation of custom key markers.
 
 Changelog:
-2021-10-01 (GUI) - Initial version of Snap to scale(s) with GUI. 2021-09-30 (no GUI) - Initial version of Snap to scale(s) without GUI.
+2021-10-01 (GUI)
+- Initial version of Snap to scale(s) with GUI.
+
+2021-09-30 (no GUI)
+- Initial version of Snap to scale(s) without GUI.
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=311700
 """

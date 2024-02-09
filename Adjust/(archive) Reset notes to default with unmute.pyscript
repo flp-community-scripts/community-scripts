@@ -9,7 +9,8 @@ Description:
 This script resets the release property of notes to its default value.
 
 Changelog:
-2023-07-23 - Resets release property (initial version)
+2023-07-23
+- Resets release property (initial version)
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=308003
 """

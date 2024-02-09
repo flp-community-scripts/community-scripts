@@ -8,10 +8,12 @@ License: Unknown
 Description: 
 This Python program allows you to control the overall length of all MIDI notes
 to be proportionally longer or shorter. The main logic of the program is as
-follows: 1. Get the end time of the last note, which serves as the original
-length. 2. Calculate the total length after scaling. 3. For each note, calculate
-its proportion of the original length and its starting position. 4. Calculate
-the scaled length and starting position based on the ratio.
+follows:
+1. Get the end time of the last note, which serves as the original length.
+2. Calculate the total length after scaling.
+3. For each note, calculate its proportion of the original length and its
+starting position.
+4. Calculate the scaled length and starting position based on the ratio.
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=310329
 """

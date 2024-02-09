@@ -1,0 +1,38 @@
+"""flp
+Title: Selection scripts / Select till start
+Author: MuuSer
+Category: Archive
+Version: Unknown
+License: Unknown
+
+Description: 
+This script allows you to select notes in the Piano Roll. It includes three
+simple UI-less scripts: "Select till end," "Select till start," and "Select
+between selected." These scripts are useful for tasks such as clearing and
+selecting notes from the Dump Score Log.
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=312075
+"""
+"""
+�llar Kruustik aka MuuSer wrote this Python code in August 2023.
+This code is free for everyone to use and change.
+Have fun and stay strong until the end.
+
+UI-less script.
+Select notes from selected one till end. If nothing selected, then nothing happens.
+"""
+from flpianoroll import *
+
+Selected = 0
+for i in range(score.noteCount, 999999):
+    if score.getNote(i):
+        if score.getNote(i).selected == True:
+            if Selected==0: Selected = i
+            score.getNote(i).selected = False
+    else:
+        break
+for i in range(0,Selected):
+    if score.getNote(i):
+        score.getNote(i).selected = True
+    else:
+        break

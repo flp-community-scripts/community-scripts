@@ -7,8 +7,8 @@ License: Unknown
 
 Description: 
 This script helps with selecting articulations for orchestral libraries. It adds
-expression keys to all notes in selected regions and removes duplicates. It has
-a working video and is available in versions for Abbey Road and BBC libraries.
+expression keys to all notes in selected regions and removes duplicates. It is
+still a work in progress and may have some bugs.
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=317751
 """

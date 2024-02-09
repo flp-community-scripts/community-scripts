@@ -13,7 +13,14 @@ preview of the changes. The latest version (v1.1) includes controls for the
 release property and a "Seed for RNG" knob.
 
 Changelog:
-2023-09-08 (Change properties of multiple notes v1.1) - Added "Seed for RNG" knob 2023-07-27 - Bug-fixes 2023-07-23 - Added controls for release property
+2023-09-08 (Change properties of multiple notes v1.1)
+- Added "Seed for RNG" knob
+
+2023-07-27
+- Bug-fixes
+
+2023-07-23
+- Added controls for release property
 
 Thread Link: https://forum.image-line.com/viewtopic.php?t=307691
 """
