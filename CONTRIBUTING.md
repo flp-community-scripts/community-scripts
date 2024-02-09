@@ -1,27 +1,15 @@
 # Contributing to FLP Community Scripts
 
 ## Overview
-This monorepo serves as a centralized repository for various projects. Each project is maintained in its own dedicated folder at the root level of the repository.
+This repository serves as a centralized repository for various fl piano roll scripts projects.
 
 ## Adding a New Project
 To contribute a new project, please follow these steps:
 
-1. Fork master
+1. [Fork repository](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) 
 
-2. **Create a New Folder**: In your fork, Make a new folder at the root level with a clear, descriptive name for your project.
-
-2. **Add a README File**: Inside your project folder, include a `README.md` file. This file should contain at least:
-```
-# Title
-Some description
-
-## Contents
-
-`script 1` - does abc and bcd 
-
-`script 2` - makes notes go all over the place, very random.
-
-## Support
-For any queries or support related to the monorepo, contact the repository maintainers
-
-Thank you for contributing to our monorepo!
+2. Put your script into respective category OR if you either prefer a package naming scheme OR you have multiple files and some `*.py` files THEN create a new folder under `Packages/` with your scripts in them
+   
+3. **Tag your scripts:** Tag all of your scripts with a **Header tag**, example of which you may find under [Header format.md](./repo-spec/Header format.md)
+   
+   
