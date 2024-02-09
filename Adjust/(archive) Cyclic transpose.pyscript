@@ -2,13 +2,14 @@
 Title: Cyclic transpose
 Author: Pierre Sosa
 Category: Adjust
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script transposes notes within a specified range, limited by the highest and lowest note. It is inspired by an idea from FaBianB.
+This script allows you to transpose notes within a specified range, limited by
+the highest and lowest note. It is based on an idea by FaBianB.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307757
 """
 import flpianoroll as flp
 

@@ -2,13 +2,16 @@
 Title: Custom Key Marker
 Author: Pierre Sosa
 Category: Archive
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script creates a custom key marker in FL Studio's piano roll. It allows you to set a specific key as the root note and displays it as a marker on the piano roll. This marker helps you visualize and stay in key while composing or playing melodies.
+This script creates a custom key marker in FL Studio's piano roll. It allows you
+to set a specific key as the root note and displays it as a marker on the piano
+roll. This marker helps you visualize and stay in key while composing or playing
+melodies.
 
-Changelog:
-2021-10-XX - Added custom key marker feature. no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=311658
 """
 import flpianoroll as flp
 

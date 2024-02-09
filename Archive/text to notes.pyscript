@@ -2,13 +2,15 @@
 Title: text to notes
 Author: seomeenu
 Category: Archive
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script converts a string into musical notes. It assigns each character in the string to a specific note, allowing you to create melodies or chord progressions based on the input text.
+This script converts a string into musical notes. It assigns each character in
+the string to a specific note, allowing you to create melodies or chord
+progressions based on the input text.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=310304
 """
 from flpianoroll import *
 

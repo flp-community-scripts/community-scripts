@@ -3,12 +3,15 @@ Title: Scale Detector
 Author: Pierre Sosa
 Category: Utility
 Version: Full
+License: Unknown
 
 Description: 
-This script detects matching scales for notes in the score, either selected or all if none is selected. It can create key markers for the chosen scale, but this feature requires FL 21.1.1 to work properly. There are two versions: "Full" and "Lite". The Lite version detects basic scales like Major, Minor Natural, Major Pentatonic, Minor Pentatonic, Minor Harmonic, Minor Melodic, Dorian, Phrygian, Lydian, Mixolydian, and Locrian. The Full version detects more scales, but it can be overwhelming to choose from. The Lite version is more convenient for most cases.
+This script detects matching scales for notes in the score, allowing you to
+create key markers for the chosen scale. There are two versions: "Full" and
+"Lite". The Lite version detects basic scales, while the Full version detects
+more uncommon scales. The Lite version is more convenient to use in most cases.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=312329
 """
 import flpianoroll as flp
 

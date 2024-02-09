@@ -1,14 +1,19 @@
 """flp
 Title: Game of Life
 Author: Harmar
-Category: Generative (creative)
+Category: Generate (creative)
 Version: FL64_2023-08-14_18-59-15
+License: Unknown
 
 Description: 
-This script implements Conway's Game of Life in the FL Studio piano roll. You can draw notes and run the simulation by pressing Ctrl+Alt+Y. The playable area is from C2 to C9 in height and an equal number of quarter notes in width. There is a debug mode that can be activated by placing a note in the top left corner, which opens a dialog box for input. Note that the preview mode may slow down rendering. Enjoy this fun implementation!
+This script implements Conway's Game of Life in the FL Studio piano roll. You
+can draw notes and run the simulation by pressing Ctrl+Alt+Y. The playable area
+is from C2 to C9 in height and an equal number of quarter notes in width. There
+is a debug mode that can be activated by placing a note in the top left corner,
+which opens a dialog box for input. Note that the preview mode may slow down
+rendering. Enjoy this fun implementation!
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=310661
 """
 from flpianoroll import *
 import math

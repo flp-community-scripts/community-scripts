@@ -2,16 +2,19 @@
 Title: Selection scripts / Select till end
 Author: MuuSer
 Category: Select
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script allows you to select notes in the Piano Roll. It includes three simple UI-less scripts: "Select till end," "Select till start," and "Select between selected." These scripts are useful for tasks such as clearing and selecting notes from the Dump Score Log.
+This script allows you to select notes in the Piano Roll. It includes three
+simple UI-less scripts: "Select till end," "Select till start," and "Select
+between selected." These scripts are useful for tasks such as clearing and
+selecting notes from the Dump Score Log.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=312075
 """
 """
-?llar Kruustik aka MuuSer wrote this Python code in August 2023.
+�llar Kruustik aka MuuSer wrote this Python code in August 2023.
 This code is free for everyone to use and change.
 Have fun and stay strong until the end.
 

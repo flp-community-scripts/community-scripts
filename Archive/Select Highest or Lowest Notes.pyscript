@@ -2,13 +2,13 @@
 Title: Select Highest or Lowest Notes
 Author: Pierre Sosa
 Category: Archive
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script allows you to select the highest or lowest notes in a piano roll. It provides advanced selection options and was inspired by an idea from Trancit.
+This script allows you to select the highest or lowest notes in a piano roll.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307544
 """
 import flpianoroll as flp
 

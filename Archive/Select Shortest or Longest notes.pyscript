@@ -2,13 +2,15 @@
 Title: Select Shortest or Longest notes
 Author: Pierre Sosa
 Category: Archive
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script allows you to select the shortest or longest notes in the piano roll. It provides advanced selection options and is based on an idea by donkeytugger.
+This script allows you to select the shortest or longest notes in the piano
+roll. It provides advanced selection options and was inspired by an idea from
+donkeytugger.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307552
 """
 import flpianoroll as flp
 

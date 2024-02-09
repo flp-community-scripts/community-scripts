@@ -3,12 +3,18 @@ Title: Randomize properties
 Author: Pierre Sosa
 Category: Archive
 Version: v1.1
+License: Unknown
 
 Description: 
-This script allows you to randomize the properties of notes in the FL Studio piano roll. It can be used to "humanize" the score or create more extreme randomizations. The latest version (v1.1) includes a "Seed for RNG" knob and more "Reset before processing" modes.
+This script allows you to randomize the properties of notes in the FL Studio
+piano roll. It can be used to "humanize" the score or create more extreme
+randomizations. The latest version (v1.1) includes a "Seed for RNG" knob and
+more "Reset before processing" modes.
 
 Changelog:
 2023-08-09 (Randomize properties v1.1) - Added "Seed for RNG" knob instead of 'change seed' checkbox - Added more 'Reset before processing' modes
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=309414
 """
 import flpianoroll as flp
 import _random

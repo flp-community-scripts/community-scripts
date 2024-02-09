@@ -3,12 +3,20 @@ Title: Melody Jam v1.2
 Author: Pierre Sosa
 Category: Archive
 Version: v1.2
+License: Unknown
 
 Description: 
-This script generates notes in a chosen scale or scales detected from key markers in the Piano Roll. You can choose the interval between each note, and the number of notes of different lengths in the loop is randomized. There are two versions of the script, one with normal option names and one with symbols as option names. The script has been updated with bug fixes and additional features based on user suggestions.
+This script generates notes in a chosen scale or scales detected from key
+markers in the Piano Roll. You can choose the interval between each note, and
+the number of notes of different lengths in the loop is randomized. There are
+two versions of the script, one with normal option names and one with symbols as
+option names. The script has been updated with bug fixes and additional features
+based on user suggestions.
 
 Changelog:
 2023-09-08 (v1.2) - Added "Seed for RNG" knob - Added "start note" drop down menu 2023-08-27 (v1.1) - Added Melody Jam v1.1 with introduced suggestions by cowpatmat from the comments below and some bug-fixes
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=310737
 """
 # *** FL Studio Piano Roll script by Pierre Sosa ***
 

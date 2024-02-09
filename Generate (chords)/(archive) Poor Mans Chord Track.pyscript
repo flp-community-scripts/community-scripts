@@ -1,0 +1,312 @@
+"""flp
+Title: Poor Mans Chord Track
+Author: pistacchio
+Category: Generate (chords)
+Version: Unknown
+License: Unknown
+
+Description: 
+This script automates the creation of a "ghost channel chord track" in FL
+Studio. It recognizes chords in a channel and creates markers with the chord
+names. It duplicates each note of each chord across all octaves and mutes all
+the notes. This creates a reference of all the notes of the currently played
+chord, which can be used to build bass tracks, arpeggios, melodies, etc. The
+script can also be used on a subset of selected notes to turn them into a chord.
+This script serves as a proof of concept for a chord track feature in FL Studio.
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=320038
+"""
+"""
+## Poor man's chord track ##
+
+A tool to make it easy to have chord references waiting for FL Studio to ship a real
+chord track!
+
+Author: Gustavo Di Pietro
+Version: 1.0.0
+Date: 2023/12/09
+
+Changelog:
+- 1.0.0 (2023/12/09):
+    Initial version
+"""
+
+from flpianoroll import *
+
+MAX_NOTE_NUMBER = 127
+MIN_NOTE_NUMBER = 0
+
+NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] * 3
+
+INTERVAL_MAP = {
+    '1': 0,
+    '2': 2,
+    'b3': 3,
+    '3': 4,
+    '4': 5,
+    'b5': 6,
+    '5': 7,
+    '#5': 8,
+    '6': 9,
+    'bb7': 9,
+    'b7': 10,
+    '7': 11,
+    'b9': 1,
+    '9': 2,
+    '#9': 3,
+    '11': 5,
+    '#11': 6,
+    '13': 9,
+}
+
+CHORD_FORMULAS = '''
+|1-3-5
+add4|1-3-4-5
+6|1-3-5-6
+6/9|1-3-5-6-9
+Maj7|1-3-5-7
+add9|1-3-5-9
+Maj9|1-3-5-7-9
+Maj11|1-3-5-7-11
+Maj11|1-3-5-7-9-11
+Maj13|1-3-5-7-13
+Maj13|1-3-5-7-9-13
+Maj13|1-3-5-7-11-13
+Maj13|1-3-5-7-9-11-13
+Maj7#11|1-3-5-7-#11
+-|1-3-b5
+m|1-b3-5
+madd4|1-b3-4-5
+m6|1-b3-5-6
+m7|1-b3-5-b7
+madd9|1-b3-5-9
+m6/9|1-b3-5-6-9
+m9|1-b3-5-b7-9
+m11|1-b3-5-b7-11
+m11|1-b3-5-b7-9-11
+m13|1-b3-5-b7-11-13
+m13|1-b3-5-b7-9-13
+m13|1-b3-5-b7-9-11-13
+m13|1-b3-5-b7-13
+m/Maj7|1-b3-5-7
+m/Maj9|1-b3-5-7-9
+m/Maj11|1-b3-5-7-11
+m/Maj11|1-b3-5-7-9-11
+m/Maj13|1-b3-5-7-9-11-13
+m/Maj13|1-b3-5-7-13
+m/Maj13|1-b3-5-7-9-13
+m/Maj13|1-b3-5-7-11-13
+m7-5ø|1-b3-b5-b7
+7|1-3-5-b7
+9|1-3-5-b7-9
+11|1-5-b7-11
+11|1-3-5-b7-11
+11|1-3-5-b7-9-11
+11|1-5-b7-9-11
+13|1-3-5-b7-13
+13|1-3-5-b7-9-11-13
+13|1-3-5-b7-11-13
+13|1-3-5-b7-9-13
+7#5|1-3-#5-b7
+7b5|1-3-b5-b7
+7b9|1-3-5-b7-b9
+7#9|1-3-5-b7-#9
+9#5|1-3-#5-b7-9
+9b5|1-3-b5-b7-9
+7#5#9|1-3-#5-b7-#9
+7#5b9|1-3-#5-b7-b9
+7b5#9|1-3-b5-b7-#9
+7b5b9|1-3-b5-b7-b9
+7#11|1-3-5-b7-#11
+°|1-b3-b5
+°7|1-b3-b5-bb7
++|1-3-#5
+5|1-5
+-5|1-b5
+sus4|1-4-5
+sus2|1-2-9-5
+sus2|1-2-5
+#11|1-5-#11
+'''
+
+CHORD_NOT_FOUND_SYMBOL = 'X'
+
+
+def prepare_chord_formulas() -> list[tuple[str, list[int]]]:
+    """Convert all the chords listed in the chord formulas chart from strings like:
+
+    | Maj7|1-3-5-7
+    | 5|1-5'''
+
+    to a dictionary like:
+
+    | {
+    |   'Maj7': [0, 4, 7, 11],
+    |   '5': [0, 7]
+    | }
+
+
+    where the keys are chord name synbols (for major, minor, seventh chords and so on)
+    and the values are 0-based intervals where '0' is the root note, '4' is the
+    major 3rd interval and so on.
+    """
+
+    chord_formulas = []
+
+    for chord in CHORD_FORMULAS.strip().splitlines():
+        name, intervals = chord.split('|')
+        chord_formulas.append((name, [INTERVAL_MAP[i] for i in intervals.split('-')]))
+
+    return chord_formulas
+
+
+def find_chord(notes: list[int], chord_formulas: list[tuple[str, list[int]]]) -> str:
+    """Compare the list of given notes with the chord formulas and return the found
+    one if any or string indicating "not found!"
+    """
+
+    # First, convert the notes (like ['A', 'C', 'E']) to intervals.
+    # Once found the index of the first root note, find all the other intervals relative
+    # to the first one.
+    # For instance, given the Am chord notes (['A', 'C', 'E']), first find the index of
+    # 'A' which is 9:
+    #
+    # C  C#  D  D#  E  F  F#  G  G#  A  A#  B   C   C#   D   D# ...
+    # 0  1   2  3   4  5  6   7  8   9  10  11  12  13   14  15
+    #                                ↑
+    #
+    # To compute the index of the second note, 'C', start from found root index, that is
+    # 9. That way, we get 12
+    #
+    # C  C#  D  D#  E  F  F#  G  G#  A  A#  B   C   C#   D   D# ...
+    # 0  1   2  3   4  5  6   7  8   9  10  11  12  13   14  15
+    #                                           ↑
+    #
+    # NOTE: we must look for indices starting from the found root index because
+    # otherwise in Am the second note 'C' would be seen as 0.
+    #
+    # We can now always consider 0 to be the index of the first note and subtract
+    # the actual index (9) to all the other notes (like 12) to obtain a list of indices
+    # that is [0, 3, 7]: a minor chord!
+    root_note_index = NOTES.index(notes[0])
+    other_notes_indices = [NOTES.index(n, root_note_index) - root_note_index for n in
+                           notes[1:]]
+    chord_intervals = [0] + other_notes_indices
+
+    for chord_name, chord_formula in chord_formulas:
+        if chord_formula == chord_intervals:
+            return chord_name
+
+    return CHORD_NOT_FOUND_SYMBOL
+
+
+def detect_chord(notes):
+    # Remove duplicates from notes so that ("C', 'E', 'G') and ("C', 'E', 'C', 'G')
+    # to make the detection easier
+    notes = list(dict.fromkeys(notes))
+
+    chord_formulas = prepare_chord_formulas()
+
+    chord = find_chord(notes, chord_formulas)
+
+    # Chord found
+    if chord != CHORD_NOT_FOUND_SYMBOL:
+        return f'{notes[0]}{chord}'
+
+    # If the chord is not found, "rotating" the notes till an inversion if found, for
+    # example, ['E', 'G', 'C'] is not found, so try rotating the notes till
+    # ['C', 'E' 'G'] (C major) is finally found
+    rotated_notes = notes[1:] + [notes[0]]
+    for _ in range(len(notes) - 1):
+        chord = find_chord(rotated_notes, chord_formulas)
+
+        if chord != CHORD_NOT_FOUND_SYMBOL:
+            return f'{rotated_notes[0]}{chord}/{notes[0]}'
+
+        rotated_notes = rotated_notes[1:] + [rotated_notes[0]]
+
+    # Chord not found
+    return CHORD_NOT_FOUND_SYMBOL
+
+
+def apply():
+    all_notes = [score.getNote(i) for i in range(score.noteCount)]
+
+    selected_notes = [n for n in all_notes if n.selected]
+
+    # Exit immediately if there is only one selected note since it cannot be a chord!
+    if len(selected_notes) == 1:
+        return
+
+    # If some notes are selected, only work on them
+    if any(selected_notes):
+        # Find the earliest starting point for the selected notes and the latest ending
+        # point and make all the selected notes statr at the same, earliest beat and
+        # end at the same, latest neat
+        earliest_time = min(n.time for n in selected_notes)
+        latest_time = max(n.time + n.length for n in selected_notes)
+        notes_length = latest_time - earliest_time
+        for note in selected_notes:
+            note.time = earliest_time
+            note.length = notes_length
+        notes_grouped_in_chords = {earliest_time: selected_notes}
+
+    # If no note is selected, group all the notes by their starting time
+    else:
+        notes_grouped_in_chords = {}
+
+        for note in all_notes:
+            notes = notes_grouped_in_chords.setdefault(note.time, [])
+            notes.append(note)
+
+    for chord_starting_time, chord_notes in notes_grouped_in_chords.items():
+        # Convert chord pitches (like "48") to chord names (like "C")
+        chord_note_pitches = sorted(c.number for c in chord_notes)
+
+        chord_note_names = [NOTES[c % 12] for c in chord_note_pitches]
+
+        # Prepare a marker with the note chord
+        chord_marker = Marker()
+        chord_marker.time = chord_starting_time
+        chord_marker.mode = 0
+        chord_marker.name = detect_chord(chord_note_names)
+
+        # Before adding the maker, delete any marker that is already in place at the
+        # same time we are about to add our own
+        index_of_marker_at_same_time = [i for i in range(score.markerCount) if
+                                        score.getMarker(i).time == chord_starting_time]
+
+        while index_of_marker_at_same_time:
+            score.deleteMarker(index_of_marker_at_same_time[0])
+            index_of_marker_at_same_time = [i for i in range(score.markerCount) if
+                                            score.getMarker(
+                                                i).time == chord_starting_time]
+
+        score.addMarker(chord_marker)
+
+        # For any note of chord, duplicate it as many times as possible to higher and
+        # lower octaves
+
+        for note in chord_notes:
+            note.selected = False
+            note.muted = True
+
+            current_note_pitch = note.number + 12
+
+            # clone the note all the octaves up
+            while current_note_pitch <= MAX_NOTE_NUMBER:
+                new_note = note.clone()
+                new_note.number = current_note_pitch
+                new_note.muted = True
+                score.addNote(new_note)
+                current_note_pitch += 12
+
+            current_note_pitch = note.number - 12
+
+            # clone the note all the octaves down
+            while current_note_pitch >= MIN_NOTE_NUMBER:
+                new_note = note.clone()
+                new_note.number = current_note_pitch
+                new_note.muted = True
+                score.addNote(new_note)
+                current_note_pitch -= 12

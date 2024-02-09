@@ -3,12 +3,16 @@ Title: Select Random Notes v1.1
 Author: Pierre Sosa
 Category: Archive
 Version: v1.1
+License: Unknown
 
 Description: 
-This script allows you to select random notes with a given probability. It has been updated to include a 'seed for RNG' knob.
+This script allows you to select random notes with a given probability. It
+includes a 'seed for RNG' knob for added control.
 
 Changelog:
 2023-08-27 (v.1.1) - Added 'seed for RNG' knob
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=307422
 """
 import flpianoroll as flp
 import _random

@@ -3,13 +3,20 @@ Title: RANDOMIZER+ Script Updated / RANDOMIZER+
 Author: LETT
 Category: Edit
 Version: 08/14/2023
+License: Unknown
 
 Description: 
-This script is an extension of the Randomizer tool in FL Studio. It randomizes note start time, velocity, and more, and also allows for randomizing note pitch in multi-sample instruments like Kontakt Drum library. It ensures that notes do not overlap or extend past the desired looping pattern length. The script includes a video demonstration of randomizing drum programming. Feedback and issue reports are welcome.
+This script is an extension of the Randomizer tool in FL Studio. It randomizes
+note start time, velocity, and more, and also allows for randomizing note pitch
+in multi-sample instruments like Kontakt Drum library. It ensures that notes do
+not overlap or extend past the desired looping pattern length. The script
+includes a video demonstration of randomizing drum programming. Feedback and
+issue reports are welcome.
 
 Changelog:
-2023-08-14
-- Fixed some odd behavior with randomization of Panning/Cutoff/Resonance
+2023-08-14 - Fixed some odd behavior with randomization of Panning/Cutoff/Resonance
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=310199
 """
 """
 An extension of the Randomizer tool concept, combined with note start time humanizing. Credit to the stock 'Humanize' script provided. 

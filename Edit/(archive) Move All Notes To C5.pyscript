@@ -2,13 +2,14 @@
 Title: Move All Notes To C5
 Author: djxfade
 Category: Edit
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script moves all notes to C5, allowing you to extract a melody's rhythm and apply it as a chopping pattern for chords.
+This script moves all notes to C5, allowing you to extract a melody's rhythm and
+apply it as a chopping pattern for chords.
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=310174
 """
 # *** FL Studio Piano Roll script by Thomas Alrek ***
 

@@ -1,0 +1,38 @@
+"""flp
+Title: BBC / TenorTrombone
+Author: phil.n
+Category: Archive
+Version: Unknown
+License: Unknown
+
+Description: 
+This script helps with selecting articulations for orchestral libraries. It adds expression keys to all notes in selected regions and removes duplicates. It has a working video and is available in versions for Abbey Road and BBC libraries.
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=317751
+"""
+# -*- coding: utf-8 -*-
+"""Tenor Trombone Articulation Selector with UI
+
+This script calls the UI for selecting the Articulation for BBC
+Symphonic Orchestra
+
+It needs the functions.py module in the same folder
+
+Classes:
+
+Functions
+
+Todo:
+    * 
+
+@author:         Philipp Noertersheuser
+@GIT Repository: 
+@License
+"""
+from flpianoroll import *
+from functions import createDialog, apply, configure
+import articulations
+
+Utils.log("Called TenorTrombone.pyscript")
+
+configure(articulations.BBCSO.TenorTrombone)

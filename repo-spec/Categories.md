@@ -1,7 +1,7 @@
 (working draft)
 
 Total list of categories (not in alpha order):
-- Adust
+- Adjust
 - Archive
 - Color
 - Edit

@@ -1,15 +1,19 @@
 """flp
 Title: Randomize Melody v1.1
 Author: Pierre Sosa
-Category: Generative (melody)
+Category: Generate (melody)
 Version: v1.1
+License: Unknown
 
 Description: 
-This script allows you to randomize the keys of existing notes in the piano roll. It has a "w/o repetition" mode that preserves the rhythm by keeping the notes' length order. The latest version (v1.1) includes a "Seed for RNG" knob.
+This script allows you to randomize the keys of existing notes in the piano
+roll. It has a "w/o repetition" mode that preserves the rhythm by keeping the
+notes' length order. The latest version (v1.1) includes a "Seed for RNG" knob.
 
 Changelog:
-2023-08-09 (Randomize melody v1.1)
-- added "Seed for RNG" knob
+2023-08-09 (Randomize melody v1.1) - added "Seed for RNG" knob
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=308180
 """
 import flpianoroll as flp
 import _random

@@ -1,0 +1,87 @@
+"""flp
+Title: microtonegen1.3
+Author: PaulTron
+Category: Archive
+Version: 1.3
+License: Unknown
+
+Description: 
+This script generates equal tone scales. It allows you to specify the starting
+note, starting octave, note length, and spacing. The default starting note is
+'C', starting octave is 4, and the default number of tones to divide the octave
+into is 12.
+
+Changelog:
+2021-03-XX (1.3) - Added starting time, octave, note length, spacing 2021-02-XX (1.2) - Fixed starting note names 2021-01-XX (1.1) - Added starting note
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=322379
+"""
+from flpianoroll import *
+
+BEAT = score.PPQ
+BAR = 4 * BEAT
+NAMES = "C,C#/Db,D,D#/Eb,E,F,F#/Gb,G,G#/Ab,A,A#/Bb,B"
+LENS = {
+    "1"   : 1       , "1/2" : 0.5    , "1/3" : 0.33333, 
+    "1/4" : 0.25    , "1/6" : 0.16666, "1/8" : 0.125,
+    "1/12": 0.083333, "1/16": 0.0625 , "1/32": 0.03125,
+    "1/64": 0.015625
+        }
+
+def barbeat(bar=1, beat=1, tick=0):
+   return (bar-1)*BAR + (beat-1)*BEAT + tick
+
+def add_note(**kwargs):
+    _note = Note() # creating Note instance
+    # setting attributes
+    for key, value in kwargs.items():
+      setattr(_note, key, value)
+    score.addNote(_note) # Add note to global 'score'
+    del _note # delete temporary note
+
+def get_pitches(num_vals, octaves = 1):
+    return [int(0 + i * ((1200 * octaves)/(num_vals))) for i in range(num_vals+1)]
+
+def add_scale(scale: list, start_time = 0, start_num = 48, note_len = BEAT, note_spacing = BEAT, end_note = 0):
+
+    vals = [(round(float(x)/100.0),-round((round(float(x)/100.0)*100-x)/10.0)) for x in scale]
+    
+    for n in range(len(vals)-1+end_note):
+        add_note(number = min(start_num + vals[n][0], 127), 
+                 time = round(barbeat(beat=n+1)*note_spacing) + start_time, 
+                 length = round(note_len), 
+                 pitchofs = vals[n][1])
+        
+def createDialog():
+  form = ScriptDialog("Add Scale", 
+                      "Adds a equal-tone scale in a specified number of tones.\r" +
+                      "Add Octave Note adds first note in next octave.")
+  form.AddInputText("Starting Bar", "1")
+  form.AddInputText("Starting Beat", "1")
+  form.AddInputCombo('Starting Note', NAMES, 0)
+  form.AddInputKnobInt('Starting Octave', 4, 0, 10)
+  form.AddInputKnobInt('Divisions', 12, 0, 48)
+  form.AddInputCombo("Note Length", ",".join(LENS.keys()), 3)
+  form.AddInputCombo("Note Spacing", ",".join(LENS.keys()), 3)
+  form.AddInputCheckbox('Add Octave Note', False)
+  return form
+
+def apply(form):
+    start_bar = max(int(form.GetInputValue("Starting Bar").strip()), 1)
+    start_beat = max(int(form.GetInputValue("Starting Beat").strip()), 1)
+    start_time = barbeat(start_bar, start_beat)
+    
+    start_oct = form.GetInputValue('Starting Octave')
+    add_oct = 1 if form.GetInputValue('Add Octave Note') else 0
+    start_num = start_oct*12 + form.GetInputValue('Starting Note')
+    note_len = list(LENS.values())[form.GetInputValue("Note Length")] * BEAT
+    note_spacing = list(LENS.values())[form.GetInputValue("Note Spacing")]
+    divs = form.GetInputValue('Divisions')
+
+    add_scale(scale=get_pitches(divs), 
+              start_time=start_time, 
+              start_num=start_num, 
+              note_len=note_len, 
+              note_spacing=note_spacing, 
+              end_note = add_oct)
+

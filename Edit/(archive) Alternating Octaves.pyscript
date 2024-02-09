@@ -2,13 +2,15 @@
 Title: Alternating Octaves
 Author: emgoz
 Category: Edit
-Version: (n/a)
+Version: Unknown
+License: Unknown
 
 Description: 
-This script allows you to convert long notes into alternating octaves or other intervals commonly used in dance music basslines. Enjoy experimenting with different intervals!
+This script allows you to convert long notes into alternating octaves or other
+intervals commonly used in dance music basslines. Enjoy experimenting with
+different intervals!
 
-Changelog:
-no changelog
+Thread Link: https://forum.image-line.com/viewtopic.php?t=311692
 """
 import flpianoroll as flp
 

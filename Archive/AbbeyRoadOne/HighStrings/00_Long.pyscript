@@ -1,0 +1,44 @@
+"""flp
+Title: AbbeyRoadOne / 00_Long
+Author: phil.n
+Category: Archive
+Version: Unknown
+License: Unknown
+
+Description: 
+This script helps with selecting articulations for orchestral libraries. It adds
+expression keys to all notes in selected regions and removes duplicates. It has
+a working video and is available in versions for Abbey Road and BBC libraries.
+
+Thread Link: https://forum.image-line.com/viewtopic.php?t=317751
+"""
+# -*- coding: utf-8 -*-
+"""High String Long Articulation
+
+This script sets the articulation for selected notes to Long = C0 = 0
+without UI
+
+It needs the functions.py module in the parent folder and has to import 
+only the update function
+
+Classes:
+
+Functions
+
+Todo:
+    * 
+
+@author:         Philipp Noertersheuser
+@GIT Repository: 
+@License
+"""
+from flpianoroll import *
+import sys
+
+scriptpath = sys.path[1]                    #get path of script
+parentpath = scriptpath.rsplit("\\", 2)     #split last folder
+sys.path.insert(0, parentpath[0])           #add parent path for loading libs from there
+
+from functions import update                #import update function from module
+
+update(0, 5)                                #set note C0 and clean up the lower 5 notes
