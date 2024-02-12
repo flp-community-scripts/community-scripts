@@ -1,0 +1,33 @@
+"""flp
+Title: Copy markers
+Author: BinaryBorn
+Category: Markers
+Version: 1.0
+License: ISC
+
+Description: 
+Outputs a serialized form off time markers in the PR which can be pasted using the Paste markers script.
+
+Changelog:
+2024-02-12
+  - initial version
+"""
+
+import flpianoroll as flp
+import copymarkerutils as utils
+
+markers = [flp.score.getMarker(i) for i in range(flp.score.markerCount)]
+
+# if there's a timeline selection, only copy markers in that selection
+# and use selection start as time offset
+selection = flp.score.getTimelineSelection()
+offset = 0
+if selection[1] != -1:
+  t0 = selection[0]
+  t1 = selection[1]
+  markers = filter(lambda m: m.time >= t0 and m.time < t1, markers)
+  offset = t0
+
+serialized = utils.serialize(markers, offset)
+  
+flp.Utils.ShowMessage(serialized)
