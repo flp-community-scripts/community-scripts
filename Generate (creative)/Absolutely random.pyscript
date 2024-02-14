@@ -9,8 +9,11 @@ Description:
 Generates absolutely random, unquantized notes.
 
 Changelog:
-2024-02-14
+v1.0 (2024-02-14)
   - initial version
+
+v1.1 (2024-02-14)
+  - fixed fine pitch
 """
 
 import flpianoroll as flp
@@ -84,7 +87,7 @@ def apply(form):
   ptofMin = form.GetInputValue('Fine pitch min')
   ptofMax = form.GetInputValue('Fine pitch max')
   if ptofMin > ptofMax: ptofMin, ptofMax = ptofMax, ptofMin
-  ptofD = modyMax - ptofMin
+  ptofD = ptofMax - ptofMin
 
   colMin = form.GetInputValue('Color min')
   colMax = form.GetInputValue('Color max')
