@@ -1,0 +1,138 @@
+"""flp
+Title: Absolutely random
+Author: BinaryBorn
+Category: Generate (creative)
+Version: 1.0
+License: ISC
+
+Description: 
+Generates absolutely random, unquantized notes.
+
+Changelog:
+2024-02-14
+  - initial version
+"""
+
+import flpianoroll as flp
+import math
+import _random
+
+random = _random.Random()
+
+def createDialog():
+  form = flp.ScriptDialog("Absolutely random","Generates absolutely random, unquantized notes."
+  + "\r\n\r\nv1.0 (2024-02-14), BinaryBorn")
+  form.AddInputKnobInt('Seed', 0, 0, 999)
+  form.AddInputKnobInt('Density', 6, 0, 100)
+  form.AddInputKnobInt('Note min', 48, 0, 131)
+  form.AddInputKnobInt('Note max', 84, 0, 131)
+  form.AddInputKnob('Length min', 1, 0, 32)
+  form.AddInputKnob('Length max', 2, 0, 32)
+  form.AddInputKnob('Velocity min', 100/127, 0, 1)
+  form.AddInputKnob('Velocity max', 100/127, 0, 1)
+  form.AddInputKnob('Pan min', 0.5, 0, 1)
+  form.AddInputKnob('Pan max', 0.5, 0, 1)
+  form.AddInputKnob('Mod X min', 0.5, 0, 1)
+  form.AddInputKnob('Mod X max', 0.5, 0, 1)
+  form.AddInputKnob('Mod Y min', 0.5, 0, 1)
+  form.AddInputKnob('Mod Y max', 0.5, 0, 1)
+  form.AddInputKnob('Fine pitch min', 0, -1, 1)
+  form.AddInputKnob('Fine pitch max', 0, -1, 1)
+  form.AddInputKnobInt('Color min', 0, 0, 15)
+  form.AddInputKnobInt('Color max', 0, 0, 15)
+  
+  return form
+
+def apply(form):
+  ppq = flp.score.PPQ
+  pp16th = ppq / 4
+  # always seed with user provided seed
+  seed = form.GetInputValue('Seed')
+  random.seed(seed)
+
+  density = form.GetInputValue('Density')
+
+  noteMin = form.GetInputValue('Note min')
+  noteMax = form.GetInputValue('Note max')
+  if noteMin > noteMax: noteMin, noteMax = noteMax, noteMin
+
+  lenMin = form.GetInputValue('Length min') * pp16th
+  lenMax = form.GetInputValue('Length max') * pp16th
+  if lenMin > lenMax: lenMin, lenMax = lenMax, lenMin
+  lenD = lenMax - lenMin
+
+  velMin = form.GetInputValue('Velocity min')
+  velMax = form.GetInputValue('Velocity max')
+  if velMin > velMax: velMin, velMax = velMax, velMin
+  velD = velMax - velMin
+
+  panMin = form.GetInputValue('Pan min')
+  panMax = form.GetInputValue('Pan max')
+  if panMin > panMax: panMin, panMax = panMax, panMin
+  panD = panMax - panMin
+
+  modxMin = form.GetInputValue('Mod X min')
+  modxMax = form.GetInputValue('Mod X max')
+  if modxMin > modxMax: modxMin, modxMax = modxMax, modxMin
+  modxD = modxMax - modxMin
+
+  modyMin = form.GetInputValue('Mod Y min')
+  modyMax = form.GetInputValue('Mod Y max')
+  if modyMin > modyMax: modyMin, modyMax = modyMax, modyMin
+  modyD = modyMax - modyMin
+
+  ptofMin = form.GetInputValue('Fine pitch min')
+  ptofMax = form.GetInputValue('Fine pitch max')
+  if ptofMin > ptofMax: ptofMin, ptofMax = ptofMax, ptofMin
+  ptofD = modyMax - ptofMin
+
+  colMin = form.GetInputValue('Color min')
+  colMax = form.GetInputValue('Color max')
+  if colMin > colMax: colMin, colMax = colMax, colMin
+  colD = colMax - colMin
+
+  # populate timeline selection, fall back to first bar if none was made
+  selection = flp.score.getTimelineSelection()
+  t0 = selection[0]
+  t1 = selection[1]
+  if t1 == -1:
+    t0 = 0
+    t1 = 4 * ppq
+  dt = t1 - t0
+
+  # absolute density is selection range dependent
+  # at 100% density, approx 1 note per 16th per pitch
+  notesMaxCnt = math.floor(132 * dt / pp16th)
+
+  newNotes = []
+
+  for i in range(notesMaxCnt):
+    # always generate all random values, makes seeding more controllable
+    rndPopulate = random.random() < (density / 100)
+    rndNote = math.floor(random.random() * 132)
+    rndTime = t0 + (math.floor(i / 132) + (random.random())) * pp16th
+
+    rndLen = math.ceil(lenMin + random.random() * lenD) # using ceil here so infinite notes are only created if both min and max are set to 0
+    rndVel = velMin + random.random() * velD
+    rndPan = panMin + random.random() * panD
+    rndModx = modxMin + random.random() * modxD
+    rndMody = modyMin + random.random() * modyD
+    rndPtof = round((ptofMin + random.random() * ptofD) * 10)
+    rndCol = round(colMin + random.random() * colD)
+
+    if rndPopulate and rndNote >= noteMin and rndNote <= noteMax and rndTime < t1:
+      note = flp.Note()
+      note.number = rndNote
+      note.time = rndTime
+      note.length = rndLen
+      note.velocity = rndVel
+      note.pan = rndPan
+      note.fcut = rndModx
+      note.fres = rndMody
+      note.pitchofs = rndPtof
+      note.color = rndCol
+      newNotes.append(note)
+
+  for n in newNotes:
+    flp.score.addNote(n)
+
