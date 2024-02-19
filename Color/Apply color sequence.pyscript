@@ -1,0 +1,120 @@
+"""flp
+Title: Apply color sequence
+Author: D3Mens (idea), BinaryBorn (code)
+Category: Color
+Version: 1.0
+License: ISC
+
+Description: 
+Changes note color following a defined sequence.
+
+Changelog:
+v1.0 (2024-02-19)
+  - initial version
+"""
+
+import flpianoroll as flp
+import math
+import _random
+
+random = _random.Random()
+
+def createDialog():
+  form = flp.ScriptDialog("Apply color sequence","Changes note color following a defined sequence."
+  + "\r\nUse comma or space to separate numbers in sequence."
+  + "\r\n\r\nv1.0 (2024-02-19), D3Mens & BinaryBorn")
+  form.AddInputText('Sequence', '1')
+  form.AddInputKnobInt('Seq. multiplier', 1, 1, 32)
+  form.AddInputCombo('Unit', ['note index', '1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)'], 0)
+  form.AddInputKnobInt('Color min', 0, 0, 15)
+  form.AddInputKnobInt('Color max', 15, 0, 15)
+  form.AddInputCheckbox('Loop sequence', True)
+  form.AddInputCheckbox('Reset on loop', False)
+  form.AddInputCheckbox('Randomize sequence', False)
+  form.AddInputKnobInt('Seed', 0, 0, 999)
+
+  return form
+
+def apply(form):
+  ppq = flp.score.PPQ
+
+  seqText = form.GetInputValue('Sequence')
+  seqMul = form.GetInputValue('Seq. multiplier')
+  seqUnit = form.GetInputValue('Unit')
+  colMin = form.GetInputValue('Color min')
+  colMax = form.GetInputValue('Color max')
+  doLoop = form.GetInputValue('Loop sequence')
+  doReset = form.GetInputValue('Reset on loop')
+  doRandomize = form.GetInputValue('Randomize sequence')
+  seed = form.GetInputValue('Seed')
+  random.seed(seed)
+
+  # turn sequence text into list of numbers
+  seqText = seqText.replace(' ', ',')
+  sequence = []
+  for split in seqText.split(','):
+    try:
+      num = int(split) * seqMul
+      sequence.append(num)
+    except Exception:
+      pass
+  seqLen = len(sequence)
+
+  if seqLen == 0: return
+
+  # total length of x in sequence
+  seqSum = sum(sequence)
+
+  if seqSum == 0: return
+
+  ts_sequence = []
+  ts_loops = -1
+  ts_i = 0
+  def tickSequence():
+    nonlocal doLoop, doReset, doRandomize
+    nonlocal ts_sequence, ts_loops, ts_i
+    while True:
+      # set up counter sequence if necessary
+      if not ts_sequence:
+        ts_loops += 1
+        # if non-looping, return last index after first loop
+        # (index will already have advanced, hence -1)
+        if ts_loops > 0 and not doLoop: return ts_i - 1
+        # if looping with loop-reset, reset index
+        if doReset: ts_i = 0
+        ts_sequence = sequence.copy()
+        if doRandomize:
+          ts_sequence.sort(key=lambda s: random.random())
+      # keep index as long as the sequence has repetitions left
+      if ts_sequence[0] > 0:
+        ts_sequence[0] -= 1
+        return ts_i
+      else:
+        # otherwise increase index
+        ts_sequence = ts_sequence[1:]
+        ts_i += 1
+
+  # i: note index, j: note index mapped acc. to unit
+  j = 0
+  jlast = -1
+  colIndex = 0
+  colInc = 1 if colMax > colMin else -1
+  colRange = max(colMin, colMax) - min(colMin, colMax)
+  for i in range(flp.score.noteCount):
+    note = flp.score.getNote(i)
+    
+    # note based
+    if seqUnit == 0:
+      j = i
+    # time based
+    else:
+      j = math.floor(note.time / (4 / [1, 2, 3, 4, 6, 8, 12, 16][seqUnit - 1] * ppq))
+
+    # advance in sequence if mapped index advanced
+    dj = j - jlast
+    for n in range(dj):
+      colIndex = tickSequence()
+    jlast = j
+
+    # allow color cycling in both directions
+    note.color = colMin + (colIndex * colInc) % (colRange + 1)
