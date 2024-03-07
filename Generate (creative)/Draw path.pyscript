@@ -1,0 +1,88 @@
+"""flp
+Title: {}
+Author: BinaryBorn
+Category: {}
+Version: 1.0
+License: ISC
+
+Description: 
+{}
+
+Changelog:
+v1.0 (2024-02-19)
+  - initial version
+"""
+
+import flpianoroll as flp
+import kaki
+import math
+
+import sys
+flp.Utils.log(sys.version)
+
+cachedFigure = None
+cachedPath = None
+
+def createDialog():
+  form = flp.ScriptDialog("Draw path","-"
+  + "\r\n--"
+  + "\r\n\r\nv1.0 (2024-mm-dd), BinaryBorn")
+  form.AddInputText('Path','M0,48 32,60 16,72')
+  form.AddInputText('Fill style', 'velocity: 0.78; pan: 0.0; color: 0')
+  form.AddInputKnob('Offset x', 0, -128, 128)
+  form.AddInputKnob('Offset y', 0, -128, 128)
+  form.AddInputKnob('Scale x', 1, 0, 10)
+  form.AddInputKnob('Scale y', 1, 0, 10)
+  form.AddInputCombo('Oversample', ['--', '4x MSAA', '16x MSAA'], 0)
+  form.AddInputCombo('Fill rule', ['even-odd', 'nonzero'], 0)
+  form.AddInputKnobInt('Pixel width', int(flp.score.PPQ / 4), 1, flp.score.PPQ)
+
+  return form
+
+def apply(form):
+  global cachedPath, cachedFigure
+
+  path = form.GetInputValue('Path')
+  style = form.GetInputValue('Fill style')
+
+  offx = form.GetInputValue('Offset x')
+  offy = form.GetInputValue('Offset y')
+
+  scalex = form.GetInputValue('Scale x')
+  scaley = form.GetInputValue('Scale y')
+
+  transform = kaki.mat3(
+    scalex, 0, offx,
+    0, -scaley, 131 - offy,
+    0, 0, 1
+  )
+
+  optOversample = form.GetInputValue('Oversample')
+  fillRule = form.GetInputValue('Fill rule')
+
+  pixelWidth = form.GetInputValue('Pixel width')
+
+  if path != cachedPath:
+    cachedPath = path
+    cachedFigure = kaki.parseFigureFromSvgPath(path)
+
+  figure = kaki.cloneFigure(cachedFigure)
+
+  # figure = kaki.parseFigureFromSvgPath(path)
+  kaki.transformFigure(figure, transform)
+
+  fill = kaki.parsePhenotypeFromStyle(style)
+
+  bbox = kaki.getFigureBoundingBox(figure, True)
+  if bbox is None: return
+
+  buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample)
+  buffer.setOrigin(bbox.x0, bbox.y0)
+
+  kaki.drawFigure(buffer, figure, fill, fillRule)
+
+  newNotes = kaki.render(buffer, bbox.x0, bbox.y0, pixelWidth)
+
+  for n in newNotes:
+    n.group = 1
+    flp.score.addNote(n)
