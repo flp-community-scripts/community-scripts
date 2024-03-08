@@ -1,0 +1,72 @@
+"""flp
+Title: {}
+Author: BinaryBorn
+Category: {}
+Version: 1.0
+License: ISC
+
+Description: 
+{}
+
+Changelog:
+v1.0 (2024-02-19)
+  - initial version
+"""
+
+import flpianoroll as flp
+import kaki
+import math
+
+def createDialog():
+  form = flp.ScriptDialog("Draw triangle","-"
+  + "\r\n--"
+  + "\r\n\r\nv1.0 (2024-mm-dd), BinaryBorn")
+  form.AddInputKnobInt('Point 1 x', 0, 0, 128)
+  form.AddInputKnobInt('Point 1 y', 48, 0, 131)
+  form.AddInputText('Point 1 style', 'velocity: 0.78; pan: 0.0; color: 0')
+  form.AddInputKnobInt('Point 2 x', 32, 0, 128)
+  form.AddInputKnobInt('Point 2 y', 60, 0, 131)
+  form.AddInputText('Point 2 style', 'velocity: 0.78; pan: 0.5; color: 8')
+  form.AddInputKnobInt('Point 3 x', 16, 0, 128)
+  form.AddInputKnobInt('Point 3 y', 72, 0, 131)
+  form.AddInputText('Point 3 style', 'velocity: 0.78; pan: 1.0; color: 15')
+  form.AddInputCombo('Oversample', ['--', '4x MSAA', '16x MSAA'], 0)
+
+  return form
+
+def apply(form):
+  x1 = form.GetInputValue('Point 1 x')
+  y1 = form.GetInputValue('Point 1 y')
+  style1 = form.GetInputValue('Point 1 style')
+  x2 = form.GetInputValue('Point 2 x')
+  y2 = form.GetInputValue('Point 2 y')
+  style2 = form.GetInputValue('Point 2 style')
+  x3 = form.GetInputValue('Point 3 x')
+  y3 = form.GetInputValue('Point 3 y')
+  style3 = form.GetInputValue('Point 3 style')
+
+  optOversample = form.GetInputValue('Oversample')
+
+  p1 = kaki.vec2(x1, y1)
+  p2 = kaki.vec2(x2, y2)
+  p3 = kaki.vec2(x3, y3)
+
+  verts = [p1, p2, p3]
+  pvs = ([
+    kaki.parsePhenotypeFromStyle(style1),
+    kaki.parsePhenotypeFromStyle(style2),
+    kaki.parsePhenotypeFromStyle(style3),
+  ])
+
+  bbox = kaki.getBoundingBox(verts)
+
+  buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample)
+  buffer.setOrigin(bbox.x0, bbox.y0)
+
+  kaki.drawTriangle(buffer, verts, pvs)
+
+  newNotes = kaki.render(buffer, bbox.x0, bbox.y0)
+
+  for n in newNotes:
+    n.group = 1
+    flp.score.addNote(n)
