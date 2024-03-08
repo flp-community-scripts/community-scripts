@@ -19,11 +19,21 @@ by: BinaryBorn
 
 2023-10-13
   - initial version
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
+  - CHANGED seed range limited to 999 for better UX
 """
 
 # gathering markers is only required once - they don't update as long as script is active
 
-scales = []
+class Scale:
+  __slots__ = ['time', 'notes']
+  def __init__(self, time: int, notes: list[bool]):
+    self.time = time
+    self.notes = notes
+
+scales: list[Scale] = []
 
 for m in range(flp.score.markerCount):
   marker = flp.score.getMarker(m)
@@ -36,21 +46,21 @@ for m in range(flp.score.markerCount):
     # "default" scale will be all False - don't append that, invert instead
     if not max(notes) == 0:
       # append that with its starting time
-      scales.append({
-        'time': marker.time,
-        'notes': notes
-      })
+      scales.append(Scale(
+        time = marker.time,
+        notes = notes
+      ))
     else:
-      scales.append({
-        'time': marker.time,
-        'notes': [True, True, True, True, True, True, True, True, True, True, True, True]
-      })
+      scales.append(Scale(
+        time = marker.time,
+        notes = [True, True, True, True, True, True, True, True, True, True, True, True]
+      ))
 
 
 def createDialog():
   form = flp.ScriptDialog("Random sequence","Generate a random sequence."
   + "\r\nOctave jumps, Melody, Rhythm, Slides and Accents knobs are probability for random value."
-  + "\r\n\r\n2023-10-13, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputKnobInt('Root note', 60, 48, 72)
   form.AddInputKnobInt('Sequence length', 16, 4, 64)
   form.AddInputKnob('Octave jumps', 0, 0, 1.0)
@@ -59,8 +69,7 @@ def createDialog():
   form.AddInputKnob('Rhythm', 0, 0, 1.0)
   form.AddInputKnob('Slides', 0, 0, 1.0)
   form.AddInputKnob('Accents', 0, 0, 1.0)
-  form.AddInputKnobInt('Seed', 0, 0, 0x7fffffff)
-  # form.AddInputKnobInt('Seed', 0, 0, 500)
+  form.AddInputKnobInt('Seed', 0, 0, 999)
   
   return form
 
@@ -68,20 +77,20 @@ def createDialog():
 # if skew = 0, the result is always 0
 # if skew = 1, the result is random
 # (skew is basically the probability of a random outcome)
-def skewedRandom(skew):
+def skewedRandom(skew: float):
   p = random.random()
   r = random.random()
   if p >= skew:
-    return 0
+    return 0.0
   else:
     return r
 
 # return scale active at "time" (use "Default" as fallback)
-def relevantScaleAt(time):
-  s = {
-    'time': 0,
-    'notes': [True, True, True, True, True, True, True, True, True, True, True, True]
-  }
+def relevantScaleAt(time: int):
+  s = Scale(
+    time = 0,
+    notes = [True, True, True, True, True, True, True, True, True, True, True, True]
+  )
 
   # find latest scale before time
   for scale in scales:
@@ -90,9 +99,9 @@ def relevantScaleAt(time):
   return s
 
 # transpose note into scale
-def transposeIntoScale(number, scale):
+def transposeIntoScale(number: int, scale: Scale):
   # look for "True" in scale above and below original note with increasing distance
-  s = scale['notes']
+  s = scale.notes
   for t in range(12):
     if s[(number + t) % 12]: return number + t
     if s[(number - t + 12) % 12]: return number - t
@@ -100,14 +109,14 @@ def transposeIntoScale(number, scale):
   return number
 
 def apply(form):
-  root = form.GetInputValue('Root note')
-  length = form.GetInputValue('Sequence length')
-  octaves = form.GetInputValue('Octave jumps')
-  octaveRange = form.GetInputValue('Octave range')
-  melody = form.GetInputValue('Melody')
-  rhythm = form.GetInputValue('Rhythm')
-  slides = form.GetInputValue('Slides')
-  accents = form.GetInputValue('Accents')
+  root = int(form.GetInputValue('Root note'))
+  length = int(form.GetInputValue('Sequence length'))
+  octaves = float(form.GetInputValue('Octave jumps'))
+  octaveRange = int(form.GetInputValue('Octave range'))
+  melody = float(form.GetInputValue('Melody'))
+  rhythm = float(form.GetInputValue('Rhythm'))
+  slides = float(form.GetInputValue('Slides'))
+  accents = float(form.GetInputValue('Accents'))
 
   ppq = flp.score.PPQ
 
@@ -120,11 +129,11 @@ def apply(form):
   octaveOptionsCnt = len(octaveOptions)
 
   # always seed with user provided seed
-  seed = form.GetInputValue('Seed')
+  seed = int(form.GetInputValue('Seed'))
   random.seed(seed)
     
   # generate steps (as in step sequencer)
-  steps = []
+  steps: list[dict[str, int]] = []
   for i in range(length):
     octj = int(skewedRandom(octaves) * octaveOptionsCnt)
     octn = int(octaveOptions[octj] * 12)
@@ -164,4 +173,4 @@ def apply(form):
       prevNote = note
 
     else:
-      prevNote.length += ppq / 4
+      prevNote.length += int(ppq / 4)

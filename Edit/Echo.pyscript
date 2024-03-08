@@ -34,11 +34,20 @@ by: BinaryBorn
   - added pitch snap options
   - added legato option
   - added descriptions for knob values
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 # gathering markers is only required once - they don't update as long as script is active
 
-scales = []
+class Scale:
+  __slots__ = ['time', 'notes']
+  def __init__(self, time: int, notes: list[bool]):
+    self.time = time
+    self.notes = notes
+
+scales: list[Scale] = []
 
 for m in range(flp.score.markerCount):
   marker = flp.score.getMarker(m)
@@ -51,22 +60,22 @@ for m in range(flp.score.markerCount):
     # "default" scale will be all False - don't append that, invert instead
     if not max(notes) == 0:
       # append that with its starting time
-      scales.append({
-        'time': marker.time,
-        'notes': notes
-      })
+      scales.append(Scale(
+        time = marker.time,
+        notes = notes
+      ))
     else:
-      scales.append({
-        'time': marker.time,
-        'notes': [True, True, True, True, True, True, True, True, True, True, True, True]
-      })
+      scales.append(Scale(
+        time = marker.time,
+        notes = [True, True, True, True, True, True, True, True, True, True, True, True]
+      ))
 
 # return scale active at "time" (use "Default" as fallback)
-def relevantScaleAt(time):
-  s = {
-    'time': 0,
-    'notes': [True, True, True, True, True, True, True, True, True, True, True, True]
-  }
+def relevantScaleAt(time: int):
+  s = Scale(
+    time = 0,
+    notes = [True, True, True, True, True, True, True, True, True, True, True, True]
+  )
 
   # find latest scale before time
   for scale in scales:
@@ -75,9 +84,9 @@ def relevantScaleAt(time):
   return s
 
 # transpose note into scale
-def transposeIntoScale(number, scale):
+def transposeIntoScale(number: int, scale: Scale):
   # look for "True" in scale above and below original note with increasing distance
-  s = scale['notes']
+  s = scale.notes
   for t in range(12):
     if s[(number + t) % 12]: return number + t
     if s[(number - t + 12) % 12]: return number - t
@@ -90,7 +99,7 @@ def createDialog():
   + "\r\nDelay time is in 16th."
   + "\r\nThe knob ranges for randomness are as follows:"
   + "\r\nTime \u00b11 bar; pitch \u00b112 semitones; rest \u00b110% f.s."
-  + "\r\n\r\n2024-02-02, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputKnob('Delay time', 4, -16, 16)
   form.AddInputKnobInt('Echos', 4, 1, 128)
   form.AddInputCombo('Velocity mode', ['exponential', 'linear'], 0)
@@ -128,33 +137,33 @@ def apply(form):
   if not notes: return
 
   ppq = flp.score.PPQ
-  tdelay = form.GetInputValue('Delay time') / 4 * ppq
-  numEchos = form.GetInputValue('Echos')
-  velMode = form.GetInputValue('Velocity mode')
-  velMul = form.GetInputValue('Velocity multiplier')
-  sterMode = form.GetInputValue('Stereo mode')
-  sterMul = form.GetInputValue('Stereo multiplier')
-  panShft = form.GetInputValue('Pan shift')
-  pitchShft = form.GetInputValue('Pitch shift') * 100
-  pitchMode = form.GetInputValue('Pitch snapping')
-  modxShft = form.GetInputValue('Mod X shift')
-  modyShft = form.GetInputValue('Mod Y shift')
-  colMode = form.GetInputValue('Note color mode')
-  colOff = form.GetInputValue('Note color offset')
-  dropSilent = form.GetInputValue('Drop silent notes')
-  groupEchos = form.GetInputValue('Group echos')
-  optLegato = form.GetInputValue('Legato echos')
+  tdelay = float(form.GetInputValue('Delay time')) / 4 * ppq
+  numEchos = int(form.GetInputValue('Echos'))
+  velMode = int(form.GetInputValue('Velocity mode'))
+  velMul = float(form.GetInputValue('Velocity multiplier'))
+  sterMode = int(form.GetInputValue('Stereo mode'))
+  sterMul = float(form.GetInputValue('Stereo multiplier'))
+  panShft = float(form.GetInputValue('Pan shift'))
+  pitchShft = float(form.GetInputValue('Pitch shift')) * 100
+  pitchMode = int(form.GetInputValue('Pitch snapping'))
+  modxShft = float(form.GetInputValue('Mod X shift'))
+  modyShft = float(form.GetInputValue('Mod Y shift'))
+  colMode = int(form.GetInputValue('Note color mode'))
+  colOff = int(form.GetInputValue('Note color offset'))
+  dropSilent = bool(form.GetInputValue('Drop silent notes'))
+  groupEchos = bool(form.GetInputValue('Group echos'))
+  optLegato = bool(form.GetInputValue('Legato echos'))
 
-  randomize = form.GetInputValue('Randomize')
-  rndTime = form.GetInputValue('Rnd time')
-  rndVel = form.GetInputValue('Rnd velocity')
-  rndPan = form.GetInputValue('Rnd pan')
-  rndPitch = form.GetInputValue('Rnd pitch')
-  rndModx = form.GetInputValue('Rnd mod X')
-  rndMody = form.GetInputValue('Rnd mod Y')
+  randomize = bool(form.GetInputValue('Randomize'))
+  rndTime = float(form.GetInputValue('Rnd time'))
+  rndVel = float(form.GetInputValue('Rnd velocity'))
+  rndPan = float(form.GetInputValue('Rnd pan'))
+  rndPitch = float(form.GetInputValue('Rnd pitch'))
+  rndModx = float(form.GetInputValue('Rnd mod X'))
+  rndMody = float(form.GetInputValue('Rnd mod Y'))
 
   # always seed with user provided seed
-  seed = form.GetInputValue('Seed')
+  seed = int(form.GetInputValue('Seed'))
   random.seed(seed)
 
   # store initial values for randomizer
@@ -167,7 +176,7 @@ def apply(form):
   def unityRandom():
     return 2 * (random.random() - 0.5)
 
-  addNotes = []
+  addNotes: list[flp.Note] = []
   grpIdx = 0
   prevNote = None # keep track of previous note for legato option
   origLength = None
@@ -233,11 +242,11 @@ def apply(form):
             tarnum -= 12
             tarofs += 120
         note.number = tarnum
-        note.pitchofs = tarofs
+        note.pitchofs = round(tarofs)
       # snap to note: round note, minimize pitchofs
       elif pitchMode == 1:
         note.number = round(pitch / 100)
-        note.pitchofs = (pitch - note.number * 100) / 10
+        note.pitchofs = round((pitch - note.number * 100) / 10)
       # snap to scale (at echo): snap note number, ignore pitchofs
       elif pitchMode == 2:
         note.number = transposeIntoScale(round(pitch / 100), relevantScaleAt(note.time))
