@@ -19,10 +19,13 @@ by: BinaryBorn
 
 2023-10-16
   - added ISC license text
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 # Utility function to get time range of selection / notes
-def getTimeRange(notes):
+def getTimeRange(notes) -> tuple[int, int]:
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -32,7 +35,7 @@ def getTimeRange(notes):
 
 def createDialog():
   form = flp.ScriptDialog("Squash and space","Change note spacing to squash them or move them apart."
-  + "\r\n\r\n2023-10-16, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputKnobInt('Spacing', 0, -100, 100)
   return form
 
@@ -46,8 +49,8 @@ def apply(form):
   dt = t1 - t0
 
   # change their starting time
-  spacing = form.GetInputValue('Spacing') / 100
+  spacing = int(form.GetInputValue('Spacing')) / 100
   f = 1 + spacing
   for note in notes:
     t = (note.time - t0) * f
-    note.time = t + t0
+    note.time = int(t + t0)

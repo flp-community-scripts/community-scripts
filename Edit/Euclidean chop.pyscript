@@ -20,13 +20,16 @@ code: BinaryBorn
 
 2023-09-14
   - added rotation
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 def createDialog():
   form = flp.ScriptDialog("Euclidean chop","Chop notes into given number of pieces."
   + "\r\nWhen quantizing, you might not get the number of notes you specified, due to quantizing."
   + "\r\nWhen quantizing, use 'Rotation' to adjust the resulting note patterns phase."
-  + "\r\n\r\n2023-09-14, Trancit & BinaryBorn")
+  + "\r\n\r\n2024-03-08, Trancit & BinaryBorn")
   form.AddInputKnobInt('Chops', 2, 2, 32)
   form.AddInputCombo('Quantization', ['off', '1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)', '1/24', '1/32', '1/48', '1/64'], 0)
   form.AddInputKnobInt('Rotation', 0, -32, 32)
@@ -34,18 +37,18 @@ def createDialog():
   return form
 
 def apply(form):
-  chops = form.GetInputValue('Chops')
-  quantization = form.GetInputValue('Quantization')
-  rotation = form.GetInputValue('Rotation')
+  chops = int(form.GetInputValue('Chops'))
+  quantization = int(form.GetInputValue('Quantization'))
+  rotation = int(form.GetInputValue('Rotation'))
   quantize = (quantization != 0)
-  quantTicks = [1, 1, 1/2, 1/3, 1/4, 1/6, 1/8, 1/12, 1/16, 1/24, 1/32, 1/48, 1/64][quantization] * 4 * flp.score.PPQ
+  quantTicks = int([1, 1, 1/2, 1/3, 1/4, 1/6, 1/8, 1/12, 1/16, 1/24, 1/32, 1/48, 1/64][quantization] * 4 * flp.score.PPQ)
 
   noteCount = flp.score.noteCount
 
   # get current notes
   notes = [flp.score.getNote(i) for i in range(noteCount)]
 
-  newNotes = []
+  newNotes: list[flp.Note] = []
 
   # go through all notes and replace by chopped copy
   for note in notes:
@@ -58,7 +61,7 @@ def apply(form):
     ticksPerChop = dt / chops
     idx = 0
     tused = 0
-    chopNotes = []
+    chopNotes: list[flp.Note] = []
     while idx < chops:
       # chop start and end time
       s0 = int(t0 + ticksPerChop * idx)

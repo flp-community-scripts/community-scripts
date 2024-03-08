@@ -22,19 +22,22 @@ by: BinaryBorn
 
 2023-09-13
   - added ISC license text
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 def createDialog():
   form = flp.ScriptDialog("Convert BPM","Convert score from one BPM to another"
-  + "\r\n\r\n2023-09-13, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputKnobInt('From tempo', 120, 10, 522)
   form.AddInputKnobInt('To tempo', 120, 10, 522)
   
   return form
 
 def apply(form):
-  tempoA = form.GetInputValue('From tempo')
-  tempoB = form.GetInputValue('To tempo')
+  tempoA = int(form.GetInputValue('From tempo'))
+  tempoB = int(form.GetInputValue('To tempo'))
   tscale = tempoA / tempoB
 
   # get current notes
@@ -42,6 +45,6 @@ def apply(form):
 
   # scale score horizontally
   for note in notes:
-    note.time *= tscale
-    note.length *= tscale
+    note.time = round(note.time * tscale)
+    note.length = round(note.length * tscale)
 

@@ -28,13 +28,16 @@ CHANGES
 2023-11-02
   - added note length
   - added note color
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 # note.release is not yet supported
 
 def createDialog():
   form = flp.ScriptDialog("Velocity tracking","Change note properties based on their velocity."
-  + "\r\n\r\n2023-11-02, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputCombo('Set pan', ['leave', 'set', 'add'], 0)
   form.AddInputKnob('Pan', 0, -1, 1)
   form.AddInputCombo('Set release', ['leave', 'set', 'add'], 0)
@@ -57,22 +60,22 @@ def apply(form):
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 
   # set their levels
-  setPan = form.GetInputValue('Set pan')
-  pan = form.GetInputValue('Pan') / 100
-  setRelease = form.GetInputValue('Set release')
-  release = form.GetInputValue('Release') / 100
-  setFCut = form.GetInputValue('Set filter cutoff')
-  fcut = form.GetInputValue('Filter cutoff') / 100
-  setFRes = form.GetInputValue('Set filter resonance')
-  fres = form.GetInputValue('Filter resonance') / 100
-  setPitch = form.GetInputValue('Set pitch')
-  pitch = form.GetInputValue('Pitch') * 12 / 10 # the range here is -120 ... 120
-  setLength = form.GetInputValue('Set length')
-  length = form.GetInputValue('Length')
-  setColor = form.GetInputValue('Set color')
-  color = form.GetInputValue('Color')
+  setPan = int(form.GetInputValue('Set pan'))
+  pan = float(form.GetInputValue('Pan')) / 100
+  setRelease = int(form.GetInputValue('Set release'))
+  release = float(form.GetInputValue('Release')) / 100
+  setFCut = int(form.GetInputValue('Set filter cutoff'))
+  fcut = float(form.GetInputValue('Filter cutoff')) / 100
+  setFRes = int(form.GetInputValue('Set filter resonance'))
+  fres = float(form.GetInputValue('Filter resonance')) / 100
+  setPitch = int(form.GetInputValue('Set pitch'))
+  pitch = float(form.GetInputValue('Pitch')) * 12 / 10 # the range here is -120 ... 120
+  setLength = int(form.GetInputValue('Set length'))
+  length = float(form.GetInputValue('Length'))
+  setColor = int(form.GetInputValue('Set color'))
+  color = float(form.GetInputValue('Color'))
 
-  center = form.GetInputValue('Center value')
+  center = int(form.GetInputValue('Center value'))
 
   ppq = flp.score.PPQ
 
@@ -89,10 +92,10 @@ def apply(form):
     if setFRes == 1: note.fres = 0.5
     if setFRes: note.fres = min(max(note.fres + fres * amount, 0),1)
     if setPitch == 1: note.pitchofs = 0
-    if setPitch: note.pitchofs = min(max(note.pitchofs + pitch * amount, -120),120)
+    if setPitch: note.pitchofs = int(min(max(note.pitchofs + pitch * amount, -120),120))
     # use 1/16 as default note length
-    if setLength == 1: note.length = ppq / 4
+    if setLength == 1: note.length = int(ppq / 4)
     if setLength: note.length = round(max(note.length + length * amount, 1))
     if setColor == 1: note.color = 0
-    if setColor: note.color = min(max(note.color + color * amount, 0), 15)
+    if setColor: note.color = int(min(max(note.color + color * amount, 0), 15))
 

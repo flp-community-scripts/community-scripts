@@ -135,6 +135,14 @@ class __score__():
         """
         pass
 
+    def getTimelineSelection(self) -> tuple[int, int]:
+        """gets the selected timeline range
+
+        Returns:
+            tuple[int, int]: selection start, selection end (start is -1 if no selection was made)
+        """
+        pass
+
 #-------------------------------------------------------------------#
 #---Script Dialog Class
 class ScriptDialog():
@@ -250,7 +258,7 @@ class Note():
     selected: bool
     "note is selected"
 
-    def clone(self) -> None:
+    def clone(self) -> Note:
         """current note is cloned
         """
 
