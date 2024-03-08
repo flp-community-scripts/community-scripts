@@ -4,9 +4,9 @@ from kakibuffer import Buffer
 
 from kakigeometryutils import (
   getFigureBoundingBox,
-  transformCluster,
+  transformPoints,
   transformFigure,
-  cloneCluster,
+  clonePoints,
   cloneFigure,
 )
 
@@ -19,7 +19,6 @@ from kakiprimitives import (
   vec2,
   mat3,
   box,
-  cluster,
   figure,
   phenotype
 )

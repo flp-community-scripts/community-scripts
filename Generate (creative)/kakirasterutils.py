@@ -1,4 +1,4 @@
-from kakiprimitives import vec2, box, cluster, figure
+from kakiprimitives import vec2, box, figure
 from kakiutils import getBoundingBox
 
 def pointInRect(rect: box, p: vec2):
@@ -23,11 +23,11 @@ def edgeFunction(a: vec2, b: vec2, c: vec2):
   return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
 
 
-def crossingNumber(poly: cluster, p: vec2):
+def crossingNumber(poly: list[vec2], p: vec2):
   """Computes the crossing number for a given point in a polygon.
 
   Args:
-    poly (Polygon): polygon
+    poly (list[vec2]): polygon
     p (vec2): point to test
 
   Returns:
@@ -50,26 +50,26 @@ def crossingNumber(poly: cluster, p: vec2):
 
   return cn
 
-def pointInPolygonsCn(polys: figure, p: vec2) -> bool:
-  """Decides whether a point is within a polygon using the crossing number algorithm, a.k.a. the even-odd fill rule.
+def pointInFigureCn(figure: figure, p: vec2) -> bool:
+  """Decides whether a point is within a figure using the crossing number algorithm, a.k.a. the even-odd fill rule.
 
   Args:
-    poly (list[vec2]): polygon
+    figure (figure): figure
     p (vec2): point to test
 
   Returns:
-    bool: true if point is in polygon
+    bool: true if point is in figure
   """
   cn = 0
-  for poly in polys:
+  for pts in figure:
     # bounding box check
-    bbox = getBoundingBox(poly)
+    bbox = getBoundingBox(pts)
     if bbox is not None and pointInRect(bbox, p):
-      cn += crossingNumber(poly, p)
+      cn += crossingNumber(pts, p)
   return cn % 2 != 0
 
 
-def windingNumber(poly: cluster, p: vec2) -> int:
+def windingNumber(poly: list[vec2], p: vec2) -> int:
   """Computes the winding number for a point in a polygon.
 
   Args:
@@ -99,22 +99,22 @@ def windingNumber(poly: cluster, p: vec2) -> int:
 
   return wn
 
-def pointInPolygonsWn(polys: figure, p: vec2) -> bool:
-  """Decides whether a point is within a polygon using the winding number algorithm, a.k.a. the nonzero fill rule.
+def pointInFigureWn(figure: figure, p: vec2) -> bool:
+  """Decides whether a point is within a figure using the winding number algorithm, a.k.a. the nonzero fill rule.
 
   Args:
-    poly (list[vec2]): polygon
+    figure (figure): figure
     p (vec2): point to test
 
   Returns:
-    bool: true if point is in polygon
+    bool: true if point is in figure
   """
   wn = 0
-  for poly in polys:
+  for pts in figure:
     # bounding box check
-    bbox = getBoundingBox(poly)
+    bbox = getBoundingBox(pts)
     if bbox is not None and pointInRect(bbox, p):
-      wn += windingNumber(poly, p)
+      wn += windingNumber(pts, p)
   return wn != 0
 
 

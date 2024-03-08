@@ -1,12 +1,12 @@
 import math
 
-from kakiprimitives import mat3, phenotype, vec2, box, cluster
+from kakiprimitives import mat3, phenotype, vec2, box
 
-def getBoundingBox(points: cluster, round: bool = False) -> box:
+def getBoundingBox(points: list[vec2], round: bool = False) -> box:
   """Returns the smallest box that completely includes all points in a given list of points.
 
   Args:
-    points (cluster): list of points
+    points (list[vec2]): list of points
 
   Returns:
     box: bounding box

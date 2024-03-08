@@ -34,7 +34,7 @@ class mat3:
 
 # TODO: mat4
 
-# geometry primitives (box, polygons, figures, surfaces, meshes) are only suffixed when using 3d
+# geometry primitives (box, figures, meshes etc) are only suffixed when using 3d
 
 class box:
   """Class for 2D boxes
@@ -47,10 +47,8 @@ class box:
     self.x1 = x1
     self.y1 = y1
 
-type cluster = list[vec2]
-"Type alias for a list of points"
-type figure = list[cluster]
-"Type alias for a list of clusters (each interpreted as polygon)"
+type figure = list[list[vec2]]
+"Type alias for a list of list of points (each interpreted as polygon)"
 
 class phenotype:
   """Class representing the property vector for all the note properties.
