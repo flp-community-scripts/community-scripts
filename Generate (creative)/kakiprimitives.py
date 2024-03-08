@@ -47,11 +47,9 @@ class box:
     self.x1 = x1
     self.y1 = y1
 
-# type aliases, the scripting engine doesn't know type, so let's use the backwards-compatibility statement
-
-cluster = list[vec2]
+type cluster = list[vec2]
 "Type alias for a list of points"
-figure = list[cluster]
+type figure = list[cluster]
 "Type alias for a list of clusters (each interpreted as polygon)"
 
 class phenotype:
