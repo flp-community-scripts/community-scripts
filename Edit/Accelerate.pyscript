@@ -20,10 +20,13 @@ by: BinaryBorn
   
 2023-09-13
   - added ISC license text
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 # Utility function to get time range of selection / notes
-def getTimeRange(notes):
+def getTimeRange(notes) -> tuple[int, int]:
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -40,7 +43,7 @@ def createDialog():
   + "\r\nAcceleration is 'rate change per bar', on a logarithmic scale:"
   + "\r\nValue:    -5      -4      -3      -2      -1       0       1       2       3       4       5"
   + "\r\nRate:     \u00d7\u215f\u2083\u2082   \u00d7\u215f\u2081\u2086   \u00d7\u215b   \u00d7\u00bc   \u00d7\u00bd    \u00d71    \u00d72    \u00d74    \u00d78    \u00d716    \u00d732"
-  + "\r\n\r\n2023-09-13, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputKnob('Acceleration', 0, -expRange, expRange)
   form.AddInputCombo('Off limit notes', ['leave', 'mute', 'select'], 0)
   form.AddInputKnob('Lower rate limit %', 100/mulRange, 100/mulRange, 100)
@@ -50,7 +53,7 @@ def createDialog():
 
 def apply(form):
   # to find acceleration, go via target rate after 1 bar
-  trExp = form.GetInputValue('Acceleration')
+  trExp = float(form.GetInputValue('Acceleration'))
   tr = pow(2, trExp)
   a_ = tr - 1
   # convert acc from %/bar to %/tick
@@ -60,22 +63,22 @@ def apply(form):
   if a == 0: return
 
   # when the limit hits
-  lim0 = form.GetInputValue('Lower rate limit %') / 100
-  lim1 = form.GetInputValue('Upper rate limit %') / 100
+  lim0 = float(form.GetInputValue('Lower rate limit %')) / 100
+  lim1 = float(form.GetInputValue('Upper rate limit %')) / 100
   endrate = lim0 if a < 0 else lim1
   tlim = (endrate - 1) / a
 
   # where the limit hits
   slim = 1 / a * math.log(abs(a*tlim + 1))
 
-  def sfromt(t):
+  def sfromt(t: float):
     if t <= tlim:
       return 1 / a * math.log(abs(a*t + 1))
     else:
       return slim + (t - tlim) / endrate
 
   # off-limit-notes mode
-  mode = form.GetInputValue('Off limit notes')
+  mode = int(form.GetInputValue('Off limit notes'))
 
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
@@ -89,8 +92,8 @@ def apply(form):
     t0 = note.time - toffset
     t1 = t0 + note.length
 
-    s0 = sfromt(t0)
-    s1 = sfromt(t1)
+    s0 = round(sfromt(t0))
+    s1 = round(sfromt(t1))
 
     note.time = s0 + toffset
     note.length = s1 - s0

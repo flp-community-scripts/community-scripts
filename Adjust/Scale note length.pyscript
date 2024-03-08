@@ -23,11 +23,14 @@ CHANGES
 
 2023-10-16
   - added ISC license text
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 def createDialog():
   form = flp.ScriptDialog("Scale note length","Scale note lengths from 0% to 200%"
-  + "\r\n\r\n2023-10-16, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputKnob('Length', 100, 0, 200)
   return form
 
@@ -36,6 +39,6 @@ def apply(form):
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 
   # change their length
-  scale = form.GetInputValue('Length') / 100
+  scale = float(form.GetInputValue('Length')) / 100
   for note in notes:
-    note.length = max(1, note.length * scale)            
+    note.length = round(max(1, note.length * scale))           

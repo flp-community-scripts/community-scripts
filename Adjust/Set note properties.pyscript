@@ -23,11 +23,14 @@ CHANGES
 
 2023-10-16
   - added ISC license text
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 def createDialog():
   form = flp.ScriptDialog("Set note properties","Set note properties of selected notes"
-  + "\r\n\r\n2023-10-16, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputCombo('Set pan', ['leave', 'set'], 0)
   form.AddInputKnobInt('Pan', 0, -100, 100)
   form.AddInputCombo('Set velocity', ['leave', 'set'], 0)
@@ -47,23 +50,23 @@ def apply(form):
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 
   # set their levels
-  setPan = form.GetInputValue('Set pan')
-  pan = form.GetInputValue('Pan') / 200 + 0.5
-  setVelocity = form.GetInputValue('Set velocity')
-  velocity = form.GetInputValue('Velocity') / 100
-  setRelease = form.GetInputValue('Set release')
-  release = form.GetInputValue('Release') / 100
-  setFCut = form.GetInputValue('Set filter cutoff')
-  fCut = form.GetInputValue('Filter cutoff') / 200 + 0.5
-  setFRes = form.GetInputValue('Set filter resonance')
-  fRes = form.GetInputValue('Filter resonance') / 200 + 0.5
-  setPitch = form.GetInputValue('Set pitch')
-  pitch = form.GetInputValue('Pitch') / 10
+  setPan = int(form.GetInputValue('Set pan'))
+  pan = float(form.GetInputValue('Pan')) / 200 + 0.5
+  setVelocity = int(form.GetInputValue('Set velocity'))
+  velocity = float(form.GetInputValue('Velocity')) / 100
+  setRelease = int(form.GetInputValue('Set release'))
+  release = float(form.GetInputValue('Release')) / 100
+  setFCut = int(form.GetInputValue('Set filter cutoff'))
+  fCut = float(form.GetInputValue('Filter cutoff')) / 200 + 0.5
+  setFRes = int(form.GetInputValue('Set filter resonance'))
+  fRes = float(form.GetInputValue('Filter resonance')) / 200 + 0.5
+  setPitch = int(form.GetInputValue('Set pitch'))
+  pitch = int(form.GetInputValue('Pitch')) / 10
   for note in notes:
     if setPan: note.pan = pan
     if setVelocity: note.velocity = velocity
     if setRelease: note.release = release
     if setFCut: note.fcut = fCut
     if setFRes: note.fres = fRes
-    if setPitch: note.pitchofs = pitch
+    if setPitch: note.pitchofs = round(pitch)
 

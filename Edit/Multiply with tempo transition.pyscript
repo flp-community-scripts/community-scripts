@@ -30,10 +30,13 @@ CHANGES
   - added getTimelineSelection()
   - replaced cloning function
   - fixed behavior when notes with different length are selected
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 # Utility function to get time range of selection / notes
-def getTimeRange(notes):
+def getTimeRange(notes) -> tuple[int, int]:
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -44,7 +47,7 @@ def getTimeRange(notes):
 # Utility function, Tension.
 # If knob is True it behaves like the tension knob in scale levels,
 # if knob is False it behaves like the Tension function in Formula Controller.
-def Tension(value, rate, knob=True):
+def Tension(value: float, rate: float, knob=True):
   if rate == 0: return value
   # rate mapping
   R = rate
@@ -60,7 +63,7 @@ def createDialog():
   form = flp.ScriptDialog("Multiply with tempo transition","Start and end scale multiply the sequences's length."
   + "\r\nDuration is in 1/16."
   + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly, the transition will then include a whole number multiple of the sequence. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
-  + "\r\n\r\n2023-10-23, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputKnob('Start scale %', 100, 100/16, 1600)
   form.AddInputKnob('End scale %', 50, 100/16, 1600)
   form.AddInputKnobInt('Copies before', 1, 0, 16)
@@ -72,7 +75,7 @@ def createDialog():
   return form
 
 def apply(form):
-  newNotes = []
+  newNotes: list[flp.Note] = []
   ppq = flp.score.PPQ
 
   # get current notes
@@ -93,24 +96,24 @@ def apply(form):
   # There are (s)ource ticks and (t)arget ticks. The source notes are projected onto the score at their target position.
 
   # convert scale to rate (source ticks per target tick)
-  r0 = 1 / (form.GetInputValue('Start scale %') / 100)
-  r1 = 1 / (form.GetInputValue('End scale %') / 100)
+  r0 = 1 / (float(form.GetInputValue('Start scale %')) / 100)
+  r1 = 1 / (float(form.GetInputValue('End scale %')) / 100)
   dr = r1 - r0
   # duration in ticks
-  dt = form.GetInputValue('Duration') / 4 * ppq
+  dt = int(form.GetInputValue('Duration') / 4 * ppq)
   # rate of rate change
   R = dr / dt
 
-  c0 = form.GetInputValue('Copies before')
-  c1 = form.GetInputValue('Copies after')
+  c0 = int(form.GetInputValue('Copies before'))
+  c1 = int(form.GetInputValue('Copies after'))
   n0 = c0 * notesCnt
   n1 = c1 * notesCnt
 
-  corr = form.GetInputValue('Phase correction')
-  corrTension = form.GetInputValue('Ph. corr. Tension')
+  corr = int(form.GetInputValue('Phase correction'))
+  corrTension = float(form.GetInputValue('Ph. corr. Tension'))
 
   # calculates target tick from source tick during transition
-  def tfroms(s):
+  def tfroms(s: float):
     if R == 0:
       return s / r0
     else:
@@ -118,7 +121,7 @@ def apply(form):
       return (math.sqrt(D) - r0) / R
 
   # returns source note, its start and end time for given noteIdx as dict
-  def getSource(idx):
+  def getSource(idx: int):
     c = int(idx / notesCnt)
     i = idx % notesCnt
     note = notes[i]
@@ -141,8 +144,8 @@ def apply(form):
   for n in range(n0):
     source = getSource(noteIdx)
     # scale times by steady rate
-    t0 = round(source['time0'] / r0)
-    t1 = round(source['time1'] / r0)
+    t0 = round(int(source['time0']) / r0)
+    t1 = round(int(source['time1']) / r0)
     # and project
     note = source['note'].clone()
     note.time = t0 + toffset
@@ -222,8 +225,8 @@ def apply(form):
   for n in range(n1):
     source = getSource(noteIdx)
     # scale times by steady rate
-    t0 = round((source['time0'] - soff1) / r1)
-    t1 = round((source['time1'] - soff1) / r1)
+    t0 = round(int((source['time0']) - soff1) / r1)
+    t1 = round(int((source['time1']) - soff1) / r1)
     # and project
     note = source['note'].clone()
     note.time = t0 + toffset

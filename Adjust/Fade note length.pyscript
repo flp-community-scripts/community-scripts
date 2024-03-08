@@ -22,10 +22,13 @@ by: BinaryBorn
 
 2023-09-14
   - added ISC license text
+
+2024-03-08
+  - FIXED typings for Python engine upgrade
 """
 
 # Utility function to get time range of selection / notes
-def getTimeRange(notes):
+def getTimeRange(notes) -> tuple[int, int]:
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -36,7 +39,7 @@ def getTimeRange(notes):
 
 def createDialog():
   form = flp.ScriptDialog("Fade note length","Fade note lengths from 0% to 100%"
-  + "\r\n\r\n2023-09-14, BinaryBorn")
+  + "\r\n\r\n2024-03-08, BinaryBorn")
   form.AddInputKnob('Start length', 100, 0, 100)
   form.AddInputKnob('End length', 100, 0, 100)
   form.AddInputCombo('Interpolate by', ['Time', 'Note number'], 0)
@@ -60,9 +63,9 @@ def apply(form):
   di = i1 - i0
 
   # go through all notes and fade length
-  mode = form.GetInputValue('Interpolate by')
-  scale0 = form.GetInputValue('Start length') / 100
-  scale1 = form.GetInputValue('End length') / 100
+  mode = int(form.GetInputValue('Interpolate by'))
+  scale0 = float(form.GetInputValue('Start length')) / 100
+  scale1 = float(form.GetInputValue('End length')) / 100
   dscale = scale1 - scale0
   idx = 0
   for note in notes:
@@ -77,7 +80,7 @@ def apply(form):
       scale = scale0 + dscale * ((i - i0) / di)
 
     # scale note length
-    note.length = max(1, note.length * scale)
+    note.length = int(max(1, note.length * scale))
 
     idx += 1
 

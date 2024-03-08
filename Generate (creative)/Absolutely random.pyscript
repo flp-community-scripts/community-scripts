@@ -14,6 +14,9 @@ v1.0 (2024-02-14)
 
 v1.1 (2024-02-14)
   - fixed fine pitch
+
+v1.2 (2024-03-08)
+  - FIXED typings for Python engine upgrade
 """
 
 import flpianoroll as flp
@@ -24,7 +27,7 @@ random = _random.Random()
 
 def createDialog():
   form = flp.ScriptDialog("Absolutely random","Generates absolutely random, unquantized notes."
-  + "\r\n\r\nv1.0 (2024-02-14), BinaryBorn")
+  + "\r\n\r\nv1.2 (2024-03-08), BinaryBorn")
   form.AddInputKnobInt('Seed', 0, 0, 999)
   form.AddInputKnobInt('Density', 6, 0, 100)
   form.AddInputKnobInt('Note min', 48, 0, 131)
@@ -48,49 +51,49 @@ def createDialog():
 
 def apply(form):
   ppq = flp.score.PPQ
-  pp16th = ppq / 4
+  pp16th = int(ppq / 4)
   # always seed with user provided seed
-  seed = form.GetInputValue('Seed')
+  seed = int(form.GetInputValue('Seed'))
   random.seed(seed)
 
-  density = form.GetInputValue('Density')
+  density = int(form.GetInputValue('Density'))
 
-  noteMin = form.GetInputValue('Note min')
-  noteMax = form.GetInputValue('Note max')
+  noteMin = int(form.GetInputValue('Note min'))
+  noteMax = int(form.GetInputValue('Note max'))
   if noteMin > noteMax: noteMin, noteMax = noteMax, noteMin
 
-  lenMin = form.GetInputValue('Length min') * pp16th
-  lenMax = form.GetInputValue('Length max') * pp16th
+  lenMin = float(form.GetInputValue('Length min')) * pp16th
+  lenMax = float(form.GetInputValue('Length max')) * pp16th
   if lenMin > lenMax: lenMin, lenMax = lenMax, lenMin
   lenD = lenMax - lenMin
 
-  velMin = form.GetInputValue('Velocity min')
-  velMax = form.GetInputValue('Velocity max')
+  velMin = float(form.GetInputValue('Velocity min'))
+  velMax = float(form.GetInputValue('Velocity max'))
   if velMin > velMax: velMin, velMax = velMax, velMin
   velD = velMax - velMin
 
-  panMin = form.GetInputValue('Pan min')
-  panMax = form.GetInputValue('Pan max')
+  panMin = float(form.GetInputValue('Pan min'))
+  panMax = float(form.GetInputValue('Pan max'))
   if panMin > panMax: panMin, panMax = panMax, panMin
   panD = panMax - panMin
 
-  modxMin = form.GetInputValue('Mod X min')
-  modxMax = form.GetInputValue('Mod X max')
+  modxMin = float(form.GetInputValue('Mod X min'))
+  modxMax = float(form.GetInputValue('Mod X max'))
   if modxMin > modxMax: modxMin, modxMax = modxMax, modxMin
   modxD = modxMax - modxMin
 
-  modyMin = form.GetInputValue('Mod Y min')
-  modyMax = form.GetInputValue('Mod Y max')
+  modyMin = float(form.GetInputValue('Mod Y min'))
+  modyMax = float(form.GetInputValue('Mod Y max'))
   if modyMin > modyMax: modyMin, modyMax = modyMax, modyMin
   modyD = modyMax - modyMin
 
-  ptofMin = form.GetInputValue('Fine pitch min')
-  ptofMax = form.GetInputValue('Fine pitch max')
+  ptofMin = float(form.GetInputValue('Fine pitch min'))
+  ptofMax = float(form.GetInputValue('Fine pitch max'))
   if ptofMin > ptofMax: ptofMin, ptofMax = ptofMax, ptofMin
   ptofD = ptofMax - ptofMin
 
-  colMin = form.GetInputValue('Color min')
-  colMax = form.GetInputValue('Color max')
+  colMin = int(form.GetInputValue('Color min'))
+  colMax = int(form.GetInputValue('Color max'))
   if colMin > colMax: colMin, colMax = colMax, colMin
   colD = colMax - colMin
 
@@ -107,13 +110,13 @@ def apply(form):
   # at 100% density, approx 1 note per 16th per pitch
   notesMaxCnt = math.floor(132 * dt / pp16th)
 
-  newNotes = []
+  newNotes: list[flp.Note] = []
 
   for i in range(notesMaxCnt):
     # always generate all random values, makes seeding more controllable
     rndPopulate = random.random() < (density / 100)
     rndNote = math.floor(random.random() * 132)
-    rndTime = t0 + (math.floor(i / 132) + (random.random())) * pp16th
+    rndTime = t0 + int((math.floor(i / 132) + (random.random())) * pp16th)
 
     rndLen = math.ceil(lenMin + random.random() * lenD) # using ceil here so infinite notes are only created if both min and max are set to 0
     rndVel = velMin + random.random() * velD
