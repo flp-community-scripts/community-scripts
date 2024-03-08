@@ -24,10 +24,10 @@ def render(buffer: Buffer, xoff: int, yoff: int, pixelWidth: int = flpianoroll.s
             note.velocity = pheno.vel
             note.pan = pheno.pan
             note.release = pheno.rel
-            note.pitchofs = pheno.pof
+            note.pitchofs = int(pheno.pof) # can be float due to interpolation
             note.fcut = pheno.cut
             note.fres = pheno.res
-            note.color = pheno.col
+            note.color = int(pheno.col) # can be float due to interpolation
             notes.append(note)
 
   return notes
