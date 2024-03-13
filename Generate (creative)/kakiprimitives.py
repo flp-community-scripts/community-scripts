@@ -93,24 +93,16 @@ class phenotype:
 
   def __init__(self, vel=0.78, pan=0.5, rel=0.5, pof=0, cut=0.5, res=0.5, col=0):
     self.vel = vel
+    "velocity, also treated as opacity, 0.0 to 1.0, default 0.78"
     self.pan = pan
+    "panning, 0.0 to 1.0, default 0.5"
     self.rel = rel
+    "release, 0.0 to 1.0, default 0.5"
     self.pof = pof
+    "pitch offset, -120 to 120, default 0"
     self.cut = cut
+    "fcut/modx, 0.0 to 1.0, default 0.5"
     self.res = res
+    "fres/mody, 0.0 to 1.0, default 0.5"
     self.col = col
-
-  vel: float
-  "velocity, also treated as opacity, 0.0 to 1.0, default 0.78"
-  pan: float
-  "panning, 0.0 to 1.0, default 0.5"
-  rel: float
-  "release, 0.0 to 1.0, default 0.5"
-  pof: int
-  "pitch offset, -120 to 120, default 0"
-  cut: float
-  "fcut/modx, 0.0 to 1.0, default 0.5"
-  res: float
-  "fres/mody, 0.0 to 1.0, default 0.5"
-  col: int
-  "note color/MIDI channel, 0 to 15, default 0"
+    "note color/MIDI channel, 0 to 15, default 0"

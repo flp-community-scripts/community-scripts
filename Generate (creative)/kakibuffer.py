@@ -4,23 +4,26 @@ from kakiutils import mixPhenotypes
 class Buffer:
   def __init__(self, width: int, height: int, optOversample: int = 0):
     self.width = width
+    "width of buffer in pixels"
     self.height = height
-    self.oversample = 2 ** optOversample
-    self.data = [None] * (width * self.oversample) * (height * self.oversample)
-  
-  width: int
-  height: int
-  oversample: int
-  data: list[phenotype]
-
-  originx: float
-  originy: float
+    "height of buffer in pixels"
+    self.oversample: int = 2 ** optOversample
+    "how many pixel sub-divisions (per dimension), power of 2"
+    self.data: list[phenotype] = [None] * (width * self.oversample) * (height * self.oversample)
+    "pixel data, each pixel is described by one phenotype"
+    self.originx = 0.0
+    "buffer x offset"
+    self.originy = 0.0
+    "buffer y offset"
 
   def setOrigin(self, x: float, y: float):
+    """Sets the buffer's offset."""
     self.originx = x
     self.originy = y
 
   def getPhenotypeAt(self, x: int, y: int) -> phenotype:
+    """Returns the phenotype at given pixel location. Will perform interpolation in case of oversampling.
+    """
     if x < 0 or x >= self.width or y < 0 or y >= self.height: return None
 
     i = y * self.width + x
