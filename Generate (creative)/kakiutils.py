@@ -28,6 +28,14 @@ def getBoundingBox(points: list[vec2], round: bool = False) -> box:
     ymax = math.ceil(ymax)
   return box(xmin, ymin, xmax, ymax)
 
+def limitBox(box: box, limit: box) -> None:
+  """Limits a box's edges to the ones of another box.
+  """
+  box.x0 = min(max(box.x0, limit.x0), limit.x1)
+  box.x1 = min(max(box.x1, limit.x0), limit.x1)
+  box.y0 = min(max(box.y0, limit.y0), limit.y1)
+  box.y1 = min(max(box.y1, limit.y0), limit.y1)
+
 def mixPhenotypes(pheno1: phenotype, pheno2: phenotype):
   """Mixes two phenotypes. Takes their respective opacity into account.
   """

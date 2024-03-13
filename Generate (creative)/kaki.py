@@ -47,8 +47,10 @@ from kakirenderer import render
 
 from kakiutils import (
   getBoundingBox,
+  limitBox,
   interpolatePhenotypes,
   matmul3,
+  matmul4,
   mixPhenotypes,
   transform
 )
