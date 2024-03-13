@@ -1,6 +1,6 @@
 import math
 
-from kakiprimitives import mat3, phenotype, vec2, box
+from kakiprimitives import vec2, vec3, mat3, mat4, phenotype, box
 
 def getBoundingBox(points: list[vec2], round: bool = False) -> box:
   """Returns the smallest box that completely includes all points in a given list of points.
@@ -133,7 +133,32 @@ def matmul3(a: mat3, b: mat3):
 
   return res
 
-# TODO: matmul4
+def matmul4(a: mat4, b: mat4):
+  """Multiplies two 4x4 matrices.
+  """
+  res = mat4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+  res.a11 = a.a11 * b.a11 + a.a12 * b.a21 + a.a13 * b.a31 + a.a14 * b.a41
+  res.a12 = a.a11 * b.a12 + a.a12 * b.a22 + a.a13 * b.a32 + a.a14 * b.a42
+  res.a13 = a.a11 * b.a13 + a.a12 * b.a23 + a.a13 * b.a33 + a.a14 * b.a43
+  res.a14 = a.a11 * b.a14 + a.a12 * b.a24 + a.a13 * b.a34 + a.a14 * b.a44
+
+  res.a21 = a.a21 * b.a11 + a.a22 * b.a21 + a.a23 * b.a31 + a.a24 * b.a41
+  res.a22 = a.a21 * b.a12 + a.a22 * b.a22 + a.a23 * b.a32 + a.a24 * b.a42
+  res.a23 = a.a21 * b.a13 + a.a22 * b.a23 + a.a23 * b.a33 + a.a24 * b.a43
+  res.a24 = a.a21 * b.a13 + a.a22 * b.a24 + a.a24 * b.a34 + a.a24 * b.a44
+
+  res.a31 = a.a31 * b.a11 + a.a32 * b.a21 + a.a33 * b.a31 + a.a34 * b.a41
+  res.a32 = a.a31 * b.a12 + a.a32 * b.a22 + a.a33 * b.a32 + a.a34 * b.a42
+  res.a33 = a.a31 * b.a13 + a.a32 * b.a23 + a.a33 * b.a33 + a.a34 * b.a43
+  res.a34 = a.a31 * b.a14 + a.a32 * b.a24 + a.a33 * b.a34 + a.a34 * b.a44
+
+  res.a41 = a.a41 * b.a11 + a.a42 * b.a21 + a.a43 * b.a31 + a.a44 * b.a41
+  res.a42 = a.a41 * b.a12 + a.a42 * b.a22 + a.a43 * b.a32 + a.a44 * b.a42
+  res.a43 = a.a41 * b.a13 + a.a42 * b.a23 + a.a43 * b.a33 + a.a44 * b.a43
+  res.a44 = a.a41 * b.a14 + a.a42 * b.a24 + a.a43 * b.a34 + a.a44 * b.a44
+
+  return res
 
 def transform(p: vec2, t: mat3):
   """Returns a new vector that is the given vector transformed by a transformation matrix.
@@ -145,4 +170,13 @@ def transform(p: vec2, t: mat3):
 
   return res
 
-# TODO: transform3d
+def transform3d(p: vec3, t: mat4):
+  """Returns a new vector that is the given vector transformed by a transformation matrix.
+  """
+  res = vec3(0,0,0)
+
+  res.x = t.a11 * p.x + t.a12 * p.y + t.a13 * p.z + t.a14 * 1
+  res.y = t.a21 * p.x + t.a22 * p.y + t.a23 * p.z + t.a24 * 1
+  res.z = t.a31 * p.x + t.a32 * p.y + t.a33 * p.z + t.a34 * 1
+
+  return res
