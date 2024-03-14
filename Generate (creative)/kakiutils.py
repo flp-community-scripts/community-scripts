@@ -1,6 +1,6 @@
 import math
 
-from kakiprimitives import vec2, vec3, mat3, mat4, phenotype, box
+from kakiprimitives import vec2, vec4, mat3, mat4, phenotype, box
 
 def getBoundingBox(points: list[vec2], round: bool = False) -> box:
   """Returns the smallest box that completely includes all points in a given list of points.
@@ -178,13 +178,139 @@ def transform(p: vec2, t: mat3):
 
   return res
 
-def transform3d(p: vec3, t: mat4):
+def transform3d(p: vec4, t: mat4):
   """Returns a new vector that is the given vector transformed by a transformation matrix.
   """
-  res = vec3(0,0,0)
+  res = vec4()
 
-  res.x = t.a11 * p.x + t.a12 * p.y + t.a13 * p.z + t.a14 * 1
-  res.y = t.a21 * p.x + t.a22 * p.y + t.a23 * p.z + t.a24 * 1
-  res.z = t.a31 * p.x + t.a32 * p.y + t.a33 * p.z + t.a34 * 1
+  res.x = t.a11 * p.x + t.a12 * p.y + t.a13 * p.z + t.a14 * p.w
+  res.y = t.a21 * p.x + t.a22 * p.y + t.a23 * p.z + t.a24 * p.w
+  res.z = t.a31 * p.x + t.a32 * p.y + t.a33 * p.z + t.a34 * p.w
+  res.w = t.a41 * p.x + t.a42 * p.y + t.a43 * p.z + t.a44 * p.w
 
   return res
+
+def identity3() -> mat3:
+  """Returns a 3x3 identity matrix.
+  """
+  return mat3(
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1
+  )
+
+def identity4() -> mat4:
+  """Returns a 4x4 identity matrix.
+  """
+  return mat4(
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  )
+
+# common matrix transformations
+
+def translate(mat: mat3, x: float, y: float) -> mat3:
+  """Returns a copy of a transformation matrix translated by x, y.
+  """
+  tr = mat3(
+    1, 0, x,
+    0, 1, y,
+    0, 0, 1
+  )
+  return matmul3(tr, mat)
+
+def scale(mat: mat3, sx: float, sy: float) -> mat3:
+  """Returns a copy of a transformation matrix scaled by sx, sy.
+  """
+  tr = mat3(
+    sx, 0, 0,
+    0, sy, 0,
+    0, 0, 1
+  )
+  return matmul3(tr, mat)
+
+def rotate(mat: mat3, phi: float) -> mat3:
+  """Returns a copy of a transformation matrix rotated by phi.
+  """
+  cosphi = math.cos(phi)
+  sinphi = math.sin(phi)
+  tr = mat3(
+    cosphi, -sinphi, 0,
+    sinphi, cosphi, 0,
+    0, 0, 1
+  )
+  return matmul3(tr, mat)
+
+def translate3d(mat: mat4, x: float, y: float, z: float) -> mat4:
+  """Returns a copy of a 3d transformation matrix translated by x, y, z.
+  """
+  tr = mat4(
+    1, 0, 0, x,
+    0, 1, 0, y,
+    0, 0, 1, z,
+    0, 0, 0, 1
+  )
+  return matmul4(tr, mat)
+
+def scale3d(mat: mat4, sx: float, sy: float, sz: float) -> mat4:
+  """Returns a copy of a 3d transformation matrix scaled by sx, sy, sz.
+  """
+  tr = mat4(
+    sx, 0, 0, 0,
+    0, sy, 0, 0,
+    0, 0, sz, 0,
+    0, 0, 0, 1
+  )
+  return matmul4(tr, mat)
+
+def rotateX3d(mat: mat4, phi: float) -> mat4:
+  """Returns a copy of a 3d transformation matrix rotated around x by phi.
+  """
+  cosphi = math.cos(phi)
+  sinphi = math.sin(phi)
+  tr = mat4(
+    1, 0, 0, 0,
+    0, cosphi, -sinphi, 0,
+    0, sinphi, cosphi, 0,
+    0, 0, 0, 1
+  )
+  return matmul4(tr, mat)
+
+def rotateY3d(mat: mat4, phi: float) -> mat4:
+  """Returns a copy of a 3d transformation matrix rotated around y by phi.
+  """
+  cosphi = math.cos(phi)
+  sinphi = math.sin(phi)
+  tr = mat4(
+    cosphi, 0, sinphi, 0,
+    0, 1, 0, 0,
+    -sinphi, 0, cosphi, 0,
+    0, 0, 0, 1
+  )
+  return matmul4(tr, mat)
+
+def rotateZ3d(mat: mat4, phi: float) -> mat4:
+  """Returns a copy of a 3d transformation matrix rotated around z by phi.
+  """
+  cosphi = math.cos(phi)
+  sinphi = math.sin(phi)
+  tr = mat4(
+    cosphi, -sinphi, 0, 0,
+    sinphi, cosphi, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  )
+  return matmul4(tr, mat)
+
+def perspective3d(mat: mat4, pinch: float) -> mat4:
+  """Returns a copy of a 3d transformation matrix with it's homogeneous component increased, causing the projection to pinch like in perspective projection.
+  """
+  tr = mat4(
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, -pinch, 1
+  )
+  return matmul4(tr, mat)

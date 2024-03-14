@@ -11,15 +11,16 @@ class vec2:
     self.x = x
     self.y = y
 
-class vec3:
-  """vector (x, y, z)
+class vec4:
+  """vector (x, y, z, w)
   """
-  __slots__ = ['x', 'y', 'z']
+  __slots__ = ['x', 'y', 'z', 'w']
 
-  def __init__(self, x: float = 0.0, y: float = 0.0, z: float = 0.0):
+  def __init__(self, x: float = 0.0, y: float = 0.0, z: float = 0.0, w: float = 1.0):
     self.x = x
     self.y = y
     self.z = z
+    self.w = w
 
 class mat3:
   """maxtrix 3x3
@@ -83,7 +84,7 @@ class box:
 type figure = list[list[vec2]]
 "Type alias for a list of list of points (each interpreted as polygon)"
 
-type figure3d = list[list[vec3]]
+type figure3d = list[list[vec4]]
 "Type alias for a list of list of 3d points (each interpreted as polygon)"
 
 class phenotype:
