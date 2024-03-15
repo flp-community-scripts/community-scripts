@@ -1,34 +1,38 @@
-"""
-ISC License
+"""flp
+Title: Generate tempo transition
+Author: BinaryBorn
+Category: Generate (rhythm)
+Version: 1.3
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Generates a transition from one rate to another.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-07-11)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-07-17)
+  - replaced tension function
+
+v1.2 (2023-09-21)
+  - added ISC license text
+
+v1.3 (2024-03-15)
+  - CHANGED note properties now consider current defaults
 """
 
 import flpianoroll as flp
 import math
 
-"""
-Generate tempo transition
-by: BinaryBorn
+def Tension(value: float, rate: float, knob=True):
+  """Applies the FL Studio Tension function to a value.
 
-2023-07-11
-  - initial version
-
-2023-07-17
-  - replaced tension function
-
-2023-09-21
-  - added ISC license text
-"""
-
-# Utility function, Tension.
-# If knob is True it behaves like the tension knob in scale levels,
-# if knob is False it behaves like the Tension function in Formula Controller.
-def Tension(value, rate, knob=True):
+  Args:
+    value (float): value to skew
+    rate (float): tension rate
+    knob (bool): if True, function behaves like the one behind knobs (e.g. scale levels), if False, it behaves like the one in Formula Controller
+  """
   if rate == 0: return value
   # rate mapping
   R = rate
@@ -44,7 +48,7 @@ def createDialog():
   form = flp.ScriptDialog("Generate tempo transition","Start and end freq are in 'pulses per whole note'."
   + "\r\nDuration is in 16th."
   + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
-  + "\r\n\r\n2023-09-21, BinaryBorn")
+  + "\r\n\r\nv1.3 (2024-03-15), BinaryBorn")
   form.AddInputKnobInt('Start freq', 4, 1, 64)
   form.AddInputKnobInt('End freq', 8, 1, 64)
   form.AddInputKnobInt('Pulses before', 0, 0, 16)
@@ -56,28 +60,28 @@ def createDialog():
   
   return form
 
-def apply(form):
-  notes = []
+def apply(form: flp.ScriptDialog):
+  notes: list[flp.Note] = []
   ppq = flp.score.PPQ
 
   # convert freq (1 per 4 beats) to rate (1 per tick)
-  r0 = form.GetInputValue('Start freq') / ppq / 4
-  r1 = form.GetInputValue('End freq') / ppq / 4
+  r0 = int(form.GetInputValue('Start freq')) / ppq / 4
+  r1 = int(form.GetInputValue('End freq')) / ppq / 4
   dr = r1 - r0
   # duration in ticks
-  dt = form.GetInputValue('Duration') * ppq
+  dt = int(form.GetInputValue('Duration')) * ppq
   # rate of rate change
   R = dr / dt
 
-  p0 = form.GetInputValue('Pulses before')
-  p1 = form.GetInputValue('Pulses after')
+  p0 = int(form.GetInputValue('Pulses before'))
+  p1 = int(form.GetInputValue('Pulses after'))
 
-  corr = form.GetInputValue('Phase correction')
-  corrTension = form.GetInputValue('Ph. corr. Tension')
+  corr = int(form.GetInputValue('Phase correction'))
+  corrTension = float(form.GetInputValue('Ph. corr. Tension'))
 
-  noteNr = form.GetInputValue('Note')
+  noteNr = int(form.GetInputValue('Note'))
 
-  def tfromp(p):
+  def tfromp(p: float):
     if R == 0:
       return p / r0
     else:
@@ -88,7 +92,7 @@ def apply(form):
   for p in range(p0):
     t0 = round(p / r0)
     t1 = round((p + 1) / r0)
-    note = flp.Note()
+    note = flp.score.getDefaultNoteProperties().clone()
     note.number = noteNr
     note.time = t0
     note.length = t1 - t0
@@ -121,7 +125,7 @@ def apply(form):
       sf1 = Tension(t1 / ttrans, corrTension)
       t0 = round(t0 * (1 + sf0 * (s - 1)))
       t1 = round(t1 * (1 + sf1 * (s - 1)))
-    note = flp.Note()
+    note = flp.score.getDefaultNoteProperties().clone()
     note.number = noteNr
     note.time = t0 + toff0
     note.length = t1 - t0
@@ -132,7 +136,7 @@ def apply(form):
   for p in range(p1):
     t0 = round(p / r1)
     t1 = round((p + 1) / r1)
-    note = flp.Note()
+    note = flp.score.getDefaultNoteProperties().clone()
     note.number = noteNr
     note.time = t0 + toff1
     note.length = t1 - t0
