@@ -185,12 +185,13 @@ class ScriptDialog():
         """
         pass
 
-    def AddInputCombo(self, name: str, value: list) -> None:
+    def AddInputCombo(self, name: str, options: list, value: int) -> None:
         """Adds a combo box input control with list of strings
 
         Args:
             name (str): Name of control
-            value (list): values for selection
+            options (list): Options for selection
+            value (int): Index of initial option
         """
         pass
 
@@ -200,6 +201,15 @@ class ScriptDialog():
         Args:
             name (str): Name of control
             value (str): text to display
+        """
+        pass
+
+    def AddInputCheckbox(self, name: str, value: bool) -> None:
+        """Adds a checkbox input control with string value
+
+        Args:
+            name (str): Name of control
+            value (bool): Initial value
         """
         pass
 
