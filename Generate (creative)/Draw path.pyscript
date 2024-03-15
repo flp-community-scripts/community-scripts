@@ -37,6 +37,14 @@ def createDialog():
   form.AddInputCombo('Fill rule', ['even-odd', 'nonzero'], 0)
   form.AddInputKnobInt('Pixel width', int(flp.score.PPQ / 4), 1, flp.score.PPQ)
 
+  form.AddInputKnob('Pinch', 0, 0, 0.01)
+  form.AddInputKnob('Pivot x', 0, 0, 128)
+  form.AddInputKnob('Pivot y', 0, 0, 128)
+  form.AddInputKnob('Rotate x', 0, -math.pi, math.pi)
+  form.AddInputKnob('Rotate y', 0, -math.pi, math.pi)
+  form.AddInputKnob('Rotate z', 0, -math.pi, math.pi)
+  form.AddInputCombo('Rotation order', ['zyx', 'xyz'], 0)
+
   return form
 
 def apply(form):
@@ -51,11 +59,17 @@ def apply(form):
   scalex = form.GetInputValue('Scale x')
   scaley = form.GetInputValue('Scale y')
 
-  transform = kaki.mat3(
-    scalex, 0, offx,
-    0, -scaley, 131 - offy,
-    0, 0, 1
-  )
+  pivotx = form.GetInputValue('Pivot x')
+  pivoty = form.GetInputValue('Pivot y')
+  rotx = form.GetInputValue('Rotate x')
+  roty = form.GetInputValue('Rotate y')
+  rotz = form.GetInputValue('Rotate z')
+  rotOrder = form.GetInputValue('Rotation order')
+  pinch = form.GetInputValue('Pinch')
+
+  transform = kaki.identity3()
+  transform = kaki.scale(transform, scalex, -scaley)
+  transform = kaki.translate(transform, offx, 131 - offy)
 
   optOversample = form.GetInputValue('Oversample')
   fillRule = form.GetInputValue('Fill rule')
@@ -71,10 +85,34 @@ def apply(form):
   # figure = kaki.parseFigureFromSvgPath(path)
   kaki.transformFigure(figure, transform)
 
+  figure3d = kaki.augmentFigure(figure)
+
+  transform3d = kaki.identity4()
+  transform3d = kaki.translate3d(transform3d, -pivotx, -pivoty, 0)
+
+  if rotOrder == 0:
+    transform3d = kaki.rotateZ3d(transform3d, rotz)
+    transform3d = kaki.rotateY3d(transform3d, roty)
+    transform3d = kaki.rotateX3d(transform3d, rotx)
+  else:
+    transform3d = kaki.rotateX3d(transform3d, rotx)
+    transform3d = kaki.rotateY3d(transform3d, roty)
+    transform3d = kaki.rotateZ3d(transform3d, rotz)
+
+  transform3d = kaki.perspective3d(transform3d, pinch)
+  transform3d = kaki.translate3d(transform3d, pivotx, pivoty, 0)
+
+  kaki.transformFigure3d(figure3d, transform3d)
+
+  figure = kaki.projectFigure(figure3d)
+
   fill = kaki.parsePhenotypeFromStyle(style)
 
   bbox = kaki.getFigureBoundingBox(figure, True)
   if bbox is None: return
+
+  # limit bbox to PR and some sensible value for max x
+  kaki.limitBox(bbox, kaki.box(0, 0, 1024, 131))
 
   buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample)
   buffer.setOrigin(bbox.x0, bbox.y0)
