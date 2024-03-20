@@ -1,0 +1,65 @@
+"""flp
+Title: Align score
+Author: BinaryBorn
+Category: Edit
+Version: 1.0
+License: ISC
+
+Description: 
+Aligns all notes in a timeline selection to the grid.
+
+Changelog:
+v1.0 (2024-03-20)
+  - initial version
+"""
+
+import flpianoroll as flp
+
+
+def getNoteFollowing(notes: list[flp.Note], time: int):
+  """Returns the note following given time (as in nearest following).
+  If there are multiple notes equally close, it takes the longest one.
+  Expects notes to be sorted by start time.
+  """
+  next = None
+  for n in notes:
+    # already at one after next
+    if next and n.time > next.time: return next
+    # possible candidate for next
+    if n.time > time:
+      # always remember first candidate, others only if they last longer
+      if not next or n.length > next.length:
+        next = n
+  return next
+
+
+def createDialog():
+  form = flp.ScriptDialog("Align score","Aligns all notes in a timeline selection to the grid."
+  + "\r\n\r\nv1.0 (2024-03-20), BinaryBorn")
+  form.AddInputKnobInt('Delta steps', 0, -16, 16)
+
+  return form
+
+
+def apply(form: flp.ScriptDialog):
+  # get current notes and order by start time
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+  notes.sort(key=lambda n: (n.time, n.number))
+  if not notes: return
+
+  pp16th = int(flp.score.PPQ / 4)
+
+  step = int(form.GetInputValue('Delta steps'))
+
+  # if the selection was made and collapsed, selection[0] corresponds to cursor time
+  selection = flp.score.getTimelineSelection()
+
+  # get the first note after cursor, use it's off-gridness as offset
+  firstNote = getNoteFollowing(notes, selection[0])
+  offset = firstNote.time % pp16th
+  delta = step * pp16th
+
+  # align all notes after the cursor
+  for n in notes:
+    if n.time >= selection[0]:
+      n.time = n.time - offset + delta
