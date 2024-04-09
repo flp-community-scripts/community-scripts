@@ -143,6 +143,14 @@ class __score__():
         """
         pass
 
+    def getDefaultNoteProperties(self) -> Note:
+        """returns a note with the currently active style
+
+        Returns:
+            Note: note with the draw tool's current properties
+        """
+        pass
+
 #-------------------------------------------------------------------#
 #---Script Dialog Class
 class ScriptDialog():
