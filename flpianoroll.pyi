@@ -221,6 +221,14 @@ class ScriptDialog():
         """
         pass
 
+    def AddInputSurface(self, name: str) -> None:
+        """Adds a control surface
+
+        Args:
+            name (str): Name of the control surface's preset file (without the `.fst` extension)
+        """
+        pass
+
     def GetInputValue(self, name: str) -> Union[str, int]:
         """Retrieve the current value of the input with the specified name
 
