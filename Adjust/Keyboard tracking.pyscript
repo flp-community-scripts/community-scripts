@@ -1,81 +1,64 @@
-"""
-ISC License
+"""flp
+Title: Keyboard tracking
+Author: BinaryBorn
+Category: Adjust
+Version: 2.0
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Aligns all notes in a timeline selection to the grid.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-07-14)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-07-17)
+  - added note.release
+
+v1.2 (2023-09-21)
+  - added ISC license text
+
+v1.3 (2023-11-02)
+  - added note length
+  - added note color
+
+v1.4 (2024-03-08)
+  - fixed typings for Python engine upgrade
+
+v2.0 (2024-04-09)
+  - changed interface to control surface
 """
 
 import flpianoroll as flp
 
-"""
-Keyboard tracking
-by: BinaryBorn
-
-2023-07-14
-  - initial version
-
-2023-07-17
-  - added note.release
-
-2023-09-21
-  - added ISC license text
-
-2023-11-02
-  - added note length
-  - added note color
-
-2024-03-08
-  - FIXED typings for Python engine upgrade
-"""
-
 def createDialog():
-  form = flp.ScriptDialog("Keyboard tracking","Change note properties based on their note number."
-  + "\r\n\r\n2024-03-08, BinaryBorn")
-  form.AddInputCombo('Set pan', ['leave', 'set', 'add'], 0)
-  form.AddInputKnob('Pan', 0, -10, 10)
-  form.AddInputCombo('Set velocity', ['leave', 'set', 'add'], 0)
-  form.AddInputKnob('Velocity', 0, -10, 10)
-  form.AddInputCombo('Set release', ['leave', 'set', 'add'], 0)
-  form.AddInputKnob('Release', 0, -10, 10)
-  form.AddInputCombo('Set filter cutoff', ['leave', 'set', 'add'], 0)
-  form.AddInputKnob('Filter cutoff', 0, -10, 10)
-  form.AddInputCombo('Set filter resonance', ['leave', 'set', 'add'], 0)
-  form.AddInputKnob('Filter resonance', 0, -10, 10)
-  form.AddInputCombo('Set pitch', ['leave', 'set', 'add'], 0)
-  form.AddInputKnob('Pitch', 0, -10, 10)
-  form.AddInputCombo('Set length', ['leave', 'set', 'add'], 0)
-  form.AddInputKnob('Length', 0, -10, 10)
-  form.AddInputCombo('Set color', ['leave', 'set', 'add'], 0)
-  form.AddInputKnob('Color', 0, -1, 1)
-  form.AddInputKnobInt('Center note', 60, 0, 131)
+  form = flp.ScriptDialog("Keyboard tracking", "")
+  form.AddInputSurface('Keyboard tracking')
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 
   # set their levels
-  setPan = int(form.GetInputValue('Set pan'))
-  pan = float(form.GetInputValue('Pan')) / 100
-  setVelocity = int(form.GetInputValue('Set velocity'))
-  velocity = float(form.GetInputValue('Velocity')) / 100
-  setRelease = int(form.GetInputValue('Set release'))
-  release = float(form.GetInputValue('Release')) / 100
-  setFCut = int(form.GetInputValue('Set filter cutoff'))
-  fcut = float(form.GetInputValue('Filter cutoff')) / 100
-  setFRes = int(form.GetInputValue('Set filter resonance'))
-  fres = float(form.GetInputValue('Filter resonance')) / 100
-  setPitch = int(form.GetInputValue('Set pitch'))
-  pitch = float(form.GetInputValue('Pitch')) * 12 / 10 # the range here is -120 ... 120
-  setLength = int(form.GetInputValue('Set length'))
-  length = float(form.GetInputValue('Length'))
-  setColor = int(form.GetInputValue('Set color'))
-  color = float(form.GetInputValue('Color'))
+  setPan = int(form.GetInputValue('Set pan') * 2)
+  pan = float(form.GetInputValue('Pan') * 2 - 1) / 10
+  setVelocity = int(form.GetInputValue('Set velocity') * 2)
+  velocity = float(form.GetInputValue('Velocity') * 2 - 1) / 10
+  setRelease = int(form.GetInputValue('Set release') * 2)
+  release = float(form.GetInputValue('Release') * 2 - 1) / 10
+  setFCut = int(form.GetInputValue('Set mod x') * 2)
+  fcut = float(form.GetInputValue('Mod x') * 2 - 1) / 10
+  setFRes = int(form.GetInputValue('Set mod y') * 2)
+  fres = float(form.GetInputValue('Mod y') * 2 - 1) / 10
+  setPitch = int(form.GetInputValue('Set pitch') * 2)
+  pitch = float(form.GetInputValue('Pitch') * 2 - 1) * 12
+  setLength = int(form.GetInputValue('Set length') * 2)
+  length = float(form.GetInputValue('Length') * 2 - 1) * 8
+  setColor = int(form.GetInputValue('Set color') * 2)
+  color = float(form.GetInputValue('Color') * 2 - 1)
 
-  center = int(form.GetInputValue('Center note'))
+  center = int(form.GetInputValue('Center note') * 132)
 
   ppq = flp.score.PPQ
 
