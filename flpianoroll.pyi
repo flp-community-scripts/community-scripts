@@ -229,14 +229,14 @@ class ScriptDialog():
         """
         pass
 
-    def GetInputValue(self, name: str) -> Union[str, int]:
+    def GetInputValue(self, name: str) -> Union[str, int, float]:
         """Retrieve the current value of the input with the specified name
 
         Args:
             name (str): name of control
 
         Returns:
-            Union[str, int]: current value of control
+            Union[str, int, float]: current value of control
         """
         pass
 
