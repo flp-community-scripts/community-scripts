@@ -47,7 +47,7 @@ def createDialog():
 
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   global cachedPath, cachedFigure
 
   path = form.GetInputValue('Path')

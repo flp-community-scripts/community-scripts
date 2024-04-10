@@ -34,7 +34,7 @@ def createDialog():
 
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   x1 = form.GetInputValue('Point 1 x')
   y1 = form.GetInputValue('Point 1 y')
   style1 = form.GetInputValue('Point 1 style')
