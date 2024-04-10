@@ -2,7 +2,7 @@ import flpianoroll
 
 from kakibuffer import Buffer
 
-def render(buffer: Buffer, xoff: int, yoff: int, pixelWidth: int = flpianoroll.score.PPQ / 4):
+def render(buffer: Buffer, xoff: int, yoff: int, pixelWidth: int = flpianoroll.score.PPQ / 4) -> list[flpianoroll.Note]:
   """Renders a buffer into flpianoroll.Notes
   """
   notes = []
@@ -27,7 +27,7 @@ def render(buffer: Buffer, xoff: int, yoff: int, pixelWidth: int = flpianoroll.s
             note.pitchofs = int(pheno.pof) # can be float due to interpolation
             note.fcut = pheno.cut
             note.fres = pheno.res
-            note.color = int(pheno.col) # can be float due to interpolation
+            note.color = round(pheno.col) # can be float due to interpolation
             notes.append(note)
 
   return notes
