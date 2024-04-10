@@ -1,0 +1,70 @@
+"""flp
+Title: Color tracking
+Author: BinaryBorn
+Category: Adjust
+Version: 2.0
+License: ISC
+
+Description: 
+Change note properties based on their color.
+
+Changelog:
+v1.0 (2023-11-03)
+  - initial version
+
+v2.0 (2024-04-10)
+  - changed interface to control surface
+"""
+
+import flpianoroll as flp
+
+def createDialog():
+  form = flp.ScriptDialog("Color tracking","")
+  form.AddInputSurface('Color tracking')
+  return form
+
+def apply(form: flp.ScriptDialog):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  # set their levels
+  setPan = int(form.GetInputValue('Set pan') * 2)
+  pan = float(form.GetInputValue('Pan') * 2 - 1) / 10
+  setVelocity = int(form.GetInputValue('Set velocity') * 2)
+  velocity = float(form.GetInputValue('Velocity') * 2 - 1) / 10
+  setRelease = int(form.GetInputValue('Set release') * 2)
+  release = float(form.GetInputValue('Release') * 2 - 1) / 10
+  setFCut = int(form.GetInputValue('Set mod x') * 2)
+  fcut = float(form.GetInputValue('Mod x') * 2 - 1) / 10
+  setFRes = int(form.GetInputValue('Set mod y') * 2)
+  fres = float(form.GetInputValue('Mod y') * 2 - 1) / 10
+  setPitch = int(form.GetInputValue('Set pitch') * 2)
+  pitch = float(form.GetInputValue('Pitch') * 2 - 1) * 12
+  setLength = int(form.GetInputValue('Set length') * 2)
+  length = float(form.GetInputValue('Length') * 2 - 1) * 8
+
+  center = int(form.GetInputValue('Center color') * 15)
+
+  ppq = flp.score.PPQ
+  sensitivity = 2
+
+  for note in notes:
+    amount = (note.color - center) * sensitivity
+    # for every property: add amount-scaled value,
+    # reset to default first if mode is 'set'
+    if setPan == 1: note.pan = 0.5
+    if setPan: note.pan = min(max(note.pan + pan * amount, 0),1)
+    if setVelocity == 1: note.velocity = 0.78
+    if setVelocity: note.velocity = min(max(note.velocity + velocity * amount, 0),1)
+    if setRelease == 1: note.release = 0.5
+    if setRelease: note.release = min(max(note.release + release * amount, 0),1)
+    if setFCut == 1: note.fcut = 0.5
+    if setFCut: note.fcut = min(max(note.fcut + fcut * amount, 0),1)
+    if setFRes == 1: note.fres = 0.5
+    if setFRes: note.fres = min(max(note.fres + fres * amount, 0),1)
+    if setPitch == 1: note.pitchofs = 0
+    if setPitch: note.pitchofs = int(min(max(note.pitchofs + pitch * amount, -120),120))
+    # use 1/16 as default note length
+    if setLength == 1: note.length = int(ppq / 4)
+    if setLength: note.length = round(max(note.length + length * amount, 1))
+
