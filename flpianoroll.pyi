@@ -143,6 +143,14 @@ class __score__():
         """
         pass
 
+    def getDefaultNoteProperties(self) -> Note:
+        """returns a note with the currently active style
+
+        Returns:
+            Note: note with the draw tool's current properties
+        """
+        pass
+
 #-------------------------------------------------------------------#
 #---Script Dialog Class
 class ScriptDialog():
@@ -185,12 +193,13 @@ class ScriptDialog():
         """
         pass
 
-    def AddInputCombo(self, name: str, value: list) -> None:
+    def AddInputCombo(self, name: str, options: list, value: int) -> None:
         """Adds a combo box input control with list of strings
 
         Args:
             name (str): Name of control
-            value (list): values for selection
+            options (list): Options for selection
+            value (int): Index of initial option
         """
         pass
 
@@ -203,14 +212,31 @@ class ScriptDialog():
         """
         pass
 
-    def GetInputValue(self, name: str) -> Union[str, int]:
+    def AddInputCheckbox(self, name: str, value: bool) -> None:
+        """Adds a checkbox input control with string value
+
+        Args:
+            name (str): Name of control
+            value (bool): Initial value
+        """
+        pass
+
+    def AddInputSurface(self, name: str) -> None:
+        """Adds a control surface
+
+        Args:
+            name (str): Name of the control surface's preset file (without the `.fst` extension)
+        """
+        pass
+
+    def GetInputValue(self, name: str) -> Union[str, int, float]:
         """Retrieve the current value of the input with the specified name
 
         Args:
             name (str): name of control
 
         Returns:
-            Union[str, int]: current value of control
+            Union[str, int, float]: current value of control
         """
         pass
 
