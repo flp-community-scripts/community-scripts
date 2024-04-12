@@ -1,4 +1,5 @@
 import math
+import flpianoroll
 
 from kakiprimitives import vec2, vec4, mat3, mat4, phenotype, box
 
@@ -99,6 +100,11 @@ def interpolatePhenotypes(phenos: list[phenotype], weights: list[float] = None):
     res += pheno.res * wgt
     col += pheno.col * wgt
   return phenotype(vel, pan, rel, pof, cut, res, col)
+
+def getPhenotypeFromNote(note: flpianoroll.Note) -> phenotype:
+  """Returns the phenotype of a given note.
+  """
+  return phenotype(note.velocity, note.pan, note.release, note.pitchofs, note.fcut, note.fres, note.color)
 
 def normvec2(a: vec2):
   """Returns the norm of a given vector.

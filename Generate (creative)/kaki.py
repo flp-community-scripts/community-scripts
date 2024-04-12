@@ -53,6 +53,7 @@ from kakirenderer import render
 
 from kakiutils import (
   getBoundingBox,
+  getPhenotypeFromNote,
   limitBox,
   interpolatePhenotypes,
   matmul3,
