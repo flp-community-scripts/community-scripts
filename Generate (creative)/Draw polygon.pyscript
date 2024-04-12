@@ -1,0 +1,156 @@
+"""flp
+Title: {}
+Author: BinaryBorn
+Category: {}
+Version: 1.0
+License: ISC
+
+Description: 
+{}
+
+Changelog:
+v1.0 (2024-04-11)
+  - initial version
+"""
+
+import flpianoroll as flp
+import kaki
+import math
+
+cachedFigure = None
+cachedPath = None
+
+def createDialog():
+  form = flp.ScriptDialog("Draw polygon","-"
+  + "\r\n--"
+  + "\r\n\r\nv1.0 (2024-mm-dd), BinaryBorn")
+  form.AddInputKnobInt('Corners', 4, 3, 16)
+  form.AddInputKnob('Pointedness', 0, 0, 1)
+
+  form.AddInputKnob('Size', 12, 1, 64)
+  form.AddInputCombo('Sizing', ['outer radius', 'inner radius'], 0)
+  form.AddInputKnobInt('Rotate', 0, -360, 360)
+  form.AddInputCombo('Align', ['corner', 'edge'], 1)
+  form.AddInputKnobInt('Offset x', 16, 0, 128)
+  form.AddInputKnobInt('Offset y', 60, 0, 128)
+  form.AddInputCombo('Oversample', ['--', '4x MSAA', '16x MSAA'], 0)
+  form.AddInputKnobInt('Pixel width', int(flp.score.PPQ / 4), 1, flp.score.PPQ)
+
+  # form.AddInputKnob('Pinch', 0, 0, 0.01)
+  # form.AddInputKnob('Pivot x', 0, 0, 128)
+  # form.AddInputKnob('Pivot y', 0, 0, 128)
+  # form.AddInputKnob('Rotate x', 0, -math.pi, math.pi)
+  # form.AddInputKnob('Rotate y', 0, -math.pi, math.pi)
+  # form.AddInputKnob('Rotate z', 0, -math.pi, math.pi)
+  # form.AddInputCombo('Rotation order', ['zyx', 'xyz'], 0)
+
+  return form
+
+def apply(form: flp.ScriptDialog):
+  global cachedPath, cachedFigure
+
+  cornerCnt = int(form.GetInputValue('Corners'))
+  pointy = float(form.GetInputValue('Pointedness'))
+  size = float(form.GetInputValue('Size'))
+  sizing = int(form.GetInputValue('Sizing'))
+  rotate = int(form.GetInputValue('Rotate'))
+  align = int(form.GetInputValue('Align'))
+
+  offx = form.GetInputValue('Offset x')
+  offy = form.GetInputValue('Offset y')
+
+  optOversample = form.GetInputValue('Oversample')
+  
+  pixelWidth = form.GetInputValue('Pixel width')
+
+  # pivotx = form.GetInputValue('Pivot x')
+  # pivoty = form.GetInputValue('Pivot y')
+  # rotx = form.GetInputValue('Rotate x')
+  # roty = form.GetInputValue('Rotate y')
+  # rotz = form.GetInputValue('Rotate z')
+  # rotOrder = form.GetInputValue('Rotation order')
+  # pinch = form.GetInputValue('Pinch')
+
+  path = ''
+  isPointy = True if pointy > 0 else False
+
+  offa = math.pi / cornerCnt if align == 1 else 0
+  vertCnt = cornerCnt
+  radius = size
+  # radius factor for inscribed circle in polygon
+  fInner = math.cos(math.pi / cornerCnt)
+  # radius factor for star valleys (if pointy)
+  fValley = 1
+  if isPointy:
+    fValley = fInner * (1 - pointy)
+    vertCnt *= 2
+  # if sizing is set to inner, correct both outer and inner
+  if sizing == 1:
+    radius /= fInner
+    fInner = 1
+  # build path
+  for i in range(vertCnt):
+    a = offa + i * 2 * math.pi / vertCnt
+    r = radius
+    if isPointy and i % 2 == 1: r *= fValley
+    x = round(math.cos(a) * r * 1000) / 1000
+    y = round(math.sin(a) * r * 1000) / 1000
+    if i == 0:
+      path += f'M{x} {y}'
+    else:
+      path += f' L{x} {y}'
+  path += ' Z'
+
+  # flp.Utils.log(path)
+
+  transform = kaki.identity3()
+  transform = kaki.rotate(transform, rotate / 180 * math.pi)
+  transform = kaki.translate(transform, offx, offy)
+
+  if path != cachedPath:
+    cachedPath = path
+    cachedFigure = kaki.parseFigureFromSvgPath(path)
+
+  figure = kaki.cloneFigure(cachedFigure)
+
+  kaki.transformFigure(figure, transform)
+
+  # figure3d = kaki.augmentFigure(figure)
+
+  # transform3d = kaki.identity4()
+  # transform3d = kaki.translate3d(transform3d, -pivotx, -pivoty, 0)
+
+  # if rotOrder == 0:
+  #   transform3d = kaki.rotateZ3d(transform3d, rotz)
+  #   transform3d = kaki.rotateY3d(transform3d, roty)
+  #   transform3d = kaki.rotateX3d(transform3d, rotx)
+  # else:
+  #   transform3d = kaki.rotateX3d(transform3d, rotx)
+  #   transform3d = kaki.rotateY3d(transform3d, roty)
+  #   transform3d = kaki.rotateZ3d(transform3d, rotz)
+
+  # transform3d = kaki.perspective3d(transform3d, pinch)
+  # transform3d = kaki.translate3d(transform3d, pivotx, pivoty, 0)
+
+  # kaki.transformFigure3d(figure3d, transform3d)
+
+  # figure = kaki.projectFigure(figure3d)
+
+  fill = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
+
+  bbox = kaki.getFigureBoundingBox(figure, True)
+  if bbox is None: return
+
+  # limit bbox to PR and some sensible value for max x
+  kaki.limitBox(bbox, kaki.box(0, 0, 1024, 131))
+
+  buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample)
+  buffer.setOrigin(bbox.x0, bbox.y0)
+
+  kaki.drawFigure(buffer, figure, fill)
+
+  newNotes = kaki.render(buffer, bbox.x0, bbox.y0, pixelWidth)
+
+  for n in newNotes:
+    n.group = 1
+    flp.score.addNote(n)
