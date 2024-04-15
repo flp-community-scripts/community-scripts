@@ -1,3 +1,7 @@
+"""
+Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
+"""
+
 # these are used as primitive data types, hence the lower case naming
 
 # math primitives (vectors, matrices) are always suffixed with their size

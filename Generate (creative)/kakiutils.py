@@ -1,3 +1,7 @@
+"""
+Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
+"""
+
 import math
 import flpianoroll
 

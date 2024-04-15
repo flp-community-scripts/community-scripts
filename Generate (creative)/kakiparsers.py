@@ -1,3 +1,7 @@
+"""
+Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
+"""
+
 import math
 
 from kakiprimitives import vec2, figure, phenotype

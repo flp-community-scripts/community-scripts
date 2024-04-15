@@ -1,3 +1,7 @@
+"""
+Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
+"""
+
 # A word on coordinates:
 # +X is to the right (same direction as time in PR)
 # +Y is up (same direction as MIDI note number in PR)
@@ -6,7 +10,7 @@
 
 # 2d coordinates are cartesian, meaning they only have two components (x, y).
 # 2d transformation matrices are 3x3 so they can be combined.
-# Applying a 2d transformation matrix will assume the vector's missing component to be 1 and ignore the 3 row in the matrix completely.
+# Applying a 2d transformation matrix will assume the vector's missing component to be 1 and ignore the 3rd row in the matrix completely.
 
 # 3d coordinates are homogeneous, meaning they all have a fourth component called w (x, y, z, w).
 

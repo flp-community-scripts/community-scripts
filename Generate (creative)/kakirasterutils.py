@@ -1,3 +1,7 @@
+"""
+Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
+"""
+
 from kakiprimitives import vec2, box, figure
 from kakiutils import getBoundingBox
 
