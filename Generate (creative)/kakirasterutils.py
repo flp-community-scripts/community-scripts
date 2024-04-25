@@ -2,10 +2,10 @@
 Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 """
 
-from kakiprimitives import vec2, box, figure
+from kakiprimitives import vec4, box, figure
 from kakiutils import getBoundingBox
 
-def pointInRect(rect: box, p: vec2):
+def pointInRect(rect: box, p: vec4):
   """Returns whether a given point is within a given rect.
   """
   if p.x >= rect.x0 and p.x < rect.x1:
@@ -13,13 +13,13 @@ def pointInRect(rect: box, p: vec2):
       return True
   return False
 
-def edgeFunction(a: vec2, b: vec2, c: vec2):
+def edgeFunction(a: vec4, b: vec4, c: vec4):
   """Calculates a hint to the area spanned by the triangle ABC.
 
   Args:
-    a (vec2): A
-    b (vec2): B
-    c (vec2): C
+    a (vec4): A
+    b (vec4): B
+    c (vec4): C
   
   Returns:
     float: >0 if ABC is CW and has an area, <0 if ABC is CCW and has an area, 0 if ABC has no area
@@ -27,12 +27,12 @@ def edgeFunction(a: vec2, b: vec2, c: vec2):
   return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
 
 
-def crossingNumber(poly: list[vec2], p: vec2):
+def crossingNumber(poly: list[vec4], p: vec4):
   """Computes the crossing number for a given point in a polygon.
 
   Args:
-    poly (list[vec2]): polygon
-    p (vec2): point to test
+    poly (list[vec4]): polygon
+    p (vec4): point to test
 
   Returns:
     int: crossing number
@@ -54,12 +54,12 @@ def crossingNumber(poly: list[vec2], p: vec2):
 
   return cn
 
-def pointInFigureCn(figure: figure, p: vec2) -> bool:
+def pointInFigureCn(figure: figure, p: vec4) -> bool:
   """Decides whether a point is within a figure using the crossing number algorithm, a.k.a. the even-odd fill rule.
 
   Args:
     figure (figure): figure
-    p (vec2): point to test
+    p (vec4): point to test
 
   Returns:
     bool: true if point is in figure
@@ -73,12 +73,12 @@ def pointInFigureCn(figure: figure, p: vec2) -> bool:
   return cn % 2 != 0
 
 
-def windingNumber(poly: list[vec2], p: vec2) -> int:
+def windingNumber(poly: list[vec4], p: vec4) -> int:
   """Computes the winding number for a point in a polygon.
 
   Args:
-    poly (list[vec2]): polygon
-    p (vec2): point to test
+    poly (list[vec4]): polygon
+    p (vec4): point to test
 
   Returns:
     int: winding number
@@ -103,12 +103,12 @@ def windingNumber(poly: list[vec2], p: vec2) -> int:
 
   return wn
 
-def pointInFigureWn(figure: figure, p: vec2) -> bool:
+def pointInFigureWn(figure: figure, p: vec4) -> bool:
   """Decides whether a point is within a figure using the winding number algorithm, a.k.a. the nonzero fill rule.
 
   Args:
     figure (figure): figure
-    p (vec2): point to test
+    p (vec4): point to test
 
   Returns:
     bool: true if point is in figure
@@ -173,7 +173,7 @@ def slpipWindingNumber(scanline: slpipScanLine, x: float):
   wn = 0 # winding number counter
 
   y = scanline.y
-  p = vec2(x, y)
+  p = vec4(x, y)
 
   # loop through all crossings
   for crossing in scanline.crossings:

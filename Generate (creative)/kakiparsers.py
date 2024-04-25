@@ -4,8 +4,8 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 
 import math
 
-from kakiprimitives import vec2, figure, phenotype
-from kakiutils import anglevec2
+from kakiprimitives import vec4, figure, phenotype
+from kakiutils import anglevec
 
 def parsePhenotypeFromStyle(style: str):
   """Parses a CSS-like style string for note phenotypes and returns the interpreted phenotype.
@@ -131,7 +131,7 @@ def parseFigureFromSvgPath(path: str) -> figure:
       # https://en.wikipedia.org/wiki/Bézier_curve
       x = tinv ** 2 * x1 + 2 * tinv * t * cx + t ** 2 * x2
       y = tinv ** 2 * y1 + 2 * tinv * t * cy + t ** 2 * y2
-      curPoly.append(vec2(x,y))
+      curPoly.append(vec4(x,y))
   
   def drawCubicBezier(x1, y1, cx1, cy1, cx2, cy2, x2, y2):
     nonlocal curPoly
@@ -144,7 +144,7 @@ def parseFigureFromSvgPath(path: str) -> figure:
       # https://en.wikipedia.org/wiki/Bézier_curve
       x = tinv ** 3 * x1 + 3 * tinv ** 2 * t * cx1 + 3 * tinv * t ** 2 * cx2 + t ** 3 * x2
       y = tinv ** 3 * y1 + 3 * tinv ** 2 * t * cy1 + 3 * tinv * t ** 2 * cy2 + t ** 3 * y2
-      curPoly.append(vec2(x,y))
+      curPoly.append(vec4(x,y))
   
   def drawArc(x1, y1, rx, ry, phi, fA, fS, x2, y2):
     nonlocal curPoly
@@ -152,7 +152,7 @@ def parseFigureFromSvgPath(path: str) -> figure:
 
     # B.2.5: ensure radii are non-zero (otherwise draw a straight line)
     if rx == 0 or ry == 0:
-      curPoly.append(vec2(x2,y2))
+      curPoly.append(vec4(x2,y2))
       return
 
     # B.2.5: ensure radii are positive
@@ -188,10 +188,10 @@ def parseFigureFromSvgPath(path: str) -> figure:
     cy = sinphi * cxprimed + cosphi * cyprimed + (y1 + y2) / 2
 
     # B.2.4: compute theta1 and dtheta
-    vstart = vec2((x1primed - cxprimed) / rx, (y1primed - cyprimed) / ry)
-    vend = vec2((-x1primed - cxprimed) / rx, (-y1primed - cyprimed) / ry)
-    theta1 = anglevec2(vec2(1,0), vstart)
-    dtheta = anglevec2(vstart, vend)
+    vstart = vec4((x1primed - cxprimed) / rx, (y1primed - cyprimed) / ry)
+    vend = vec4((-x1primed - cxprimed) / rx, (-y1primed - cyprimed) / ry)
+    theta1 = anglevec(vec4(1,0), vstart)
+    dtheta = anglevec(vstart, vend)
 
     if fS == 0 and dtheta > 0:
       dtheta -= 2 * math.pi
@@ -208,7 +208,7 @@ def parseFigureFromSvgPath(path: str) -> figure:
       _y = ry * math.sin(theta)
       x = cosphi * _x - sinphi * _y + cx
       y = sinphi * _x + cosphi * _y + cy
-      curPoly.append(vec2(x,y))
+      curPoly.append(vec4(x,y))
 
 
   live = 100000
@@ -230,28 +230,28 @@ def parseFigureFromSvgPath(path: str) -> figure:
         getCommaWsp()
         y = y + getNumber() if rel else getNumber()
         if x is not None and y is not None:
-          curPoly.append(vec2(x,y))
+          curPoly.append(vec4(x,y))
         # subsequent pairs are treated as implicit lineto commands
         cmd = 'l' if rel else 'L'
       elif cmdUC == 'Z':
         p0 = curPoly[0]
         x = p0.x
         y = p0.y
-        curPoly.append(vec2(x, y))
+        curPoly.append(vec4(x, y))
       elif cmdUC == 'L':
         x = x + getNumber() if rel else getNumber()
         getCommaWsp()
         y = y + getNumber() if rel else getNumber()
         if x is not None and y is not None:
-          curPoly.append(vec2(x,y))
+          curPoly.append(vec4(x,y))
       elif cmdUC == 'H':
         x = x + getNumber() if rel else getNumber()
         if x is not None and y is not None:
-          curPoly.append(vec2(x,y))
+          curPoly.append(vec4(x,y))
       elif cmdUC == 'V':
         y = y + getNumber() if rel else getNumber()
         if x is not None and y is not None:
-          curPoly.append(vec2(x,y))
+          curPoly.append(vec4(x,y))
       elif cmdUC == 'C':
         u1 = x + getNumber() if rel else getNumber()
         getCommaWsp()

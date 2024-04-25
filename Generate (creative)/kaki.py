@@ -1,4 +1,6 @@
 """
+Kaki engine (rasterizer for FL Studio).
+
 Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 """
 
@@ -8,11 +10,13 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 # +Z is out of screen (established by the right hand rule)
 # Incidentally, this is the same as in OpenGL
 
-# 2d coordinates are cartesian, meaning they only have two components (x, y).
-# 2d transformation matrices are 3x3 so they can be combined.
-# Applying a 2d transformation matrix will assume the vector's missing component to be 1 and ignore the 3rd row in the matrix completely.
+# everything happens in 3d space
 
 # 3d coordinates are homogeneous, meaning they all have a fourth component called w (x, y, z, w).
+
+# therefore, all the matrices are 4x4 as well
+
+# perspective projection has to be applied explicitly before rendering
 
 from kakibuffer import Buffer
 
@@ -22,14 +26,8 @@ from kakigeometryutils import (
   transformFigure,
   clonePoints,
   cloneFigure,
-  transformPoints3d,
-  transformFigure3d,
-  clonePoints3d,
-  cloneFigure3d,
-  augmentPoints,
-  augmentFigure,
-  projectPoints,
-  projectFigure,
+  applyPerspectivePoints,
+  applyPerspectiveFigure,
 )
 
 from kakiparsers import (
@@ -38,13 +36,10 @@ from kakiparsers import (
 )
 
 from kakiprimitives import (
-  vec2,
   vec4,
-  mat3,
   mat4,
   box,
   figure,
-  figure3d,
   phenotype
 )
 
@@ -60,21 +55,16 @@ from kakiutils import (
   getPhenotypeFromNote,
   limitBox,
   interpolatePhenotypes,
-  matmul3,
   matmul4,
   mixPhenotypes,
   transform,
-  transform3d,
-  identity3,
   identity4,
   translate,
   scale,
   rotate,
-  translate3d,
-  scale3d,
-  rotateX3d,
-  rotateY3d,
-  rotateZ3d,
-  perspective3d,
+  rotateX,
+  rotateY,
+  rotateZ,
+  homogeneousPinch,
 )
 

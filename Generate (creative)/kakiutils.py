@@ -5,13 +5,13 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 import math
 import flpianoroll
 
-from kakiprimitives import vec2, vec4, mat3, mat4, phenotype, box
+from kakiprimitives import vec4, mat4, phenotype, box
 
-def getBoundingBox(points: list[vec2], round: bool = False) -> box:
+def getBoundingBox(points: list[vec4], round: bool = False) -> box:
   """Returns the smallest box that completely includes all points in a given list of points.
 
   Args:
-    points (list[vec2]): list of points
+    points (list[vec4]): list of points
 
   Returns:
     box: bounding box
@@ -110,46 +110,28 @@ def getPhenotypeFromNote(note: flpianoroll.Note) -> phenotype:
   """
   return phenotype(note.velocity, note.pan, note.release, note.pitchofs, note.fcut, note.fres, note.color)
 
-def normvec2(a: vec2):
+def normvec(a: vec4):
   """Returns the norm of a given vector.
   """
-  return math.sqrt(a.x ** 2 + a.y ** 2)
+  return math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2)
 
-def dotprod2(a: vec2, b: vec2):
+def dotprod(a: vec4, b: vec4):
   """Returns the dot product of two given vectors.
   """
-  return a.x * b.x + a.y * b.y
+  return a.x * b.x + a.y * b.y + a.z * b.z
 
-def anglevec2(a: vec2, b: vec2):
+def anglevec(a: vec4, b: vec4):
   """Returns the angle between two given vectors.
   """
+  # TODO: find out what to do with the z component
   sign = 1 if a.x * b.y - a.y * b.x > 0 else -1
-  p = dotprod2(a,b) / (normvec2(a) * normvec2(b))
+  p = dotprod(a,b) / (normvec(a) * normvec(b))
   # should never be outside [-1, +1], but epsilon...
   if p < -1:
     p = -1
   elif p > 1:
     p = 1
   return sign * math.acos(p)
-
-def matmul3(a: mat3, b: mat3):
-  """Multiplies two 3x3 matrices.
-  """
-  res = mat3(0, 0, 0, 0, 0, 0, 0, 0, 0)
-
-  res.a11 = a.a11 * b.a11 + a.a12 * b.a21 + a.a13 * b.a31
-  res.a12 = a.a11 * b.a12 + a.a12 * b.a22 + a.a13 * b.a32
-  res.a13 = a.a11 * b.a13 + a.a12 * b.a23 + a.a13 * b.a33
-
-  res.a21 = a.a21 * b.a11 + a.a22 * b.a21 + a.a23 * b.a31
-  res.a22 = a.a21 * b.a12 + a.a22 * b.a22 + a.a23 * b.a32
-  res.a23 = a.a21 * b.a13 + a.a22 * b.a23 + a.a23 * b.a33
-
-  res.a31 = a.a31 * b.a11 + a.a32 * b.a21 + a.a33 * b.a31
-  res.a32 = a.a31 * b.a12 + a.a32 * b.a22 + a.a33 * b.a32
-  res.a33 = a.a31 * b.a13 + a.a32 * b.a23 + a.a33 * b.a33
-
-  return res
 
 def matmul4(a: mat4, b: mat4):
   """Multiplies two 4x4 matrices.
@@ -178,17 +160,7 @@ def matmul4(a: mat4, b: mat4):
 
   return res
 
-def transform(p: vec2, t: mat3):
-  """Returns a new vector that is the given vector transformed by a transformation matrix.
-  """
-  res = vec2(0,0)
-
-  res.x = t.a11 * p.x + t.a12 * p.y + t.a13 * 1
-  res.y = t.a21 * p.x + t.a22 * p.y + t.a23 * 1
-
-  return res
-
-def transform3d(p: vec4, t: mat4):
+def transform(p: vec4, t: mat4):
   """Returns a new vector that is the given vector transformed by a transformation matrix.
   """
   res = vec4()
@@ -199,15 +171,6 @@ def transform3d(p: vec4, t: mat4):
   res.w = t.a41 * p.x + t.a42 * p.y + t.a43 * p.z + t.a44 * p.w
 
   return res
-
-def identity3() -> mat3:
-  """Returns a 3x3 identity matrix.
-  """
-  return mat3(
-    1, 0, 0,
-    0, 1, 0,
-    0, 0, 1
-  )
 
 def identity4() -> mat4:
   """Returns a 4x4 identity matrix.
@@ -221,39 +184,7 @@ def identity4() -> mat4:
 
 # common matrix transformations
 
-def translate(mat: mat3, x: float, y: float) -> mat3:
-  """Returns a copy of a transformation matrix translated by x, y.
-  """
-  tr = mat3(
-    1, 0, x,
-    0, 1, y,
-    0, 0, 1
-  )
-  return matmul3(tr, mat)
-
-def scale(mat: mat3, sx: float, sy: float) -> mat3:
-  """Returns a copy of a transformation matrix scaled by sx, sy.
-  """
-  tr = mat3(
-    sx, 0, 0,
-    0, sy, 0,
-    0, 0, 1
-  )
-  return matmul3(tr, mat)
-
-def rotate(mat: mat3, phi: float) -> mat3:
-  """Returns a copy of a transformation matrix rotated by phi.
-  """
-  cosphi = math.cos(phi)
-  sinphi = math.sin(phi)
-  tr = mat3(
-    cosphi, -sinphi, 0,
-    sinphi, cosphi, 0,
-    0, 0, 1
-  )
-  return matmul3(tr, mat)
-
-def translate3d(mat: mat4, x: float, y: float, z: float) -> mat4:
+def translate(mat: mat4, x: float, y: float, z: float = 0.0) -> mat4:
   """Returns a copy of a 3d transformation matrix translated by x, y, z.
   """
   tr = mat4(
@@ -264,7 +195,7 @@ def translate3d(mat: mat4, x: float, y: float, z: float) -> mat4:
   )
   return matmul4(tr, mat)
 
-def scale3d(mat: mat4, sx: float, sy: float, sz: float) -> mat4:
+def scale(mat: mat4, sx: float, sy: float, sz: float = 1.0) -> mat4:
   """Returns a copy of a 3d transformation matrix scaled by sx, sy, sz.
   """
   tr = mat4(
@@ -275,7 +206,7 @@ def scale3d(mat: mat4, sx: float, sy: float, sz: float) -> mat4:
   )
   return matmul4(tr, mat)
 
-def rotateX3d(mat: mat4, phi: float) -> mat4:
+def rotateX(mat: mat4, phi: float) -> mat4:
   """Returns a copy of a 3d transformation matrix rotated around x by phi.
   """
   cosphi = math.cos(phi)
@@ -288,7 +219,7 @@ def rotateX3d(mat: mat4, phi: float) -> mat4:
   )
   return matmul4(tr, mat)
 
-def rotateY3d(mat: mat4, phi: float) -> mat4:
+def rotateY(mat: mat4, phi: float) -> mat4:
   """Returns a copy of a 3d transformation matrix rotated around y by phi.
   """
   cosphi = math.cos(phi)
@@ -301,7 +232,7 @@ def rotateY3d(mat: mat4, phi: float) -> mat4:
   )
   return matmul4(tr, mat)
 
-def rotateZ3d(mat: mat4, phi: float) -> mat4:
+def rotateZ(mat: mat4, phi: float) -> mat4:
   """Returns a copy of a 3d transformation matrix rotated around z by phi.
   """
   cosphi = math.cos(phi)
@@ -314,8 +245,10 @@ def rotateZ3d(mat: mat4, phi: float) -> mat4:
   )
   return matmul4(tr, mat)
 
-def perspective3d(mat: mat4, pinch: float) -> mat4:
-  """Returns a copy of a 3d transformation matrix with it's homogeneous component increased, causing the projection to pinch like in perspective projection.
+rotate = rotateZ
+
+def homogeneousPinch(mat: mat4, pinch: float) -> mat4:
+  """Returns a copy of a 3d transformation matrix with it's homogeneous component increased. After applying the transformation on an object, call the corresponding `applyPerspective` function before rendering to obtain a perspective projection.
   """
   tr = mat4(
     1, 0, 0, 0,

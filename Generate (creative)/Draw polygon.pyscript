@@ -20,6 +20,8 @@ import math
 cachedFigure = None
 cachedPath = None
 
+USE_3D = True
+
 def createDialog():
   form = flp.ScriptDialog("Draw polygon","-"
   + "\r\n--"
@@ -36,13 +38,15 @@ def createDialog():
   form.AddInputCombo('Oversample', ['--', '4x MSAA', '16x MSAA'], 0)
   form.AddInputKnobInt('Pixel width', int(flp.score.PPQ / 4), 1, flp.score.PPQ)
 
-  # form.AddInputKnob('Pinch', 0, 0, 0.01)
-  # form.AddInputKnob('Pivot x', 0, 0, 128)
-  # form.AddInputKnob('Pivot y', 0, 0, 128)
-  # form.AddInputKnob('Rotate x', 0, -math.pi, math.pi)
-  # form.AddInputKnob('Rotate y', 0, -math.pi, math.pi)
-  # form.AddInputKnob('Rotate z', 0, -math.pi, math.pi)
-  # form.AddInputCombo('Rotation order', ['zyx', 'xyz'], 0)
+  if USE_3D:
+    form.AddInputKnob('Pivot x', 0, 0, 128)
+    form.AddInputKnob('Pivot y', 0, 0, 128)
+    form.AddInputKnob('Pinch', 0, 0, 0.02)
+    form.AddInputKnob('Move z', 0, -128, 0)
+    form.AddInputKnob('Rotate x', 0, -math.pi, math.pi)
+    form.AddInputKnob('Rotate y', 0, -math.pi, math.pi)
+    form.AddInputKnob('Rotate z', 0, -math.pi, math.pi)
+    form.AddInputCombo('Rotation order', ['zyx', 'xyz'], 0)
 
   return form
 
@@ -63,13 +67,23 @@ def apply(form: flp.ScriptDialog):
   
   pixelWidth = form.GetInputValue('Pixel width')
 
-  # pivotx = form.GetInputValue('Pivot x')
-  # pivoty = form.GetInputValue('Pivot y')
-  # rotx = form.GetInputValue('Rotate x')
-  # roty = form.GetInputValue('Rotate y')
-  # rotz = form.GetInputValue('Rotate z')
-  # rotOrder = form.GetInputValue('Rotation order')
-  # pinch = form.GetInputValue('Pinch')
+  pivotx = 0.0
+  pivoty = 0.0
+  movez = 0.0
+  rotx = 0.0
+  roty = 0.0
+  rotz = 0.0
+  rotOrder = 0
+  pinch = 0.0
+  if USE_3D:
+    pivotx = form.GetInputValue('Pivot x')
+    pivoty = form.GetInputValue('Pivot y')
+    movez = form.GetInputValue('Move z')
+    rotx = form.GetInputValue('Rotate x')
+    roty = form.GetInputValue('Rotate y')
+    rotz = form.GetInputValue('Rotate z')
+    rotOrder = form.GetInputValue('Rotation order')
+    pinch = form.GetInputValue('Pinch')
 
   path = ''
   isPointy = True if pointy > 0 else False
@@ -103,38 +117,34 @@ def apply(form: flp.ScriptDialog):
 
   # flp.Utils.log(path)
 
-  transform = kaki.identity3()
-  transform = kaki.rotate(transform, rotate / 180 * math.pi)
-  transform = kaki.translate(transform, offx, offy)
-
   if path != cachedPath:
     cachedPath = path
     cachedFigure = kaki.parseFigureFromSvgPath(path)
 
   figure = kaki.cloneFigure(cachedFigure)
 
+  transform = kaki.identity4()
+  transform = kaki.rotate(transform, rotate / 180 * math.pi)
+  transform = kaki.translate(transform, offx, offy)
   kaki.transformFigure(figure, transform)
 
-  # figure3d = kaki.augmentFigure(figure)
+  if USE_3D:
+    transform3d = kaki.identity4()
+    transform3d = kaki.translate(transform3d, -pivotx, -pivoty)
+    if rotOrder == 0:
+      transform3d = kaki.rotateZ(transform3d, rotz)
+      transform3d = kaki.rotateY(transform3d, roty)
+      transform3d = kaki.rotateX(transform3d, rotx)
+    else:
+      transform3d = kaki.rotateX(transform3d, rotx)
+      transform3d = kaki.rotateY(transform3d, roty)
+      transform3d = kaki.rotateZ(transform3d, rotz)
+    transform3d = kaki.translate(transform3d, 0, 0, movez)
+    transform3d = kaki.homogeneousPinch(transform3d, pinch)
+    transform3d = kaki.translate(transform3d, pivotx, pivoty)
 
-  # transform3d = kaki.identity4()
-  # transform3d = kaki.translate3d(transform3d, -pivotx, -pivoty, 0)
-
-  # if rotOrder == 0:
-  #   transform3d = kaki.rotateZ3d(transform3d, rotz)
-  #   transform3d = kaki.rotateY3d(transform3d, roty)
-  #   transform3d = kaki.rotateX3d(transform3d, rotx)
-  # else:
-  #   transform3d = kaki.rotateX3d(transform3d, rotx)
-  #   transform3d = kaki.rotateY3d(transform3d, roty)
-  #   transform3d = kaki.rotateZ3d(transform3d, rotz)
-
-  # transform3d = kaki.perspective3d(transform3d, pinch)
-  # transform3d = kaki.translate3d(transform3d, pivotx, pivoty, 0)
-
-  # kaki.transformFigure3d(figure3d, transform3d)
-
-  # figure = kaki.projectFigure(figure3d)
+    kaki.transformFigure(figure, transform3d)
+    kaki.applyPerspectiveFigure(figure)
 
   fill = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
 

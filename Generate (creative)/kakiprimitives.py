@@ -6,15 +6,6 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 
 # math primitives (vectors, matrices) are always suffixed with their size
 
-class vec2:
-  """vector (x, y)
-  """
-  __slots__ = ['x', 'y']
-
-  def __init__(self, x: float = 0.0, y: float = 0.0):
-    self.x = x
-    self.y = y
-
 class vec4:
   """vector (x, y, z, w)
   """
@@ -25,25 +16,6 @@ class vec4:
     self.y = y
     self.z = z
     self.w = w
-
-class mat3:
-  """maxtrix 3x3
-  """
-  __slots__ = ['a11', 'a12', 'a13', 'a21', 'a22', 'a23', 'a31', 'a32', 'a33']
-
-  def __init__(self,
-      a11: float = 0.0, a12: float = 0.0, a13: float = 0.0,
-      a21: float = 0.0, a22: float = 0.0, a23: float = 0.0,
-      a31: float = 0.0, a32: float = 0.0, a33: float = 0.0):
-    self.a11 = a11
-    self.a12 = a12
-    self.a13 = a13
-    self.a21 = a21
-    self.a22 = a22
-    self.a23 = a23
-    self.a31 = a31
-    self.a32 = a32
-    self.a33 = a33
 
 class mat4:
   """maxtrix 4x4
@@ -72,8 +44,6 @@ class mat4:
     self.a43 = a43
     self.a44 = a44
 
-# geometry primitives (box, figures, meshes etc) are only suffixed when using 3d
-
 class box:
   """Class for 2D boxes
   """
@@ -85,11 +55,8 @@ class box:
     self.x1 = x1
     self.y1 = y1
 
-type figure = list[list[vec2]]
+type figure = list[list[vec4]]
 "Type alias for a list of list of points (each interpreted as polygon)"
-
-type figure3d = list[list[vec4]]
-"Type alias for a list of list of 3d points (each interpreted as polygon)"
 
 class phenotype:
   """Class representing the property vector for all the note properties.

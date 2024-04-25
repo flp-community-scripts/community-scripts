@@ -5,7 +5,7 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 import math
 
 from kakibuffer import Buffer
-from kakiprimitives import vec2, figure, phenotype
+from kakiprimitives import vec4, figure, phenotype
 from kakirasterutils import (
   edgeFunction,
   slpipPointInFigureCn,
@@ -46,7 +46,7 @@ def drawFigure(buffer: Buffer, figure: figure, fill: phenotype, fillRule: int = 
   h = buffer.height
 
   # check all points buffer
-  p = vec2(0,0)
+  p = vec4(0,0)
   for y in range(h * ovs):
     p.y = y / ovs + oy
     scanline = slpipScanFigure(figure, p.y)
@@ -57,7 +57,7 @@ def drawFigure(buffer: Buffer, figure: figure, fill: phenotype, fillRule: int = 
         i = y * w * ovs + x
         buffer.data[i] = fill # use a reference here
 
-def drawTriangle(buffer: Buffer, verts: list[vec2], phenos: list[phenotype]):
+def drawTriangle(buffer: Buffer, verts: list[vec4], phenos: list[phenotype]):
   """Draws a triangle onto buffer.
 
   Args:
@@ -89,7 +89,7 @@ def drawTriangle(buffer: Buffer, verts: list[vec2], phenos: list[phenotype]):
   if e123 == 0: return
 
   # check all points in bounding box
-  p = vec2(0,0)
+  p = vec4(0,0)
   for y in range(y0 * ovs, y1 * ovs):
     p.y = y / ovs + oy
     for x in range(x0 * ovs, x1 * ovs):
