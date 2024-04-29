@@ -124,12 +124,14 @@ def pointInFigureWn(figure: figure, p: vec4) -> bool:
 
 # scan line based point in polygon checks (optimization)
 
+type slpipCrossing = tuple[list[vec4], list[vec4], bool]
+
 class slpipScanLine:
   __slots__ = ['y', 'crossings']
 
   def __init__(self, y: float):
     self.y = y
-    self.crossings = []
+    self.crossings: list[slpipCrossing] = []
 
 def slpipScanFigure(figure: figure, y: float):
   scanline = slpipScanLine(y)
