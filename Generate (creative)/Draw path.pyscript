@@ -40,14 +40,16 @@ def createDialog():
   form.AddInputKnobInt('Pixel width', int(flp.score.PPQ / 4), 1, flp.score.PPQ)
 
   if USE_3D:
-    form.AddInputKnob('Pivot x', 0, 0, 128)
-    form.AddInputKnob('Pivot y', 0, 0, 128)
+    form.AddInputKnob('Pivot x', 16, 0, 128)
+    form.AddInputKnob('Pivot y', 60, 0, 128)
     form.AddInputKnob('Pinch', 0, 0, 0.02)
     form.AddInputKnob('Move z', 0, -128, 0)
     form.AddInputKnob('Rotate x', 0, -math.pi, math.pi)
     form.AddInputKnob('Rotate y', 0, -math.pi, math.pi)
     form.AddInputKnob('Rotate z', 0, -math.pi, math.pi)
     form.AddInputCombo('Rotation order', ['zyx', 'xyz'], 0)
+    form.AddInputKnob('Fog near', 0, -128, 128)
+    form.AddInputKnob('Fog far', -128, -128, 128)
 
   return form
 
@@ -71,6 +73,8 @@ def apply(form: flp.ScriptDialog):
   rotz = 0.0
   rotOrder = 0
   pinch = 0.0
+  fog0 = 0.0
+  fog1 = 0.0
   if USE_3D:
     pivotx = form.GetInputValue('Pivot x')
     pivoty = form.GetInputValue('Pivot y')
@@ -80,6 +84,8 @@ def apply(form: flp.ScriptDialog):
     rotz = form.GetInputValue('Rotate z')
     rotOrder = form.GetInputValue('Rotation order')
     pinch = form.GetInputValue('Pinch')
+    fog0 = form.GetInputValue('Fog near')
+    fog1 = form.GetInputValue('Fog far')
 
   optOversample = form.GetInputValue('Oversample')
   fillRule = form.GetInputValue('Fill rule')
@@ -123,10 +129,13 @@ def apply(form: flp.ScriptDialog):
   # limit bbox to PR and some sensible value for max x
   kaki.limitBox(bbox, kaki.box(0, 0, 1024, 131))
 
-  buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample)
+  buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample, True)
   buffer.setOrigin(bbox.x0, bbox.y0)
 
   kaki.drawFigure(buffer, figure, fill, fillRule)
+
+  if USE_3D:
+    buffer.fog(fog0, fog1)
 
   newNotes = kaki.render(buffer, bbox.x0, bbox.y0, pixelWidth)
 
