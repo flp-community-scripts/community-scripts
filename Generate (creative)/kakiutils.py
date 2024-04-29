@@ -59,7 +59,8 @@ def mixPhenotypes(pheno1: phenotype, pheno2: phenotype):
   wgt1 = pheno1.vel
   wgt2 = pheno2.vel
   wgtTot = wgt1 + wgt2
-  if wgtTot == 0: return None
+  if wgtTot == 0:
+    wgtTot = 1
   # interpolate
   vel = (pheno1.vel + pheno2.vel) / 2
   pan = (pheno1.pan * wgt1 + pheno2.pan * wgt2) / wgtTot
