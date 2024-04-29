@@ -42,12 +42,15 @@ from kakiprimitives import (
   mat4,
   box,
   figure,
-  phenotype
+  phenotype,
+  tri,
+  mesh,
 )
 
 from kakirasterizer import (
   drawFigure,
-  drawTriangle
+  drawTriangle,
+  drawMesh,
 )
 
 from kakirenderer import render

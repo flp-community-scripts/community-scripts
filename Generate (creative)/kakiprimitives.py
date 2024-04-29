@@ -78,3 +78,13 @@ class phenotype:
     "fres/mody, 0.0 to 1.0, default 0.5"
     self.col = col
     "note color/MIDI channel, 0 to 15, default 0"
+
+type tri = tuple[int, int, int]
+
+class mesh:
+  __slots__ = ['verts', 'phenos', 'tris']
+
+  def __init__(self, verts: list[vec4], phenos: list[phenotype], tris: list[tri]):
+    self.verts = verts
+    self.phenos = phenos
+    self.tris = tris

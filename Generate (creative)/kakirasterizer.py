@@ -6,7 +6,7 @@ import math
 
 from kakibuffer import Buffer
 from kakigeometryutils import getFigurePlane
-from kakiprimitives import vec4, figure, phenotype
+from kakiprimitives import vec4, figure, phenotype, mesh
 from kakirasterutils import (
   edgeFunction,
   slpipPointInFigureCn,
@@ -62,9 +62,14 @@ def drawFigure(buffer: Buffer, figure: figure, fill: phenotype, fillRule: int = 
       p.x = x / ovs + ox
       if (pip(scanline, p.x)):
         i = y * w * ovs + x
-        buffer.data[i] = copyPhenotype(fill)
-        if buffer.zbuffer:
-          buffer.zbuffer[i] = (plane.w - plane.x * p.x - plane.y * p.y) / plane.z
+        if buffer.zbuffer is None:
+          buffer.data[i] = copyPhenotype(fill)
+        elif buffer.zbuffer:
+          zexist = buffer.zbuffer[i]
+          znew = (plane.w - plane.x * p.x - plane.y * p.y) / plane.z
+          if zexist is None or znew > zexist:
+            buffer.data[i] = copyPhenotype(fill)
+            buffer.zbuffer[i] = znew
 
 def drawTriangle(buffer: Buffer, verts: list[vec4], phenos: list[phenotype]):
   """Draws a triangle onto buffer.
@@ -117,6 +122,21 @@ def drawTriangle(buffer: Buffer, verts: list[vec4], phenos: list[phenotype]):
         pheno = interpolatePhenotypes([pheno0, pheno1, pheno2], [wgt0, wgt1, wgt2])
         # put point
         i = y * w * ovs + x
-        buffer.data[i] = pheno
-        if buffer.zbuffer:
-          buffer.zbuffer[i] = p0.z * wgt0 + p1.z * wgt1 + p2.z * wgt2
+        if buffer.zbuffer is None:
+          buffer.data[i] = pheno
+        elif buffer.zbuffer:
+          zexist = buffer.zbuffer[i]
+          znew = p0.z * wgt0 + p1.z * wgt1 + p2.z * wgt2
+          if zexist is None or znew > zexist:
+            buffer.data[i] = pheno
+            buffer.zbuffer[i] = znew
+
+def drawMesh(buffer: Buffer, mesh: mesh):
+  for tri in mesh.tris:
+    v0 = mesh.verts[tri[0]]
+    v1 = mesh.verts[tri[1]]
+    v2 = mesh.verts[tri[2]]
+    p0 = mesh.phenos[tri[0]]
+    p1 = mesh.phenos[tri[1]]
+    p2 = mesh.phenos[tri[2]]
+    drawTriangle(buffer, [v0, v1, v2], [p0, p1, p2])
