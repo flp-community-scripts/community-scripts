@@ -5,6 +5,7 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 import math
 
 from kakibuffer import Buffer
+from kakigeometryutils import getFigurePlane
 from kakiprimitives import vec4, figure, phenotype
 from kakirasterutils import (
   edgeFunction,
@@ -12,7 +13,7 @@ from kakirasterutils import (
   slpipPointInFigureWn,
   slpipScanFigure,
 )
-from kakiutils import getBoundingBox, interpolatePhenotypes
+from kakiutils import getBoundingBox, copyPhenotype, interpolatePhenotypes
 
 """
 Resources:
@@ -45,6 +46,12 @@ def drawFigure(buffer: Buffer, figure: figure, fill: phenotype, fillRule: int = 
   w = buffer.width
   h = buffer.height
 
+  plane: vec4 | None
+  # if zbuffer is on,
+  if buffer.zbuffer:
+    # ... find plane equation
+    plane = getFigurePlane(figure)
+
   # check all points buffer
   p = vec4(0,0)
   for y in range(h * ovs):
@@ -55,7 +62,9 @@ def drawFigure(buffer: Buffer, figure: figure, fill: phenotype, fillRule: int = 
       p.x = x / ovs + ox
       if (pip(scanline, p.x)):
         i = y * w * ovs + x
-        buffer.data[i] = fill # use a reference here
+        buffer.data[i] = copyPhenotype(fill)
+        if buffer.zbuffer:
+          buffer.zbuffer[i] = (plane.w - plane.x * p.x - plane.y * p.y) / plane.z
 
 def drawTriangle(buffer: Buffer, verts: list[vec4], phenos: list[phenotype]):
   """Draws a triangle onto buffer.

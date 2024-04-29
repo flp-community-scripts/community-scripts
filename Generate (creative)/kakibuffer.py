@@ -6,7 +6,7 @@ from kakiprimitives import phenotype
 from kakiutils import mixPhenotypes
 
 class Buffer:
-  def __init__(self, width: int, height: int, optOversample: int = 0):
+  def __init__(self, width: int, height: int, optOversample: int = 0, optZBuffer: bool = False):
     self.width = width
     "width of buffer in pixels"
     self.height = height
@@ -19,11 +19,28 @@ class Buffer:
     "buffer x offset"
     self.originy = 0.0
     "buffer y offset"
+    self.zbuffer: list[float] | None = None
+    "z buffer data, each pixel has one float z value"
+    if optZBuffer:
+      self.zbuffer: list[float] = [None] * (width * self.oversample) * (height * self.oversample)
 
   def setOrigin(self, x: float, y: float):
     """Sets the buffer's offset."""
     self.originx = x
     self.originy = y
+
+  def fog(self, znear: float, zfar: float):
+    if self.zbuffer is None: return
+    dz = zfar - znear
+    # go through all pixels and apply depth fog
+    for i in range(len(self.data)):
+      d = self.data[i]
+      z = self.zbuffer[i]
+      if d is not None and z is not None:
+        if z < zfar:
+          d.vel = 0
+        elif z < znear:
+          d.vel *= 1 - (z - znear) / dz
 
   def getPhenotypeAt(self, x: int, y: int) -> phenotype:
     """Returns the phenotype at given pixel location. Will perform interpolation in case of oversampling.
