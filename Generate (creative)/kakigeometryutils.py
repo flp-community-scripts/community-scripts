@@ -2,7 +2,7 @@
 Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 """
 
-from kakiprimitives import vec4, mat4, box, figure
+from kakiprimitives import vec4, mat4, box, figure, mesh
 from kakiutils import getBoundingBox, transform, normvec, dotprod, crossprod
 
 def getFigureBoundingBox(figure: figure, round: bool = False) -> box:
@@ -12,6 +12,11 @@ def getFigureBoundingBox(figure: figure, round: bool = False) -> box:
   for pts in figure:
     points.extend(pts)
   return getBoundingBox(points, round)
+
+def getMeshBoundingBox(mesh: mesh, round: bool = False) -> box:
+  """Returns the bounding box of a mesh.
+  """
+  return getBoundingBox(mesh.verts, round)
 
 def getPointsPlane(points: list[vec4]) -> vec4 | None:
   """Returns the plane equation for a list of points
@@ -74,6 +79,11 @@ def transformFigure(figure: figure, t: mat4) -> None:
   for pts in figure:
     transformPoints(pts, t)
 
+def transformMesh(mesh: mesh, t: mat4) -> None:
+  """Transforms a mesh in-place.
+  """
+  transformPoints(mesh.verts, t)
+
 def clonePoints(points: list[vec4]) -> list[vec4]:
   """Returns a clone of a list of points, all points cloned.
   """
@@ -106,3 +116,8 @@ def applyPerspectiveFigure(figure: figure) -> None:
   """
   for pts in figure:
     applyPerspectivePoints(pts)
+
+def applyPerspectiveMesh(mesh: mesh) -> None:
+  """Applies the perspective projection to a mesh.
+  """
+  applyPerspectivePoints(mesh.verts)

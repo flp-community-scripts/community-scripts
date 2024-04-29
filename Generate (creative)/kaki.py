@@ -22,14 +22,21 @@ from kakibuffer import Buffer
 
 from kakigeometryutils import (
   getFigureBoundingBox,
+  getMeshBoundingBox,
   getPointsPlane,
   getFigurePlane,
   transformPoints,
   transformFigure,
+  transformMesh,
   clonePoints,
   cloneFigure,
   applyPerspectivePoints,
   applyPerspectiveFigure,
+  applyPerspectiveMesh,
+)
+
+from kakilighting import (
+  lightMesh
 )
 
 from kakiparsers import (
