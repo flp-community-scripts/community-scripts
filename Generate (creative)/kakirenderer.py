@@ -6,7 +6,7 @@ import flpianoroll
 
 from kakibuffer import Buffer
 
-def render(buffer: Buffer, xoff: int, yoff: int, pixelWidth: int = flpianoroll.score.PPQ / 4) -> list[flpianoroll.Note]:
+def render(buffer: Buffer, xoff: int, yoff: int, pixelWidth: int = int(flpianoroll.score.PPQ / 4)) -> list[flpianoroll.Note]:
   """Renders a buffer into flpianoroll.Notes
   """
   notes = []
