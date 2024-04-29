@@ -41,6 +41,11 @@ def limitBox(box: box, limit: box) -> None:
   box.y0 = min(max(box.y0, limit.y0), limit.y1)
   box.y1 = min(max(box.y1, limit.y0), limit.y1)
 
+def copyPhenotype(pheno: phenotype):
+  """Returns a copy of a given phenotype.
+  """
+  return phenotype(pheno.vel, pheno.pan, pheno.rel, pheno.pof, pheno.cut, pheno.res, pheno.col)
+
 def mixPhenotypes(pheno1: phenotype, pheno2: phenotype):
   """Mixes two phenotypes. Takes their respective opacity into account.
   """
@@ -119,6 +124,15 @@ def dotprod(a: vec4, b: vec4):
   """Returns the dot product of two given vectors.
   """
   return a.x * b.x + a.y * b.y + a.z * b.z
+
+def crossprod(a: vec4, b: vec4) -> vec4:
+  """Returns the cross product of two given vectors.
+  """
+  return vec4(
+    x = a.y * b.z - a.z * b.y,
+    y = a.z * b.x - a.x * b.z,
+    z = a.x * b.y - a.y * b.x
+  )
 
 def anglevec(a: vec4, b: vec4):
   """Returns the angle between two given vectors.
