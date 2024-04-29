@@ -118,3 +118,5 @@ def drawTriangle(buffer: Buffer, verts: list[vec4], phenos: list[phenotype]):
         # put point
         i = y * w * ovs + x
         buffer.data[i] = pheno
+        if buffer.zbuffer:
+          buffer.zbuffer[i] = p0.z * wgt0 + p1.z * wgt1 + p2.z * wgt2
