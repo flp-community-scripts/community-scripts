@@ -22,6 +22,8 @@ from kakibuffer import Buffer
 
 from kakigeometryutils import (
   getFigureBoundingBox,
+  getPointsPlane,
+  getFigurePlane,
   transformPoints,
   transformFigure,
   clonePoints,
@@ -52,11 +54,16 @@ from kakirenderer import render
 
 from kakiutils import (
   getBoundingBox,
-  getPhenotypeFromNote,
   limitBox,
-  interpolatePhenotypes,
-  matmul4,
+  copyPhenotype,
   mixPhenotypes,
+  interpolatePhenotypes,
+  getPhenotypeFromNote,
+  normvec,
+  dotprod,
+  crossprod,
+  anglevec,
+  matmul4,
   transform,
   identity4,
   translate,
