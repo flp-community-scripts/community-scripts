@@ -262,8 +262,10 @@ def rotateZ(mat: mat4, phi: float) -> mat4:
 
 rotate = rotateZ
 
-def homogeneousPinch(mat: mat4, pinch: float) -> mat4:
-  """Returns a copy of a 3d transformation matrix with it's homogeneous component increased. After applying the transformation on an object, call the corresponding `applyPerspective` function before rendering to obtain a perspective projection.
+def perspectiveTransform(mat: mat4, pinch: float) -> mat4:
+  """Returns a copy of a 3d transformation matrix with it's homogeneous component increased, causing a perspective projection like transformation.
+
+  Remember to apply perspective division before rendering!
   """
   tr = mat4(
     1, 0, 0, 0,
@@ -271,4 +273,6 @@ def homogeneousPinch(mat: mat4, pinch: float) -> mat4:
     0, 0, 1, 0,
     0, 0, -pinch, 1
   )
+  # the -pinch is because -Z is into screen
+  # the w=1 part is because the projection plane is at 0, thus @z=0 w has to be 1 for a /1 division
   return matmul4(tr, mat)

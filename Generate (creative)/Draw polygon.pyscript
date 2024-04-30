@@ -140,11 +140,11 @@ def apply(form: flp.ScriptDialog):
       transform3d = kaki.rotateY(transform3d, roty)
       transform3d = kaki.rotateZ(transform3d, rotz)
     transform3d = kaki.translate(transform3d, 0, 0, movez)
-    transform3d = kaki.homogeneousPinch(transform3d, pinch)
+    transform3d = kaki.perspectiveTransform(transform3d, pinch)
     transform3d = kaki.translate(transform3d, pivotx, pivoty)
 
     kaki.transformFigure(figure, transform3d)
-    kaki.applyPerspectiveFigure(figure)
+    kaki.perspectiveDivideFigure(figure)
 
   fill = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
 

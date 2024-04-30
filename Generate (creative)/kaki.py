@@ -30,9 +30,9 @@ from kakigeometryutils import (
   transformMesh,
   clonePoints,
   cloneFigure,
-  applyPerspectivePoints,
-  applyPerspectiveFigure,
-  applyPerspectiveMesh,
+  perspectiveDividePoints,
+  perspectiveDivideFigure,
+  perspectiveDivideMesh,
 )
 
 from kakilighting import (
@@ -82,6 +82,6 @@ from kakiutils import (
   rotateX,
   rotateY,
   rotateZ,
-  homogeneousPinch,
+  perspectiveTransform,
 )
 

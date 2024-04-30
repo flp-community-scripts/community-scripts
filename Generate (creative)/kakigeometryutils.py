@@ -100,7 +100,7 @@ def cloneFigure(figure: figure) -> figure:
     clone.append(clonePoints(pts))
   return clone
 
-def applyPerspectivePoints(points: list[vec4]) -> None:
+def perspectiveDividePoints(points: list[vec4]) -> None:
   """Applies the perspective projection to a list of points.
   """
   for p in points:
@@ -110,14 +110,15 @@ def applyPerspectivePoints(points: list[vec4]) -> None:
       w = 1e-10
     p.x /= w
     p.y /= w
+    p.z /= w
 
-def applyPerspectiveFigure(figure: figure) -> None:
+def perspectiveDivideFigure(figure: figure) -> None:
   """Applies the perspective projection to a figure.
   """
   for pts in figure:
-    applyPerspectivePoints(pts)
+    perspectiveDividePoints(pts)
 
-def applyPerspectiveMesh(mesh: mesh) -> None:
+def perspectiveDivideMesh(mesh: mesh) -> None:
   """Applies the perspective projection to a mesh.
   """
-  applyPerspectivePoints(mesh.verts)
+  perspectiveDividePoints(mesh.verts)
