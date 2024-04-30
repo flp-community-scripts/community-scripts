@@ -82,9 +82,10 @@ class phenotype:
 type tri = tuple[int, int, int]
 
 class mesh:
-  __slots__ = ['verts', 'phenos', 'tris']
+  __slots__ = ['verts', 'norms', 'phenos', 'tris']
 
-  def __init__(self, verts: list[vec4], phenos: list[phenotype], tris: list[tri]):
+  def __init__(self, verts: list[vec4], norms: list[vec4], phenos: list[phenotype], tris: list[tri]):
     self.verts = verts
+    self.norms = norms
     self.phenos = phenos
     self.tris = tris

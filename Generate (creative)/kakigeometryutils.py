@@ -83,6 +83,7 @@ def transformMesh(mesh: mesh, t: mat4) -> None:
   """Transforms a mesh in-place.
   """
   transformPoints(mesh.verts, t)
+  transformPoints(mesh.norms, t)
 
 def clonePoints(points: list[vec4]) -> list[vec4]:
   """Returns a clone of a list of points, all points cloned.
