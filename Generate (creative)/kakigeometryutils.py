@@ -3,7 +3,7 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 """
 
 from kakiprimitives import vec4, mat4, box, figure, mesh
-from kakiutils import getBoundingBox, transform, normvec, dotprod, crossprod, vecadd
+from kakiutils import getBoundingBox, transform, vecnorm, dotprod, crossprod, vecadd
 
 def getFigureBoundingBox(figure: figure, round: bool = False) -> box:
   """Returns the bounding box of a whole figure.
@@ -44,7 +44,7 @@ def getPointsPlane(points: list[vec4]) -> vec4 | None:
       pC = point
       pBC = vec4(pC.x - pB.x, pC.y - pB.y, pC.z - pB.z)
       cross = crossprod(pAB, pBC)
-      norm = normvec(cross)
+      norm = vecnorm(cross)
       # if that product has a length, we're done
       if norm > 0:
         # normalize cross product to make it a norm vector

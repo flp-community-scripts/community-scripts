@@ -5,7 +5,7 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 import math
 
 from kakiprimitives import vec4, figure, phenotype
-from kakiutils import anglevec
+from kakiutils import vecangle
 
 def parsePhenotypeFromStyle(style: str):
   """Parses a CSS-like style string for note phenotypes and returns the interpreted phenotype.
@@ -190,8 +190,8 @@ def parseFigureFromSvgPath(path: str) -> figure:
     # B.2.4: compute theta1 and dtheta
     vstart = vec4((x1primed - cxprimed) / rx, (y1primed - cyprimed) / ry)
     vend = vec4((-x1primed - cxprimed) / rx, (-y1primed - cyprimed) / ry)
-    theta1 = anglevec(vec4(1,0), vstart)
-    dtheta = anglevec(vstart, vend)
+    theta1 = vecangle(vec4(1,0), vstart)
+    dtheta = vecangle(vstart, vend)
 
     if fS == 0 and dtheta > 0:
       dtheta -= 2 * math.pi

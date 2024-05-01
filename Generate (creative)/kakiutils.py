@@ -118,21 +118,25 @@ def getPhenotypeFromNote(note: flpianoroll.Note) -> phenotype:
 
 def vecadd(a: vec4, b: vec4) -> vec4:
   """Returns the sum of two vectors.
+  The homogeneous component (w) is ignored.
   """
   return vec4(a.x + b.x, a.y + b.y, a.z + b.z)
 
-def normvec(a: vec4):
+def vecnorm(a: vec4):
   """Returns the norm of a given vector.
+  The homogeneous component (w) is ignored.
   """
   return math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2)
 
 def dotprod(a: vec4, b: vec4):
   """Returns the dot product of two given vectors.
+  The homogeneous component (w) is ignored.
   """
   return a.x * b.x + a.y * b.y + a.z * b.z
 
 def crossprod(a: vec4, b: vec4) -> vec4:
   """Returns the cross product of two given vectors.
+  The homogeneous component (w) is ignored.
   """
   return vec4(
     x = a.y * b.z - a.z * b.y,
@@ -140,12 +144,13 @@ def crossprod(a: vec4, b: vec4) -> vec4:
     z = a.x * b.y - a.y * b.x
   )
 
-def anglevec(a: vec4, b: vec4):
+def vecangle(a: vec4, b: vec4):
   """Returns the angle between two given vectors.
+  The homogeneous component (w) is ignored.
   """
   # TODO: find out what to do with the z component
   sign = 1 if a.x * b.y - a.y * b.x > 0 else -1
-  p = dotprod(a,b) / (normvec(a) * normvec(b))
+  p = dotprod(a,b) / (vecnorm(a) * vecnorm(b))
   # should never be outside [-1, +1], but epsilon...
   if p < -1:
     p = -1
