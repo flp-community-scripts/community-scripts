@@ -128,6 +128,17 @@ def vecnorm(a: vec4):
   """
   return math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2)
 
+def normalize(a: vec4):
+  """Returns the normalized form of a given vector.
+  The homogeneous component (w) is ignored.
+  """
+  norm = vecnorm(a)
+  return vec4(
+    a.x / norm,
+    a.y / norm,
+    a.z / norm
+  )
+
 def dotprod(a: vec4, b: vec4):
   """Returns the dot product of two given vectors.
   The homogeneous component (w) is ignored.
