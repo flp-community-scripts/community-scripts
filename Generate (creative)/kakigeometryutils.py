@@ -3,7 +3,7 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 """
 
 from kakiprimitives import vec4, mat4, box, figure, mesh
-from kakiutils import getBoundingBox, transform, normvec, dotprod, crossprod
+from kakiutils import getBoundingBox, transform, normvec, dotprod, crossprod, vecadd
 
 def getFigureBoundingBox(figure: figure, round: bool = False) -> box:
   """Returns the bounding box of a whole figure.
@@ -83,7 +83,8 @@ def transformMesh(mesh: mesh, t: mat4) -> None:
   """Transforms a mesh in-place.
   """
   transformPoints(mesh.verts, t)
-  transformPoints(mesh.norms, t)
+  # TODO: inverse transpose matrix
+  # TODO: tn = inverseTranspose(t), transformPoints(mesh.normals, tn)
 
 def clonePoints(points: list[vec4]) -> list[vec4]:
   """Returns a clone of a list of points, all points cloned.
@@ -123,3 +124,20 @@ def perspectiveDivideMesh(mesh: mesh) -> None:
   """Applies the perspective projection to a mesh.
   """
   perspectiveDividePoints(mesh.verts)
+
+def updateNormalsMesh(mesh: mesh) -> None:
+  """Updates the normal vectors in a mesh based on these simple rules
+  * for every triangle, add the triangle's normal to each vertex
+  * if a vertex is shared across multiple triangles, its normal will be averaged
+  """
+  for tri in mesh.tris:
+    i0 = tri[0]
+    i1 = tri[1]
+    i2 = tri[2]
+    v0 = mesh.verts[i0]
+    v1 = mesh.verts[i1]
+    v2 = mesh.verts[i2]
+    normal = getPointsPlane([v0, v1, v2])
+    mesh.normals[i0] = vecadd(mesh.normals[i0], normal)
+    mesh.normals[i1] = vecadd(mesh.normals[i1], normal)
+    mesh.normals[i2] = vecadd(mesh.normals[i2], normal)

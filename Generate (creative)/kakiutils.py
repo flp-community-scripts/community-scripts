@@ -116,6 +116,11 @@ def getPhenotypeFromNote(note: flpianoroll.Note) -> phenotype:
   """
   return phenotype(note.velocity, note.pan, note.release, note.pitchofs, note.fcut, note.fres, note.color)
 
+def vecadd(a: vec4, b: vec4) -> vec4:
+  """Returns the sum of two vectors.
+  """
+  return vec4(a.x + b.x, a.y + b.y, a.z + b.z)
+
 def normvec(a: vec4):
   """Returns the norm of a given vector.
   """

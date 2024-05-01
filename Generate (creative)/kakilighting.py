@@ -19,6 +19,6 @@ def lightMesh(mesh: mesh, lightVector: vec4, lightPheno: phenotype):
   # light each vertex on its own based on corresponding normal vector
   for i in range(len(mesh.verts)):
     # amount of lighting (normalize normal vector, could be != 1 due to mesh scaling)
-    amt = min(max(dotprod(mesh.norms[i], lightVector) / normvec(mesh.norms[i]), 0), 1)
+    amt = min(max(dotprod(mesh.normals[i], lightVector) / normvec(mesh.normals[i]), 0), 1)
     # mix material phenotype with light
     mesh.phenos[i] = interpolatePhenotypes([mesh.phenos[i], lightPheno], [1 - amt, amt])

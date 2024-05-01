@@ -33,6 +33,7 @@ from kakigeometryutils import (
   perspectiveDividePoints,
   perspectiveDivideFigure,
   perspectiveDivideMesh,
+  updateNormalsMesh,
 )
 
 from kakilighting import (
@@ -69,6 +70,7 @@ from kakiutils import (
   mixPhenotypes,
   interpolatePhenotypes,
   getPhenotypeFromNote,
+  vecadd,
   normvec,
   dotprod,
   crossprod,
