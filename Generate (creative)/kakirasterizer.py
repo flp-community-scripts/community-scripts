@@ -15,6 +15,8 @@ from kakirasterutils import (
 )
 from kakiutils import getBoundingBox, copyPhenotype, interpolatePhenotypes
 
+import kakiconfig as config
+
 """
 Resources:
 
@@ -113,8 +115,8 @@ def drawTriangle(buffer: Buffer, verts: list[vec4], phenos: list[phenotype]):
       e12 = edgeFunction(p1, p2, p)
       e20 = edgeFunction(p2, p0, p)
       # allow CW and CCW triangles
-      if (e01 <= 0 and e12 <= 0 and e20 <= 0
-          or e01 >= 0 and e12 >= 0 and e20 >= 0):
+      if (e01 <= 0 and e12 <= 0 and e20 <= 0 and config.cull_backface
+          or e01 >= 0 and e12 >= 0 and e20 >= 0 and config.cull_frontface):
         # interpolate phenotypes, wheighted according to distance to vertice
         wgt0 = e12 / e123
         wgt1 = e20 / e123

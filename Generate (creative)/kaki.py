@@ -20,6 +20,8 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 
 from kakibuffer import Buffer
 
+import kakiconfig as config
+
 from kakigeometryutils import (
   getFigureBoundingBox,
   getMeshBoundingBox,
