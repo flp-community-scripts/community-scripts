@@ -29,7 +29,7 @@ class Buffer:
     self.originx = x
     self.originy = y
 
-  def fog(self, znear: float, zfar: float):
+  def fog(self, znear: float, zfar: float, cutfar: bool = True):
     if self.zbuffer is None: return
     dz = zfar - znear
     # go through all pixels and apply depth fog
@@ -38,7 +38,10 @@ class Buffer:
       z = self.zbuffer[i]
       if d is not None and z is not None:
         if z < zfar:
-          d.vel = 0
+          if cutfar:
+            self.data[i] = None
+          else:
+            d.vel = 0
         elif z < znear:
           d.vel *= 1 - (z - znear) / dz
 
