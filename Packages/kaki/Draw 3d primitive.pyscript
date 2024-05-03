@@ -50,6 +50,7 @@ def createDialog():
   form.AddInputKnob('Pinch', 0, 0, 0.02)
   form.AddInputText('Material', styleMat)
   form.AddInputText('Light', styleLight)
+  form.AddInputKnob('Shininess', 0.5, 0, 1)
   form.AddInputCombo('Oversample', ['--', '4x MSAA', '16x MSAA'], 0)
   form.AddInputKnob('Light azimuth', 0, -math.pi, math.pi)
   form.AddInputKnob('Light elevation', 0, 0, math.pi / 2)
@@ -75,6 +76,7 @@ def apply(form: flp.ScriptDialog):
   pinch = form.GetInputValue('Pinch')
   styleMat = form.GetInputValue('Material')
   styleLight = form.GetInputValue('Light')
+  shininess = form.GetInputValue('Shininess')
   optOversample = form.GetInputValue('Oversample')
   lightAzi = form.GetInputValue('Light azimuth')
   lightEle = form.GetInputValue('Light elevation')
@@ -127,7 +129,7 @@ def apply(form: flp.ScriptDialog):
   trLight = kaki.rotateY(trLight, lightEle)
   trLight = kaki.rotateZ(trLight, lightAzi)
   light = kaki.transform(light, trLight)
-  kaki.lightMesh(mesh, light, phenoLight)
+  kaki.lightMesh(mesh, light, phenoLight, shininess)
 
   # third: move into shot, pinch, move shot
   transform3d = kaki.identity4()
