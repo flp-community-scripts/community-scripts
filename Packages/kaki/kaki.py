@@ -65,6 +65,14 @@ from kakirasterizer import (
 
 from kakirenderer import render
 
+from kakishapes3d import (
+  createCube,
+  createPrism,
+  createSphere,
+  createCylinder,
+  createTorus,
+)
+
 from kakiutils import (
   getBoundingBox,
   limitBox,
