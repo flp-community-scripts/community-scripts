@@ -26,6 +26,14 @@ def createDialog():
   form = flp.ScriptDialog("Draw 3D primitive","-"
   + "\r\n--"
   + "\r\n\r\nv1.0 (2024-mm-dd), BinaryBorn")
+
+  mat = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
+  styleMat = kaki.serializePhenotypeToStyle(mat)
+  light = kaki.copyPhenotype(mat)
+  light.vel = 1.0
+  light.col = (light.col + 8) % 16
+  styleLight = kaki.serializePhenotypeToStyle(light)
+
   form.AddInputCombo('Shape', shapes, 0)
   form.AddInputKnobInt('Sides', 3, 3, 24)
   form.AddInputKnob('Ratio', 0.5, 0, 1)
@@ -40,8 +48,8 @@ def createDialog():
   form.AddInputKnob('Rotate z', 0, -math.pi, math.pi)
   form.AddInputCombo('Rotation order', ['zyx', 'xyz'], 0)
   form.AddInputKnob('Pinch', 0, 0, 0.02)
-  form.AddInputText('Material', 'velocity: 0.5; pan: 0.0; color: 0')
-  form.AddInputText('Light', 'velocity: 1; pan: 0.0; color: 8')
+  form.AddInputText('Material', styleMat)
+  form.AddInputText('Light', styleLight)
   form.AddInputCombo('Oversample', ['--', '4x MSAA', '16x MSAA'], 0)
   form.AddInputKnob('Light azimuth', 0, -math.pi, math.pi)
   form.AddInputKnob('Light elevation', 0, 0, math.pi / 2)

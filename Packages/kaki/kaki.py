@@ -44,7 +44,8 @@ from kakilighting import (
 
 from kakiparsers import (
   parsePhenotypeFromStyle,
-  parseFigureFromSvgPath
+  serializePhenotypeToStyle,
+  parseFigureFromSvgPath,
 )
 
 from kakiprimitives import (

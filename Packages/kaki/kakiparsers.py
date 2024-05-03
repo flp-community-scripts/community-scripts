@@ -42,7 +42,7 @@ def parsePhenotypeFromStyle(style: str):
       elif key == 'release':
         rel = float(val)
       elif key == 'pitchofs':
-        pof = int(val)
+        pof = int(val / 10)
       elif key == 'fcut':
         cut = float(val)
       elif key == 'fres':
@@ -52,6 +52,30 @@ def parsePhenotypeFromStyle(style: str):
     except Exception:
       pass
   return phenotype(vel, pan, rel, pof, cut, res, col)
+
+def serializePhenotypeToStyle(pheno: phenotype) -> str:
+  """Serializes a phenotype into a CSS-like string.
+  """
+
+  texts = []
+
+  # include only non-default properties (except vel, that's always included)
+
+  texts.append(f'velocity: {pheno.vel:.2f}')
+  if round(pheno.pan, 3) != round(phenotype.__init__.__defaults__[1], 3):
+    texts.append(f'pan: {pheno.pan:.2f}')
+  if round(pheno.rel, 3) != round(phenotype.__init__.__defaults__[2], 3):
+    texts.append(f'release: {pheno.rel:.2f}')
+  if pheno.pof != phenotype.__init__.__defaults__[3]:
+    texts.append(f'pitchofs: {10 * pheno.pof}')
+  if round(pheno.cut, 3) != round(phenotype.__init__.__defaults__[4], 3):
+    texts.append(f'fcut: {pheno.cut:.3f}')
+  if round(pheno.res, 3) != round(phenotype.__init__.__defaults__[5], 3):
+    texts.append(f'fres: {pheno.res:.3f}')
+  if pheno.col != phenotype.__init__.__defaults__[6]:
+    texts.append(f'color: {pheno.col}')
+
+  return '; '.join(texts)
 
 def parseFigureFromSvgPath(path: str) -> figure:
   """Parses SVG path data (the `d` attribute) and turns it into a figure.
