@@ -63,7 +63,7 @@ class phenotype:
   """
   __slots__ = ['vel', 'pan', 'rel', 'pof', 'cut', 'res', 'col']
 
-  def __init__(self, vel=0.78, pan=0.5, rel=0.5, pof=0, cut=0.5, res=0.5, col=0):
+  def __init__(self, vel=100/128, pan=0.5, rel=0.5, pof=0, cut=128/255, res=128/255, col=0):
     self.vel = vel
     "velocity, also treated as opacity, 0.0 to 1.0, default 0.78"
     self.pan = pan
