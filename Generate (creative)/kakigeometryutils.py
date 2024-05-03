@@ -138,6 +138,7 @@ def updateNormalsMesh(mesh: mesh) -> None:
     v1 = mesh.verts[i1]
     v2 = mesh.verts[i2]
     normal = getPointsPlane([v0, v1, v2])
+    if normal is None: normal = vec4(0, 0, 0)
     mesh.normals[i0] = vecadd(mesh.normals[i0], normal)
     mesh.normals[i1] = vecadd(mesh.normals[i1], normal)
     mesh.normals[i2] = vecadd(mesh.normals[i2], normal)
