@@ -72,6 +72,7 @@ from kakiutils import (
   mixPhenotypes,
   interpolatePhenotypes,
   getPhenotypeFromNote,
+  copyVec,
   vecadd,
   vecnorm,
   dotprod,

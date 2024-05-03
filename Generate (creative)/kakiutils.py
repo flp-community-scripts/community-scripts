@@ -116,6 +116,11 @@ def getPhenotypeFromNote(note: flpianoroll.Note) -> phenotype:
   """
   return phenotype(note.velocity, note.pan, note.release, note.pitchofs, note.fcut, note.fres, note.color)
 
+def copyVec(a: vec4) -> vec4:
+  """Returns a copy of a given vector.
+  """
+  return vec4(a.x, a.y, a.z, a.w)
+
 def vecadd(a: vec4, b: vec4) -> vec4:
   """Returns the sum of two vectors.
   The homogeneous component (w) is ignored.
