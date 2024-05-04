@@ -23,9 +23,7 @@ kaki.config.cull_backface = False
 shapes = ['Cube', 'Prism', 'Pyramid', 'Pyramid frustum', 'Sphere', 'Cylinder', 'Cone', 'Cone frustum', 'Torus']
 
 def createDialog():
-  form = flp.ScriptDialog("Draw 3D primitive","-"
-  + "\r\n--"
-  + "\r\n\r\nv1.0 (2024-mm-dd), BinaryBorn")
+  form = flp.ScriptDialog("Draw 3D primitive","")
 
   mat = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
   styleMat = kaki.serializePhenotypeToStyle(mat)
@@ -37,25 +35,10 @@ def createDialog():
   form.AddInputCombo('Shape', shapes, 0)
   form.AddInputKnobInt('Sides', 3, 3, 24)
   form.AddInputKnob('Ratio', 0.5, 0, 1)
-  form.AddInputKnobInt('Center x', 16, 0, 128)
-  form.AddInputKnobInt('Center y', 60, 0, 131)
-  form.AddInputKnobInt('Center z', 0, -128, 0)
-  form.AddInputKnob('Scale x', 16, 0, 128)
-  form.AddInputKnob('Scale y', 16, 0, 128)
-  form.AddInputKnob('Scale z', 16, 0, 128)
-  form.AddInputKnob('Rotate x', math.pi / 4, -math.pi, math.pi)
-  form.AddInputKnob('Rotate y', math.pi / 6, -math.pi, math.pi)
-  form.AddInputKnob('Rotate z', 0, -math.pi, math.pi)
-  form.AddInputCombo('Rotation order', ['zyx', 'xyz'], 0)
-  form.AddInputKnob('Pinch', 0, 0, 0.02)
   form.AddInputText('Material', styleMat)
   form.AddInputText('Light', styleLight)
-  form.AddInputKnob('Shininess', 0.5, 0, 1)
-  form.AddInputCombo('Oversample', ['--', '4x MSAA', '16x MSAA'], 0)
-  form.AddInputKnob('Light azimuth', 0, -math.pi, math.pi)
-  form.AddInputKnob('Light elevation', 0, 0, math.pi / 2)
-  form.AddInputKnob('Fog near', 0, -128, 128)
-  form.AddInputKnob('Fog far', -128, -128, 128)
+
+  form.AddInputSurface('Draw 3D shape')
 
   return form
 
@@ -63,25 +46,33 @@ def apply(form: flp.ScriptDialog):
   optShape = form.GetInputValue('Shape')
   sides = form.GetInputValue('Sides')
   ratio = form.GetInputValue('Ratio')
-  cx = form.GetInputValue('Center x')
-  cy = form.GetInputValue('Center y')
-  cz = form.GetInputValue('Center z')
-  sx = form.GetInputValue('Scale x')
-  sy = form.GetInputValue('Scale y')
-  sz = form.GetInputValue('Scale z')
-  rotx = form.GetInputValue('Rotate x')
-  roty = form.GetInputValue('Rotate y')
-  rotz = form.GetInputValue('Rotate z')
-  rotOrder = form.GetInputValue('Rotation order')
-  pinch = form.GetInputValue('Pinch')
   styleMat = form.GetInputValue('Material')
   styleLight = form.GetInputValue('Light')
+
+  scaleX = form.GetInputValue('Scale X') * 128
+  scaleY = form.GetInputValue('Scale Y') * 128
+  scaleZ = form.GetInputValue('Scale Z') * 128
+  rotationX = (form.GetInputValue('Rotation X') - 0.5) * math.pi * 4
+  rotationY = (form.GetInputValue('Rotation Y') - 0.5) * math.pi * 4
+  rotationZ = (form.GetInputValue('Rotation Z') - 0.5) * math.pi * 4
+  positionX = form.GetInputValue('Position X') * 128
+  positionY = form.GetInputValue('Position Y') * 128
+  positionZ = (1 - form.GetInputValue('Position Z')) * -128
+  rotOrder = int(form.GetInputValue('Rotation order'))
+  perspective = form.GetInputValue('Perspective') * 0.04
   shininess = form.GetInputValue('Shininess')
-  optOversample = form.GetInputValue('Oversample')
-  lightAzi = form.GetInputValue('Light azimuth')
-  lightEle = form.GetInputValue('Light elevation')
-  fog0 = form.GetInputValue('Fog near')
-  fog1 = form.GetInputValue('Fog far')
+  optOversample = int(form.GetInputValue('Oversampling') * 2)
+  fogNear = (form.GetInputValue('Fog near') - 0.5) * 256
+  fogFar = (form.GetInputValue('Fog far') - 0.5) * 256
+  lightPositionX = (form.GetInputValue('Light position - X') - 0.5) * 2
+  lightPositionY = (form.GetInputValue('Light position - Y') - 0.5) * 2
+
+  lightAzimuth = 0
+  lightElevation = math.pi / 4
+  if lightPositionX != 0 or lightPositionY != 0:
+    # these feel right because the XY pad is square
+    lightAzimuth = math.atan2(-lightPositionY, -lightPositionX)
+    lightElevation = min(math.acos(abs(lightPositionX)), math.acos(abs(lightPositionY)))
 
   shape = shapes[optShape]
   phenoMat = kaki.parsePhenotypeFromStyle(styleMat)
@@ -111,31 +102,31 @@ def apply(form: flp.ScriptDialog):
 
   # first: transform up to including rotation (because of lighting)
   transform3d = kaki.identity4()
-  transform3d = kaki.scale(transform3d, sx, sy, sz)
+  transform3d = kaki.scale(transform3d, scaleX, scaleY, scaleZ)
   if rotOrder == 0:
-    transform3d = kaki.rotateZ(transform3d, rotz)
-    transform3d = kaki.rotateY(transform3d, roty)
-    transform3d = kaki.rotateX(transform3d, rotx)
+    transform3d = kaki.rotateZ(transform3d, rotationZ)
+    transform3d = kaki.rotateY(transform3d, rotationY)
+    transform3d = kaki.rotateX(transform3d, rotationX)
   else:
-    transform3d = kaki.rotateX(transform3d, rotx)
-    transform3d = kaki.rotateY(transform3d, roty)
-    transform3d = kaki.rotateZ(transform3d, rotz)
+    transform3d = kaki.rotateX(transform3d, rotationX)
+    transform3d = kaki.rotateY(transform3d, rotationY)
+    transform3d = kaki.rotateZ(transform3d, rotationZ)
   kaki.transformMesh(mesh, transform3d)
 
-  # second: lighting (before pinching)
+  # second: lighting (before perspective)
   kaki.updateNormalsMesh(mesh)
   light = kaki.vec4(1, 0, 0)
   trLight = kaki.identity4()
-  trLight = kaki.rotateY(trLight, lightEle)
-  trLight = kaki.rotateZ(trLight, lightAzi)
+  trLight = kaki.rotateY(trLight, lightElevation)
+  trLight = kaki.rotateZ(trLight, lightAzimuth)
   light = kaki.transform(light, trLight)
   kaki.lightMesh(mesh, light, phenoLight, shininess)
 
-  # third: move into shot, pinch, move shot
+  # third: move into shot, perspective projection, move shot
   transform3d = kaki.identity4()
-  transform3d = kaki.translate(transform3d, 0, 0, cz)
-  transform3d = kaki.perspectiveTransform(transform3d, pinch)
-  transform3d = kaki.translate(transform3d, cx, cy, 0)
+  transform3d = kaki.translate(transform3d, 0, 0, positionZ)
+  transform3d = kaki.perspectiveTransform(transform3d, perspective)
+  transform3d = kaki.translate(transform3d, positionX, positionY, 0)
   kaki.transformMesh(mesh, transform3d)
   kaki.perspectiveDivideMesh(mesh)
 
@@ -150,7 +141,7 @@ def apply(form: flp.ScriptDialog):
 
   kaki.drawMesh(buffer, mesh)
 
-  buffer.fog(fog0, fog1)
+  buffer.fog(fogNear, fogFar)
 
   newNotes = kaki.render(buffer, bbox.x0, bbox.y0)
 
