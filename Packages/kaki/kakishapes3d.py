@@ -43,7 +43,7 @@ def createCube(pheno: phenotype) -> mesh:
     verts.extend(vs)
     tris.extend(ts)
 
-  phenos = [copyPhenotype(pheno)] * len(verts)
+  phenos = [copyPhenotype(pheno) for v in verts]
   
   return mesh(verts, phenos, tris)
 
@@ -98,7 +98,7 @@ def createPrism(pheno: phenotype, sides: int, rtop: float = 1.0) -> mesh:
     verts.extend(vs)
     tris.extend(ts)
   
-  phenos = [copyPhenotype(pheno)] * len(verts)
+  phenos = [copyPhenotype(pheno) for v in verts]
 
   return mesh(verts, phenos, tris)
 
@@ -147,7 +147,7 @@ def createSphere(pheno: phenotype, sides: int) -> mesh:
     verts.extend(vs)
     tris.extend(ts)
 
-  phenos = [copyPhenotype(pheno)] * len(verts)
+  phenos = [copyPhenotype(pheno) for v in verts]
   
   return mesh(verts, phenos, tris)
 
@@ -204,7 +204,7 @@ def createCylinder(pheno: phenotype, sides: int, rtop: float = 1.0) -> mesh:
     verts.extend(vs)
     tris.extend(ts)
   
-  phenos = [copyPhenotype(pheno)] * len(verts)
+  phenos = [copyPhenotype(pheno) for v in verts]
 
   return mesh(verts, phenos, tris)
 
@@ -245,6 +245,6 @@ def createTorus(pheno: phenotype, sides: int, ratio: float = 1.0) -> mesh:
     verts.extend(vs)
     tris.extend(ts)
   
-  phenos = [copyPhenotype(pheno)] * len(verts)
+  phenos = [copyPhenotype(pheno) for v in verts]
 
   return mesh(verts, phenos, tris)
