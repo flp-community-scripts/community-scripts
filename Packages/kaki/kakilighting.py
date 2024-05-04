@@ -2,7 +2,6 @@
 Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 """
 
-from kakigeometryutils import getPointsPlane
 from kakiprimitives import vec4, phenotype, mesh
 from kakiutils import vecnorm, normalize, dotprod, interpolatePhenotypes
 
@@ -17,8 +16,14 @@ def lightMesh(mesh: mesh, lightVector: vec4, lightPheno: phenotype, shininess: f
     # amount of lighting (normalize normal vector, could be != 1 due to mesh scaling)
     norm = vecnorm(mesh.normals[i])
     amt = 0 if norm == 0 else dotprod(mesh.normals[i], lightVector) / norm
-    amt = min(max(amt, 0), 1)
+    amt = min(max(amt, -1), 1)
     if shininess > 0:
-      amt = (pow(2, 10 * shininess * amt) - 1) / (pow(2, 10 * shininess) - 1)
-    # mix material phenotype with light
-    mesh.phenos[i] = interpolatePhenotypes([mesh.phenos[i], lightPheno], [1 - amt, amt])
+      sign = 1 if amt >= 0 else -1
+      amt = abs(amt)
+      amt = sign * (pow(2, 10 * shininess * amt) - 1) / (pow(2, 10 * shininess) - 1)
+    if amt > 0:
+      # mix material phenotype with light
+      mesh.phenos[i] = interpolatePhenotypes([mesh.phenos[i], lightPheno], [1 - amt, amt])
+    elif amt < 0:
+      # or shade
+      mesh.phenos[i].vel *= (amt + 1)
