@@ -25,7 +25,7 @@ def render(buffer: Buffer, xoff: int, yoff: int, pixelWidth: int = int(flpianoro
             note.number = y
             note.length = pixelWidth
             # apply attributes
-            note.velocity = pheno.vel
+            note.velocity = pheno.vel * pheno.opa
             note.pan = pheno.pan
             note.release = pheno.rel
             note.pitchofs = int(pheno.pof) # can be float due to interpolation

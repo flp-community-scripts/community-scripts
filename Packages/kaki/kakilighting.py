@@ -22,8 +22,10 @@ def lightMesh(mesh: mesh, lightVector: vec4, lightPheno: phenotype, shininess: f
       amt = abs(amt)
       amt = sign * (pow(2, 10 * shininess * amt) - 1) / (pow(2, 10 * shininess) - 1)
     if amt > 0:
-      # mix material phenotype with light
-      mesh.phenos[i] = interpolatePhenotypes([mesh.phenos[i], lightPheno], [1 - amt, amt])
+      # mix material phenotype with light, keep original opacity (for logical reasons)
+      matPheno = mesh.phenos[i]
+      mesh.phenos[i] = interpolatePhenotypes([matPheno, lightPheno], [1 - amt, amt])
+      mesh.phenos[i].opa = matPheno.opa
     elif amt < 0:
       # or shade
       mesh.phenos[i].vel *= (amt + 1)

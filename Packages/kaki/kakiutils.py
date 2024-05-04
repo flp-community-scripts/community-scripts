@@ -44,7 +44,7 @@ def limitBox(box: box, limit: box) -> None:
 def copyPhenotype(pheno: phenotype):
   """Returns a copy of a given phenotype.
   """
-  return phenotype(pheno.vel, pheno.pan, pheno.rel, pheno.pof, pheno.cut, pheno.res, pheno.col)
+  return phenotype(pheno.vel, pheno.pan, pheno.rel, pheno.pof, pheno.cut, pheno.res, pheno.col, pheno.opa)
 
 def mixPhenotypes(pheno1: phenotype, pheno2: phenotype):
   """Mixes two phenotypes. Takes their respective opacity into account.
@@ -52,27 +52,28 @@ def mixPhenotypes(pheno1: phenotype, pheno2: phenotype):
   # special cases: both or one of them fully absent
   if pheno1 is None and pheno2 is None: return None
   if pheno1 is None:
-    pheno1 = phenotype(vel=0.0)
+    pheno1 = phenotype(opa=0.0)
   if pheno2 is None:
-    pheno2 = phenotype(vel=0.0)
-  # weigh by velocity
-  wgt1 = pheno1.vel
-  wgt2 = pheno2.vel
+    pheno2 = phenotype(opa=0.0)
+  # weigh by opacity
+  wgt1 = pheno1.opa
+  wgt2 = pheno2.opa
   wgtTot = wgt1 + wgt2
   if wgtTot == 0:
     wgtTot = 1
   # interpolate
-  vel = (pheno1.vel + pheno2.vel) / 2
+  vel = (pheno1.vel * wgt1 + pheno2.vel * wgt2) / wgtTot
   pan = (pheno1.pan * wgt1 + pheno2.pan * wgt2) / wgtTot
   rel = (pheno1.rel * wgt1 + pheno2.rel * wgt2) / wgtTot
   pof = (pheno1.pof * wgt1 + pheno2.pof * wgt2) / wgtTot
   cut = (pheno1.cut * wgt1 + pheno2.cut * wgt2) / wgtTot
   res = (pheno1.res * wgt1 + pheno2.res * wgt2) / wgtTot
   col = (pheno1.col * wgt1 + pheno2.col * wgt2) / wgtTot
-  return phenotype(vel, pan, rel, pof, cut, res, col)
+  opa = (pheno1.opa + pheno2.opa) / 2
+  return phenotype(vel, pan, rel, pof, cut, res, col, opa)
   
 def interpolatePhenotypes(phenos: list[phenotype], weights: list[float] = None):
-  """Interpolates multiple phenotypes. Does not take their respective opacity into account.
+  """Interpolates multiple phenotypes. Does not take their respective opacity into account for weighing.
   """
   # if no weights are given, fallback to all-1
   if weights is None:
@@ -99,6 +100,7 @@ def interpolatePhenotypes(phenos: list[phenotype], weights: list[float] = None):
   cut = 0
   res = 0
   col = 0
+  opa = 0
   for i in range(len(phenos)):
     pheno = phenos[i]
     wgt = weights[i]
@@ -109,7 +111,8 @@ def interpolatePhenotypes(phenos: list[phenotype], weights: list[float] = None):
     cut += pheno.cut * wgt
     res += pheno.res * wgt
     col += pheno.col * wgt
-  return phenotype(vel, pan, rel, pof, cut, res, col)
+    opa += pheno.opa * wgt
+  return phenotype(vel, pan, rel, pof, cut, res, col, opa)
 
 def getPhenotypeFromNote(note: flpianoroll.Note) -> phenotype:
   """Returns the phenotype of a given note.

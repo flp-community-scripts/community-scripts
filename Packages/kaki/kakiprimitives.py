@@ -61,11 +61,11 @@ type figure = list[list[vec4]]
 class phenotype:
   """Class representing the property vector for all the note properties.
   """
-  __slots__ = ['vel', 'pan', 'rel', 'pof', 'cut', 'res', 'col']
+  __slots__ = ['vel', 'pan', 'rel', 'pof', 'cut', 'res', 'col', 'opa']
 
-  def __init__(self, vel=100/128, pan=0.5, rel=0.5, pof=0, cut=128/255, res=128/255, col=0):
+  def __init__(self, vel=100/128, pan=0.5, rel=0.5, pof=0, cut=128/255, res=128/255, col=0, opa=1.0):
     self.vel = vel
-    "velocity, also treated as opacity, 0.0 to 1.0, default 0.78"
+    "velocity, 0.0 to 1.0, default 0.78"
     self.pan = pan
     "panning, 0.0 to 1.0, default 0.5"
     self.rel = rel
@@ -78,6 +78,8 @@ class phenotype:
     "fres/mody, 0.0 to 1.0, default 0.5"
     self.col = col
     "note color/MIDI channel, 0 to 15, default 0"
+    self.opa = opa
+    "alpha / opacity, 0.0 to 1.0, taken into account on phenotype mixing, default 1.0"
 
 type tri = tuple[int, int, int]
 

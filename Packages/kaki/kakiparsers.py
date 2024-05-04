@@ -10,7 +10,7 @@ from kakiutils import vecangle
 def parsePhenotypeFromStyle(style: str):
   """Parses a CSS-like style string for note phenotypes and returns the interpreted phenotype.
 
-  Example string: `velocity: 0.8; pan: 0.5; release: 0.5; pitchofs: 0; fcut: 1; fres: 0.5; color: 4`
+  Example string: `velocity: 0.8; pan: 0.5; release: 0.5; pitchofs: 0; fcut: 1; fres: 0.5; color: 4; opacity: 1.0`
 
   Args:
     style (str): style string
@@ -26,6 +26,7 @@ def parsePhenotypeFromStyle(style: str):
   cut = phenotype.__init__.__defaults__[4]
   res = phenotype.__init__.__defaults__[5]
   col = phenotype.__init__.__defaults__[6]
+  opa = phenotype.__init__.__defaults__[7]
   # properties are separated by ;
   propStrs = style.split(';')
   for propStr in propStrs:
@@ -49,9 +50,11 @@ def parsePhenotypeFromStyle(style: str):
         res = float(val)
       elif key == 'color':
         col = int(val)
+      elif key == 'opacity':
+        opa = float(val)
     except Exception:
       pass
-  return phenotype(vel, pan, rel, pof, cut, res, col)
+  return phenotype(vel, pan, rel, pof, cut, res, col, opa)
 
 def serializePhenotypeToStyle(pheno: phenotype) -> str:
   """Serializes a phenotype into a CSS-like string.
@@ -74,6 +77,8 @@ def serializePhenotypeToStyle(pheno: phenotype) -> str:
     texts.append(f'fres: {pheno.res:.3f}')
   if pheno.col != phenotype.__init__.__defaults__[6]:
     texts.append(f'color: {pheno.col}')
+  if pheno.opa != phenotype.__init__.__defaults__[7]:
+    texts.append(f'opacity: {pheno.opa}')
 
   return '; '.join(texts)
 
