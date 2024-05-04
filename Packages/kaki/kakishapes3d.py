@@ -78,7 +78,7 @@ def createPrism(pheno: phenotype, sides: int, rtop: float = 1.0) -> mesh:
     ])
     ts.extend([
       [0, 1, 2],    # mantle
-      [3, 4, 5],    # bottom face
+      [3, 5, 4],    # bottom face
     ])
     if rtop > 0:
       vs.extend([
