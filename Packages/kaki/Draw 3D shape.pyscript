@@ -134,7 +134,7 @@ def apply(form: flp.ScriptDialog):
   if bbox is None: return
 
   # limit bbox to PR and some sensible value for max x
-  kaki.limitBox(bbox, kaki.box(0, 0, 1024, 131))
+  kaki.limitBox(bbox, kaki.box(0, 0, 1024, 132))
 
   buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample, True)
   buffer.setOrigin(bbox.x0, bbox.y0)

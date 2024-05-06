@@ -13,7 +13,7 @@ def render(buffer: Buffer, xoff: int, yoff: int, pixelWidth: int = int(flpianoro
 
   for iy in range(buffer.height):
     y = yoff + iy
-    if y >= 0 and y < 131:
+    if y >= 0 and y <= 131:
       for ix in range(buffer.width):
         x = xoff + ix
         if x >= 0:
