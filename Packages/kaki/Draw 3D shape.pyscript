@@ -20,7 +20,7 @@ import math
 # don't render back faces (pure optimisation)
 kaki.config.cull_backface = False
 
-shapes = ['Cube', 'Prism', 'Pyramid', 'Pyramid frustum', 'Sphere', 'Cylinder', 'Cone', 'Cone frustum', 'Torus']
+shapes = ['Cube', 'Prism', 'Pyramid', 'Pyramid frustum', 'Sphere', 'Cylinder', 'Cone', 'Cone frustum', 'Torus', 'Star']
 
 def createDialog():
   form = flp.ScriptDialog("Draw 3D primitive","")
@@ -97,6 +97,8 @@ def apply(form: flp.ScriptDialog):
     mesh = kaki.createCylinder(phenoMat, 24, ratio)
   elif shape == 'Torus':
     mesh = kaki.createTorus(phenoMat, 24, ratio)
+  elif shape == 'Star':
+    mesh = kaki.createStar(phenoMat, sides, ratio)
   else:
     mesh = kaki.mesh([], [], [])
 

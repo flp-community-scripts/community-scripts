@@ -248,3 +248,63 @@ def createTorus(pheno: phenotype, sides: int, ratio: float = 1.0) -> mesh:
   phenos = [copyPhenotype(pheno) for v in verts]
 
   return mesh(verts, phenos, tris)
+
+def createStar(pheno: phenotype, sides: int, ratio: float = 1.0) -> mesh:
+  """Creates a star with outer diameter 1.
+  """
+  if sides < 3: sides = 3
+  if sides > 24: sides = 24
+  if ratio < 0: ratio = 0
+
+  verts: list[vec4] = []
+  tris: list[tri] = []
+
+  for n in range(sides):
+    # helper coordinates
+    a0 = n * 2 * math.pi / sides
+    a1 = (n + 1/2) * 2 * math.pi / sides
+    a2 = (n + 1) * 2 * math.pi / sides
+    v0 = vec4(math.cos(a0) * 0.5, 0, math.sin(a0) * 0.5)
+    v1 = vec4(math.cos(a1) * 0.5 * ratio, 0, math.sin(a1) * 0.5 * ratio)
+    v2 = vec4(math.cos(a2) * 0.5, 0, math.sin(a2) * 0.5)
+
+    vs = []
+    ts = []
+    vs.extend([
+      vec4(v0.x, -0.5, v0.z),   # mantle
+      vec4(v0.x, 0.5, v0.z),
+      vec4(v1.x, -0.5, v1.z),
+      vec4(v1.x, 0.5, v1.z),
+      vec4(v1.x, -0.5, v1.z),
+      vec4(v1.x, 0.5, v1.z),
+      vec4(v2.x, -0.5, v2.z),
+      vec4(v2.x, 0.5, v2.z),
+      vec4(0, -0.5, 0),         # bottom face
+      vec4(v0.x, -0.5, v0.z),
+      vec4(v1.x, -0.5, v1.z),
+      vec4(v2.x, -0.5, v2.z),
+      vec4(0, 0.5, 0),          # top face
+      vec4(v0.x, 0.5, v0.z),
+      vec4(v1.x, 0.5, v1.z),
+      vec4(v2.x, 0.5, v2.z),
+    ])
+    ts.extend([
+      [0, 1, 2],    # mantle
+      [1, 3, 2],
+      [4, 5, 6],
+      [5, 7, 6],
+      [8, 9, 10],   # bottom face
+      [8, 10, 11],
+      [12, 15, 14], # top face
+      [12, 14, 13],
+    ])
+
+    i0 = len(verts)
+    ts = [[i+i0 for i in t] for t in ts]
+    
+    verts.extend(vs)
+    tris.extend(ts)
+  
+  phenos = [copyPhenotype(pheno) for v in verts]
+
+  return mesh(verts, phenos, tris)

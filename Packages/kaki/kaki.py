@@ -72,6 +72,7 @@ from kakishapes3d import (
   createSphere,
   createCylinder,
   createTorus,
+  createStar,
 )
 
 from kakiutils import (
