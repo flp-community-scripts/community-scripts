@@ -1,15 +1,15 @@
 """flp
-Title: {}
+Title: Draw polygon
 Author: BinaryBorn
-Category: {}
+Category: Packages/kaki
 Version: 1.0
 License: ISC
 
 Description: 
-{}
+Draws a pointy polygon.
 
 Changelog:
-v1.0 (2024-04-11)
+v1.0 (2024-05-06)
   - initial version
 """
 

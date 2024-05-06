@@ -1,15 +1,15 @@
 """flp
-Title: {}
+Title: Draw SVG path
 Author: BinaryBorn
-Category: {}
+Category: Packages/kaki
 Version: 1.0
 License: ISC
 
 Description: 
-{}
+Draws a figure from SVG path data.
 
 Changelog:
-v1.0 (2024-02-19)
+v1.0 (2024-05-06)
   - initial version
 """
 
@@ -21,7 +21,7 @@ cachedFigure = None
 cachedPath = None
 
 def createDialog():
-  form = flp.ScriptDialog("Draw path","")
+  form = flp.ScriptDialog("Draw SVG path","")
 
   mat = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
   styleMat = kaki.serializePhenotypeToStyle(mat)

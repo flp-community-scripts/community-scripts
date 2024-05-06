@@ -1,15 +1,15 @@
 """flp
-Title: {}
+Title: Draw 3D shape
 Author: BinaryBorn
-Category: {}
+Category: Packages/kaki
 Version: 1.0
 License: ISC
 
 Description: 
-{}
+Draws a basic 3D shape.
 
 Changelog:
-v1.0 (2024-02-19)
+v1.0 (2024-05-06)
   - initial version
 """
 
@@ -23,7 +23,7 @@ kaki.config.cull_backface = False
 shapes = ['Cube', 'Prism', 'Pyramid', 'Pyramid frustum', 'Sphere', 'Cylinder', 'Cone', 'Cone frustum', 'Torus', 'Star']
 
 def createDialog():
-  form = flp.ScriptDialog("Draw 3D primitive","")
+  form = flp.ScriptDialog("Draw 3D shape","")
 
   mat = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
   styleMat = kaki.serializePhenotypeToStyle(mat)

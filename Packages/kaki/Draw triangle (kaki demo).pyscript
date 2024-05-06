@@ -1,26 +1,24 @@
 """flp
-Title: {}
+Title: Draw triangle (kaki demo)
 Author: BinaryBorn
-Category: {}
+Category: Packages/kaki
 Version: 1.0
 License: ISC
 
 Description: 
-{}
+Demonstrates how a triangle is drawn in kaki and how the z-buffer and fog interplay.
 
 Changelog:
-v1.0 (2024-02-19)
+v1.0 (2024-05-06)
   - initial version
 """
 
 import flpianoroll as flp
 import kaki
-import math
 
 def createDialog():
-  form = flp.ScriptDialog("Draw triangle","-"
-  + "\r\n--"
-  + "\r\n\r\nv1.0 (2024-mm-dd), BinaryBorn")
+  form = flp.ScriptDialog("Draw triangle (kaki demo)","Demonstrates how a triangle is drawn in kaki and how the z-buffer and fog interplay."
+  + "\r\n\r\nv1.0 (2024-05-06), BinaryBorn")
   form.AddInputKnobInt('Point 1 x', 0, 0, 128)
   form.AddInputKnobInt('Point 1 y', 48, 0, 131)
   form.AddInputKnobInt('Point 1 z', 0, -128, 128)
@@ -57,26 +55,34 @@ def apply(form: flp.ScriptDialog):
 
   optOversample = form.GetInputValue('Oversample')
 
+  # create a vector at each coordinate
   p1 = kaki.vec4(x1, y1, z1)
   p2 = kaki.vec4(x2, y2, z2)
   p3 = kaki.vec4(x3, y3, z3)
 
+  # put them together to a list of vertices
   verts = [p1, p2, p3]
-  pvs = ([
+
+  # create a list of phenotypes (one per vertex)
+  phenos = ([
     kaki.parsePhenotypeFromStyle(style1),
     kaki.parsePhenotypeFromStyle(style2),
     kaki.parsePhenotypeFromStyle(style3),
   ])
 
-  bbox = kaki.getBoundingBox(verts)
+  # create a buffer with z-buffer data big enough to hold the triangle
+  bbox = kaki.getBoundingBox(verts, True)
 
   buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample, True)
   buffer.setOrigin(bbox.x0, bbox.y0)
 
-  kaki.drawTriangle(buffer, verts, pvs)
+  # render the triangle (from list of vertices and phenotypes) onto the buffer
+  kaki.drawTriangle(buffer, verts, phenos)
 
+  # apply fog based on z-buffer data
   buffer.fog(fog0, fog1)
 
+  # render the buffer to piano roll notes
   newNotes = kaki.render(buffer, bbox.x0, bbox.y0)
 
   for n in newNotes:
