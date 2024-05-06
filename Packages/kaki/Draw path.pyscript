@@ -61,6 +61,17 @@ def apply(form: flp.ScriptDialog):
   if path != cachedPath:
     cachedPath = path
     cachedFigure = kaki.parseFigureFromSvgPath(path)
+    bbox = kaki.getFigureBoundingBox(cachedFigure)
+    cx = (bbox.x0 + bbox.x1) / 2
+    cy = (bbox.y0 + bbox.y1) / 2
+    w = bbox.x1 - bbox.x0
+    h = bbox.y1 - bbox.y0
+    tr = kaki.identity4()
+    tr = kaki.translate(tr, -cx, -cy)
+    if (h > 128):
+      s = 128 / h
+      tr = kaki.scale(tr, s, s)
+    kaki.transformFigure(cachedFigure, tr)
 
   figure = kaki.cloneFigure(cachedFigure)
 
