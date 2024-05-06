@@ -30,7 +30,7 @@ def createDialog():
   form.AddInputText('Fill style', styleMat)
   form.AddInputCombo('Fill rule', ['even-odd', 'nonzero'], 0)
 
-  form.AddInputSurface('Draw path')
+  form.AddInputSurface('Draw SVG path')
 
   return form
 
