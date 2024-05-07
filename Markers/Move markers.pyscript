@@ -11,6 +11,9 @@ Moves selected markers.
 Changelog:
 v1.0 (2024-05-07)
   - initial version
+
+v1.1
+  - fixed scale markers not preserved properly
 """
 
 import flpianoroll as flp
@@ -22,6 +25,8 @@ def cloneMarker(marker: flp.Marker) -> flp.Marker:
   clone.mode = marker.mode
   clone.tsnum = marker.tsnum
   clone.tsden = marker.tsden
+  clone.scale_root = marker.scale_root
+  clone.scale_helper = marker.scale_helper
   return clone
 
 # get existing markers once
