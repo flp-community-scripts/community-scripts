@@ -287,3 +287,10 @@ class Marker():
     "when marker is a time signature"
     tsden: int
     "when marker is a time signature"
+    scale_root: int
+    "scale root note (C = 0)"
+    scale_hepler: str
+    """String in the form of `0,1,0,1,0,0,1,0,1,0,1,0`
+    with 0 indicating notes *in* the scale and 1 indicating notes
+    *not* in scale. This helper is always C-aligned.
+    """
