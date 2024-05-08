@@ -12,8 +12,9 @@ Changelog:
 v1.0 (2024-05-07)
   - initial version
 
-v1.1
+v1.1 (2024-05-08)
   - fixed scale markers not preserved properly
+  - fixed project time signature not regarded
 """
 
 import flpianoroll as flp
@@ -34,7 +35,7 @@ markers = [flp.score.getMarker(i) for i in range(flp.score.markerCount)]
 
 def createDialog():
   form = flp.ScriptDialog("Move markers","Move selected markers."
-  + "\r\n\r\n2024-05-07, BinaryBorn")
+  + "\r\n\r\nv1.1 (2024-05-08), BinaryBorn")
 
   ppq = flp.score.PPQ
   pp16th = int(ppq / 4)
@@ -54,8 +55,10 @@ def apply(form: flp.ScriptDialog):
 
   ppq = flp.score.PPQ
   pp16th = int(ppq / 4)
+  ppbeat = int(pp16th * flp.score.tsden)
+  ppbar = int(ppbeat * flp.score.tsnum)
 
-  dt = bars * 4 * ppq + beats * ppq + steps * pp16th + ticks
+  dt = bars * ppbar + beats * ppbeat + steps * pp16th + ticks
 
   # clone initial markers, otherwise movements will add up somehow...
   newMarkers = [cloneMarker(m) for m in markers]
