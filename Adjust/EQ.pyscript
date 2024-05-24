@@ -1,0 +1,61 @@
+"""flp
+Title: EQ
+Author: BinaryBorn
+Category: Adjust
+Version: 1.0
+License: ISC
+
+Description: 
+EQs
+
+Changelog:
+v1.0 (2024-05-24)
+  - initial version
+"""
+
+import flpianoroll as flp
+import math
+
+def widthToNotes(val: float) -> float:
+  """Maps the width knob value to note (number) value"""
+  return pow(12, 2 * val)
+
+def deltaToAmount(delta: float) -> float:
+  """Maps delta value to band EQ amount"""
+  if delta <= -1: return 0
+  if delta >= 1: return 0
+  return 0.5 + 0.5 * math.cos(delta * math.pi)
+
+def createDialog():
+  form = flp.ScriptDialog("EQ","")
+  form.AddInputSurface('EQ')
+  return form
+
+def apply(form: flp.ScriptDialog):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  # gain from -1 to +1
+  gains = [float(form.GetInputValue(f'Gain {i}')) * 2 - 1 for i in range(12)]
+  # frequency from 0 (C0) to 132 (C11)
+  freqs = [round(form.GetInputValue(f'Freq {i}') * 132) for i in range(12)]
+  # width in delta notes 
+  widths = [widthToNotes(form.GetInputValue(f'Width {i}')) for i in range(12)]
+
+  gainToLen = float(form.GetInputValue('Gain to length') * 2 - 1)
+  gainToRel = float(form.GetInputValue('Gain to release') * 2 - 1)
+
+  for n in notes:
+    gain = 0
+    # collect all bands' influences
+    for i in range(12):
+      dn = n.number - freqs[i]
+      delta = dn / widths[i]
+      gain += gains[i] * deltaToAmount(delta)
+    # map gain value to actual gain (multiplier)
+    gain = max(0, gain + 1)
+    n.velocity = min(1, n.velocity * gain)
+    if gainToLen != 0:
+      n.length = round(max(1, n.length * (1 + (gain - 1) * gainToLen)))
+    if gainToRel != 0:
+      n.release = max(0, min(1, n.release * (1 + (gain - 1) * gainToRel)))
