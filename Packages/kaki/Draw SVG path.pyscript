@@ -62,6 +62,7 @@ def apply(form: flp.ScriptDialog):
     cachedPath = path
     cachedFigure = kaki.parseFigureFromSvgPath(path)
     bbox = kaki.getFigureBoundingBox(cachedFigure)
+    if bbox is None: return
     cx = (bbox.x0 + bbox.x1) / 2
     cy = (bbox.y0 + bbox.y1) / 2
     w = bbox.x1 - bbox.x0
