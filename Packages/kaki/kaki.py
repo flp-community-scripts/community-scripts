@@ -32,6 +32,7 @@ from kakigeometryutils import (
   transformMesh,
   clonePoints,
   cloneFigure,
+  cloneMesh,
   perspectiveDividePoints,
   perspectiveDivideFigure,
   perspectiveDivideMesh,

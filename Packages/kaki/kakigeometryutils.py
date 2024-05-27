@@ -3,7 +3,7 @@ Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
 """
 
 from kakiprimitives import vec4, mat4, box, figure, mesh
-from kakiutils import getBoundingBox, transform, vecnorm, dotprod, crossprod, vecadd
+from kakiutils import getBoundingBox, copyPhenotype, transform, vecnorm, dotprod, crossprod, vecadd
 
 def getFigureBoundingBox(figure: figure, round: bool = False) -> box:
   """Returns the bounding box of a whole figure.
@@ -101,6 +101,15 @@ def cloneFigure(figure: figure) -> figure:
   for pts in figure:
     clone.append(clonePoints(pts))
   return clone
+
+def cloneMesh(msh: mesh) -> mesh:
+  """Returns a clone of given mesh.
+  """
+  clonedVerts = clonePoints(msh.verts)
+  clonedTris = [tri.copy() for tri in msh.tris]
+  clonedPhenos = [copyPhenotype(p) for p in msh.phenos]
+
+  return mesh(clonedVerts, clonedPhenos, clonedTris)
 
 def perspectiveDividePoints(points: list[vec4]) -> None:
   """Applies the perspective projection to a list of points.
