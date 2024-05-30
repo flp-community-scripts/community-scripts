@@ -1,0 +1,58 @@
+"""flp
+Title: Paste note properties
+Author: BinaryBorn
+Category: Adjust
+Version: 1.0
+License: ISC
+
+Description: 
+Reads note properties from a temporary file and applies them to existing notes.
+
+Changelog:
+v1.0 (2024-05-30)
+  - initial version
+"""
+
+import flpianoroll as flp
+import copynoteutils as utils
+
+def getReferenceNoteAt(time: int, refs: list[flp.Note]) -> flp.Note:
+  ref = None
+  for n in refs:
+    if time >= n.time:
+      ref = n
+  return ref
+
+try:
+  file = open('.notes', 'r')
+  serialized = file.read()
+  file.close()
+
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  # if there's a timeline selection, only consider notes in that selection
+  # and use selection start as time offset
+  selection = flp.score.getTimelineSelection()
+  offset = 0
+  if selection[1] != -1:
+    t0 = selection[0]
+    t1 = selection[1]
+    notes = filter(lambda m: m.time >= t0 and m.time < t1, notes)
+    offset = t0
+
+  refNotes = utils.deserialize(serialized, offset)
+
+  # apply reference properties to existing notes
+  for note in notes:
+    ref = getReferenceNoteAt(note.time, refNotes)
+    if ref:
+      # only apply properties that don't affect tuning and timing
+      note.pan = ref.pan
+      note.velocity = ref.velocity
+      note.release = ref.release
+      note.color = ref.color
+      note.fcut = ref.fcut
+      note.fres = ref.fres
+
+except Exception:
+  pass
