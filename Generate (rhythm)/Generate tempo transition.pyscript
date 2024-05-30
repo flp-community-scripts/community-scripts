@@ -20,6 +20,11 @@ v1.2 (2023-09-21)
 
 v1.3 (2024-03-15)
   - CHANGED note properties now consider current defaults
+
+v1.4 (2024-05-30)
+  - ADDED delta length tempo change mode
+  - CHANGED max frequency now depends on PPQ
+  - CHANGED timeline selection now offsets generated score
 """
 
 import flpianoroll as flp
@@ -43,17 +48,28 @@ def Tension(value: float, rate: float, knob=True):
   # f(x,R) = (2^(-10*R*x)-1)/(2^(-10*R)-1)
   return (pow(2, -10 * R * value) - 1) / (pow(2, -10 * R) - 1)
 
+# check for timeline selection
+selection = flp.score.getTimelineSelection()
 
 def createDialog():
   form = flp.ScriptDialog("Generate tempo transition","Start and end freq are in 'pulses per whole note'."
-  + "\r\nDuration is in 16th."
+  + "\r\nDuration is in beats."
   + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
-  + "\r\n\r\nv1.3 (2024-03-15), BinaryBorn")
-  form.AddInputKnobInt('Start freq', 4, 1, 64)
-  form.AddInputKnobInt('End freq', 8, 1, 64)
+  + "\r\n\r\nv1.4 (2024-05-30), BinaryBorn")
+
+  # fmax = flp.score.PPQ * 4 # actual technical maximum
+  fmax = flp.score.PPQ # feels like the better UX choice
+
+  duration = 16
+  if selection[1] != -1:
+    duration = round((selection[1] - selection[0]) / flp.score.PPQ)
+
+  form.AddInputKnobInt('Start freq', 4, 1, fmax)
+  form.AddInputKnobInt('End freq', 8, 1, fmax)
   form.AddInputKnobInt('Pulses before', 0, 0, 16)
   form.AddInputKnobInt('Pulses after', 0, 0, 16)
-  form.AddInputKnobInt('Duration', 16, 1, 32 * 16)
+  form.AddInputKnobInt('Duration', duration, 1, 32 * 16)
+  form.AddInputCombo('Tempo change', ['delta frequency', 'delta length'], 0)
   form.AddInputCombo('Phase correction', ['none', 'stretch', 'squash'], 0)
   form.AddInputKnob('Ph. corr. tension', 0, -1, 1)
   form.AddInputKnobInt('Note', 60, 0, 131)
@@ -64,29 +80,62 @@ def apply(form: flp.ScriptDialog):
   notes: list[flp.Note] = []
   ppq = flp.score.PPQ
 
+  offset = 0
+  if selection[1] != -1:
+    offset = selection[0]
+
   # convert freq (1 per 4 beats) to rate (1 per tick)
   r0 = int(form.GetInputValue('Start freq')) / ppq / 4
   r1 = int(form.GetInputValue('End freq')) / ppq / 4
-  dr = r1 - r0
   # duration in ticks
   dt = int(form.GetInputValue('Duration')) * ppq
-  # rate of rate change
-  R = dr / dt
 
   p0 = int(form.GetInputValue('Pulses before'))
   p1 = int(form.GetInputValue('Pulses after'))
+
+  mode = int(form.GetInputValue('Tempo change'))
 
   corr = int(form.GetInputValue('Phase correction'))
   corrTension = float(form.GetInputValue('Ph. corr. Tension'))
 
   noteNr = int(form.GetInputValue('Note'))
 
-  def tfromp(p: float):
+  # delta rate in transition
+  dr = r1 - r0
+  # rate of rate change
+  R = dr / dt
+  # pulse lengths and delta pulse length
+  L0 = 1 / r0
+  L1 = 1 / r1
+  RL = (L1 - L0) / dt
+
+  def pfromtCA(t: float) -> float:
+    return r0 * t + 1/2 * R * t ** 2
+
+  def tfrompCA(p: float) -> float:
     if R == 0:
       return p / r0
     else:
       D = max(r0 ** 2 + 2 * R * p, 0)
       return (math.sqrt(D) - r0) / R 
+
+  def pfromtCDT(t: float) -> float:
+    if RL == 0:
+      return r0 * t
+    else:
+      return math.log((RL * t) / L0 + 1) / RL
+
+  def tfrompCDT(p: float) -> float:
+    if RL == 0:
+      return p / r0
+    else:
+      return (math.exp(RL * p) - 1) / (RL / L0)
+
+  pfromt = pfromtCA
+  tfromp = tfrompCA
+  if mode == 1:
+    pfromt = pfromtCDT
+    tfromp = tfrompCDT
 
   # before transition
   for p in range(p0):
@@ -94,13 +143,13 @@ def apply(form: flp.ScriptDialog):
     t1 = round((p + 1) / r0)
     note = flp.score.getDefaultNoteProperties().clone()
     note.number = noteNr
-    note.time = t0
+    note.time = t0 + offset
     note.length = t1 - t0
     notes.append(note)
 
   # transition
   toff0 = round(p0 / r0)
-  dp = r0 * dt + 1/2 * R * dt ** 2
+  dp = pfromt(dt)
 
   # phase correction (and duration correction, if applicable)
   if corr == 0:
@@ -127,7 +176,7 @@ def apply(form: flp.ScriptDialog):
       t1 = round(t1 * (1 + sf1 * (s - 1)))
     note = flp.score.getDefaultNoteProperties().clone()
     note.number = noteNr
-    note.time = t0 + toff0
+    note.time = t0 + toff0 + offset
     note.length = t1 - t0
     notes.append(note)
 
@@ -138,7 +187,7 @@ def apply(form: flp.ScriptDialog):
     t1 = round((p + 1) / r1)
     note = flp.score.getDefaultNoteProperties().clone()
     note.number = noteNr
-    note.time = t0 + toff1
+    note.time = t0 + toff1 + offset
     note.length = t1 - t0
     notes.append(note)
 
