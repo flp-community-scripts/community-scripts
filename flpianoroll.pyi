@@ -56,6 +56,13 @@ class __score__():
     "current project time signature denominator, read only"
     markerCount : int
     "nr of markers, read only"
+    snap_root_note: int
+    "scale root note (C = 0)"
+    snap_scale_helper: str
+    """String in the form of `0,1,0,1,0,0,1,0,1,0,1,0`
+    with 0 indicating notes *in* the scale and 1 indicating notes
+    *not* in scale. This helper is always C-aligned.
+    """
 
     def clear(self, all:bool = False) -> None:
         """remove notes and markers.
