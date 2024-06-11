@@ -56,6 +56,13 @@ class __score__():
     "current project time signature denominator, read only"
     markerCount : int
     "nr of markers, read only"
+    snap_root_note: int
+    "scale root note (C = 0)"
+    snap_scale_helper: str
+    """String in the form of `0,1,0,1,0,0,1,0,1,0,1,0`
+    with 0 indicating notes *in* the scale and 1 indicating notes
+    *not* in scale. This helper is always C-aligned.
+    """
 
     def clear(self, all:bool = False) -> None:
         """remove notes and markers.
@@ -143,6 +150,14 @@ class __score__():
         """
         pass
 
+    def getDefaultNoteProperties(self) -> Note:
+        """returns a note with the currently active style
+
+        Returns:
+            Note: note with the draw tool's current properties
+        """
+        pass
+
 #-------------------------------------------------------------------#
 #---Script Dialog Class
 class ScriptDialog():
@@ -213,14 +228,22 @@ class ScriptDialog():
         """
         pass
 
-    def GetInputValue(self, name: str) -> Union[str, int]:
+    def AddInputSurface(self, name: str) -> None:
+        """Adds a control surface
+
+        Args:
+            name (str): Name of the control surface's preset file (without the `.fst` extension)
+        """
+        pass
+
+    def GetInputValue(self, name: str) -> Union[str, int, float]:
         """Retrieve the current value of the input with the specified name
 
         Args:
             name (str): name of control
 
         Returns:
-            Union[str, int]: current value of control
+            Union[str, int, float]: current value of control
         """
         pass
 

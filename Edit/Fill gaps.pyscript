@@ -1,25 +1,27 @@
-"""
-ISC License
+"""flp
+Title: Fill gaps
+Author: BinaryBorn
+Category: Edit
+Version: 1.1
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Fill gaps with default notes.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2024-01-16)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2024-03-15)
+  - ADDED typings
+  - CHANGED note properties now consider current defaults
 """
 
 import flpianoroll as flp
 
-"""
-Fill gaps
-by: BinaryBorn
-
-2024-01-16
-  - initial version
-"""
-
-# Utility function to get time range of selection / notes
-def getTimeRange(notes):
+def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
+  """Returns the time range spanning notes.
+  """
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -27,10 +29,11 @@ def getTimeRange(notes):
   # return start and end time
   return (first.time, last.time + last.length)
 
-# Returns the note following given time (as in nearest following).
-# If there are multiple notes equally close, it takes the longest one.
-# Expects notes to be sorted by start time.
-def getNoteFollowing(notes, time):
+def getNoteFollowing(notes: list[flp.Note], time: int) -> flp.Note | None:
+  """Returns the note following given time (as in nearest following).
+  If there are multiple notes equally close, it takes the longest one.
+  Expects notes to be sorted by start time.
+  """
   next = None
   for n in notes:
     # already at one after next
@@ -42,10 +45,10 @@ def getNoteFollowing(notes, time):
         next = n
   return next
 
-# Returns the note playing at given time.
-# If there are multiple notes playing, it takes the one ending the latest.
-# Expects notes to be sorted by start time.
-def getNoteAt(notes, time):
+def getNoteAt(notes: list[flp.Note], time: int) -> flp.Note | None:
+  """Returns the note playing at given time.
+  If there are multiple notes playing, it takes the one ending the latest.Expects notes to be sorted by start time.
+  """
   current = None
   for n in notes:
     # already after time
@@ -57,7 +60,7 @@ def getNoteAt(notes, time):
         current = n
   return current
 
-def applyNoForm():
+def apply():
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
   # order by start time
@@ -74,7 +77,7 @@ def applyNoForm():
   seldt = selt1 - selt0
 
   cursor = selt0
-  addNotes = []
+  addNotes: list[flp.Note] = []
   
   while True:
     # currently playing note
@@ -92,7 +95,7 @@ def applyNoForm():
 
     # gap from cursor to next note, fill
     if next.time > cursor:
-      note = flp.Note()
+      note = flp.score.getDefaultNoteProperties().clone()
       note.number = 60
       note.time = cursor
       note.length = next.time - cursor
@@ -103,7 +106,7 @@ def applyNoForm():
 
   # gap from cursor to selection end, fill
   if selt1 > cursor:
-    note = flp.Note()
+    note = flp.score.getDefaultNoteProperties().clone()
     note.number = 60
     note.time = cursor
     note.length = selt1 - cursor
@@ -117,5 +120,3 @@ def applyNoForm():
   # add filler notes
   for n in addNotes:
     flp.score.addNote(n)         
-
-applyNoForm()

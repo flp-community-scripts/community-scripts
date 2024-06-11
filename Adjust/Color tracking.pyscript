@@ -1,39 +1,26 @@
 """flp
-Title: Keyboard tracking
+Title: Color tracking
 Author: BinaryBorn
 Category: Adjust
 Version: 2.0
 License: ISC
 
 Description: 
-Change note properties based on their note number.
+Change note properties based on their color.
 
 Changelog:
-v1.0 (2023-07-14)
+v1.0 (2023-11-03)
   - initial version
 
-v1.1 (2023-07-17)
-  - added note.release
-
-v1.2 (2023-09-21)
-  - added ISC license text
-
-v1.3 (2023-11-02)
-  - added note length
-  - added note color
-
-v1.4 (2024-03-08)
-  - fixed typings for Python engine upgrade
-
-v2.0 (2024-04-09)
+v2.0 (2024-04-10)
   - changed interface to control surface
 """
 
 import flpianoroll as flp
 
 def createDialog():
-  form = flp.ScriptDialog("Keyboard tracking", "")
-  form.AddInputSurface('Keyboard tracking')
+  form = flp.ScriptDialog("Color tracking","")
+  form.AddInputSurface('Color tracking')
   return form
 
 def apply(form: flp.ScriptDialog):
@@ -55,15 +42,14 @@ def apply(form: flp.ScriptDialog):
   pitch = float(form.GetInputValue('Pitch') * 2 - 1) * 12
   setLength = int(form.GetInputValue('Set length') * 2)
   length = float(form.GetInputValue('Length') * 2 - 1) * 8
-  setColor = int(form.GetInputValue('Set color') * 2)
-  color = float(form.GetInputValue('Color') * 2 - 1)
 
-  center = int(form.GetInputValue('Center note') * 132)
+  center = int(form.GetInputValue('Center color') * 15)
 
   ppq = flp.score.PPQ
+  sensitivity = 2
 
   for note in notes:
-    amount = note.number - center
+    amount = (note.color - center) * sensitivity
     # for every property: add amount-scaled value,
     # reset to default first if mode is 'set'
     if setPan == 1: note.pan = 0.5
@@ -81,6 +67,4 @@ def apply(form: flp.ScriptDialog):
     # use 1/16 as default note length
     if setLength == 1: note.length = int(ppq / 4)
     if setLength: note.length = round(max(note.length + length * amount, 1))
-    if setColor == 1: note.color = 0
-    if setColor: note.color = int(min(max(note.color + color * amount, 0), 15))
 

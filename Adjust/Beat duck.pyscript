@@ -1,0 +1,104 @@
+"""flp
+Title: Beat duck
+Author: BinaryBorn
+Category: Adjust
+Version: 1.0
+License: ISC
+
+Description: 
+Apply a one-beat-long volume pattern to existing score.
+
+Changelog:
+v1.0 (2024-06-03)
+  - initial version
+"""
+
+import flpianoroll as flp
+import math
+
+def Tension(value: float, rate: float, knob=True):
+  """Applies the FL Studio Tension function to a value.
+
+  Args:
+    value (float): value to skew
+    rate (float): tension rate
+    knob (bool): if True, function behaves like the one behind knobs (e.g. scale levels), if False, it behaves like the one in Formula Controller
+  """
+  if rate == 0: return value
+  # rate mapping
+  R = rate
+  if not knob and rate > 0:
+    R = math.log2(rate + 1) / 10
+  elif not knob and rate < 0:
+    R = -math.log2(-rate + 1) / 10
+  # f(x,R) = (2^(-10*R*x)-1)/(2^(-10*R)-1)
+  return (pow(2, -10 * R * value) - 1) / (pow(2, -10 * R) - 1)
+
+def createDialog():
+  form = flp.ScriptDialog('Beat duck', '')
+  form.AddInputSurface('Beat duck')
+  
+  return form
+
+def apply(form: flp.ScriptDialog):
+  ppq = flp.score.PPQ
+  pp16th = int(ppq / 4)
+  twrap = 3 * pp16th
+
+  vels = [float(form.GetInputValue(f'vel {i}')) for i in range(4)]
+  interPattern = float(form.GetInputValue('Pattern interpolation') * 2)
+  interWrap = float(form.GetInputValue('Wrap interpolation') * 2)
+
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  # slopes for smooth interpolation
+  slopes = [(vels[(i + 1) % 4] - vels[(i + 3) % 4]) / 2 for i in range(4)]
+  # limit slopes so mid-points don't exceed (0,1)
+  for i in range(4):
+    ma = vels[i] + slopes[i] / 2
+    if ma > 1:
+      slopes[i] = (1 - vels[i]) * 2
+    elif ma < 0:
+      slopes[i] = (0 - vels[i]) * 2
+    mb = vels[i] - slopes[i] / 2
+    if mb < 0:
+      slopes[i] = (vels[i] - 0) * 2
+    elif mb > 1:
+      slopes[i] = (vels[i] - 1) * 2
+
+  def interpolated(t: int, mode: float) -> float:
+    tc = math.floor(t / pp16th)
+    tf = (t / pp16th) % 1
+
+    # steppy
+    if mode == 0:
+      return vels[tc]
+    # tension up to linear
+    elif mode < 1:
+      v0 = vels[tc]
+      v1 = vels[(tc + 1) % 4]
+      dv = v1 - v0
+      return v0 + dv * Tension(tf, mode - 1)
+    # smooth (af), mix linear interpolation and polynome
+    else:
+      v0 = vels[tc]
+      v1 = vels[(tc + 1) % 4]
+      flin = v0 + (v1 - v0) * tf
+      if mode == 1: return flin
+      s0 = slopes[tc]
+      s1 = slopes[(tc + 1) % 4]
+      # one "do the math" later
+      a = s1 + s0 - 2*v1 + 2*v0
+      b = 3*v1 - 3*v0 - s1 - 2*s0
+      c = s0
+      d = v0
+      # floating point precision could make this polynome go out of (1,0) - we don't want that
+      fpoly = min(1, max(0, a*tf*tf*tf + b*tf*tf + c*tf + d))
+      mix = mode - 1
+      return flin * (1 - mix) + fpoly * mix
+
+  for note in notes:
+    t = note.time % ppq
+    mode = interPattern if t < twrap else interWrap
+    amt = interpolated(t, mode)
+    note.velocity *= amt

@@ -2,7 +2,7 @@
 Title: Copy markers
 Author: BinaryBorn
 Category: Markers
-Version: 1.0
+Version: 2.0
 License: ISC
 
 Description: 
@@ -11,6 +11,9 @@ Outputs a serialized form off time markers in the PR which can be pasted using t
 Changelog:
 2024-02-12
   - initial version
+
+2.0 (2024-05-06)
+  - markers now written to temp file
 """
 
 import flpianoroll as flp
@@ -29,5 +32,7 @@ if selection[1] != -1:
   offset = t0
 
 serialized = utils.serialize(markers, offset)
-  
-flp.Utils.ShowMessage(serialized)
+
+file = open('.markers', 'w')
+file.write(serialized)
+file.close()
