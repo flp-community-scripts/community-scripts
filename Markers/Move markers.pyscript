@@ -1,0 +1,79 @@
+"""flp
+Title: Move markers
+Author: BinaryBorn
+Category: Markers
+Version: 1.0
+License: ISC
+
+Description: 
+Moves selected markers.
+
+Changelog:
+v1.0 (2024-05-07)
+  - initial version
+
+v1.1 (2024-05-08)
+  - fixed scale markers not preserved properly
+  - fixed project time signature not regarded
+"""
+
+import flpianoroll as flp
+
+def cloneMarker(marker: flp.Marker) -> flp.Marker:
+  clone = flp.Marker()
+  clone.time = marker.time
+  clone.name = marker.name
+  clone.mode = marker.mode
+  clone.tsnum = marker.tsnum
+  clone.tsden = marker.tsden
+  clone.scale_root = marker.scale_root
+  clone.scale_helper = marker.scale_helper
+  return clone
+
+# get existing markers once
+markers = [flp.score.getMarker(i) for i in range(flp.score.markerCount)]
+
+def createDialog():
+  form = flp.ScriptDialog("Move markers","Move selected markers."
+  + "\r\n\r\nv1.1 (2024-05-08), BinaryBorn")
+
+  ppq = flp.score.PPQ
+  pp16th = int(ppq / 4)
+
+  form.AddInputKnobInt('Coarse (bars)', 0, -16, 16)
+  form.AddInputKnobInt('Coarse (beats)', 0, -16, 16)
+  form.AddInputKnobInt('Fine (steps)', 0, -4, 4)
+  form.AddInputKnobInt('Fine (ticks)', 0, -pp16th, pp16th)
+
+  return form
+
+def apply(form: flp.ScriptDialog):
+  bars = int(form.GetInputValue('Coarse (bars)'))
+  beats = int(form.GetInputValue('Coarse (beats)'))
+  steps = int(form.GetInputValue('Fine (steps)'))
+  ticks = int(form.GetInputValue('Fine (ticks)'))
+
+  ppq = flp.score.PPQ
+  pp16th = int(ppq / 4)
+  ppbeat = int(pp16th * flp.score.tsden)
+  ppbar = int(ppbeat * flp.score.tsnum)
+
+  dt = bars * ppbar + beats * ppbeat + steps * pp16th + ticks
+
+  # clone initial markers, otherwise movements will add up somehow...
+  newMarkers = [cloneMarker(m) for m in markers]
+
+  # remove all markers (only removing selected markers doesnt' work currently, so force clear all markers for future compatibility)
+  flp.score.clearMarkers(True)
+
+  selection = flp.score.getTimelineSelection()
+  t0 = selection[0]
+  t1 = selection[1]
+
+  # restore all markers at their target time
+  for marker in newMarkers:
+    if t1 == -1 or (marker.time >= t0 and marker.time < t1):
+      marker.time += dt
+    if marker.time >= 0:
+      flp.score.addMarker(marker)
+

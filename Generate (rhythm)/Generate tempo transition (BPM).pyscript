@@ -1,42 +1,16 @@
 """flp
-Title: Generate tempo transition
+Title: Generate tempo transition (BPM)
 Author: BinaryBorn
 Category: Generate (rhythm)
-Version: 1.6
+Version: 1.0
 License: ISC
 
 Description: 
-Generates a transition from one rate to another.
+Generates a transition from one tempo to another.
 
 Changelog:
-v1.0 (2023-07-11)
+v1.0 (2024-06-10)
   - initial version
-
-v1.1 (2023-07-17)
-  - replaced tension function
-
-v1.2 (2023-09-21)
-  - added ISC license text
-
-v1.3 (2024-03-15)
-  - CHANGED note properties now consider current defaults
-
-v1.4 (2024-05-30)
-  - ADDED delta length tempo change mode
-  - CHANGED max frequency now depends on PPQ
-  - CHANGED timeline selection now offsets generated score
-
-v1.5 (2024-05-31)
-  - ADDED sweep tension
-  - CHANGED mode wording to sweep
-  - CHANGED calculation is now discrete instead of algebraically correct
-  - ADDED zero length notes option
-
-v1.6 (2024-06-10)
-  - CHANGED calculation is now done by TempoTransition utility class
-  - ADDED markers option
-  - CHANGED last pulse not included any more
-  - FIXED division by zero error
 """
 
 import flpianoroll as flp
@@ -46,7 +20,7 @@ from tempotransition import TempoTransition
 selection = flp.score.getTimelineSelection()
 
 def createDialog():
-  form = flp.ScriptDialog("Generate tempo transition","Start and end freq are in 'pulses per whole note'."
+  form = flp.ScriptDialog("Generate tempo transition","Match project BPM to current BPM to get expected results."
   + "\r\nDuration is in beats."
   + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
   + "\r\n\r\nv1.6 (2024-06-10), BinaryBorn")
@@ -58,11 +32,12 @@ def createDialog():
   if selection[1] != -1:
     duration = round((selection[1] - selection[0]) / flp.score.PPQ)
 
-  form.AddInputKnobInt('Start freq', 4, 1, fmax)
-  form.AddInputKnobInt('End freq', 8, 1, fmax)
+  form.AddInputKnob('Start BPM', 120, 10, 522)
+  form.AddInputKnob('End BPM', 240, 10, 522)
   form.AddInputKnobInt('Pulses before', 0, 0, 16)
   form.AddInputKnobInt('Pulses after', 0, 0, 16)
   form.AddInputKnobInt('Duration', duration, 1, 32 * 16)
+  form.AddInputKnob('Project BPM', 120, 10, 522)
   form.AddInputCombo('Sweep', ['pulse frequency', 'pulse length'], 0)
   form.AddInputKnob('Tension', 0, -1, 1)
   form.AddInputKnobInt('Note', 60, 0, 131)
@@ -80,9 +55,11 @@ def apply(form: flp.ScriptDialog):
   if selection[1] != -1:
     offset = selection[0]
 
+  bpm = float(form.GetInputValue('Project BPM'))
+
   # convert freq (1 per 4 beats) to pulse length
-  l0 = 4 * ppq / int(form.GetInputValue('Start freq'))
-  l1 = 4 * ppq / int(form.GetInputValue('End freq'))
+  l0 = ppq / (float(form.GetInputValue('Start BPM')) / bpm)
+  l1 = ppq / (float(form.GetInputValue('End BPM')) / bpm)
   # duration in ticks
   dt = int(form.GetInputValue('Duration')) * ppq
 

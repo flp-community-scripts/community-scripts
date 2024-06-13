@@ -1,0 +1,35 @@
+"""flp
+Title: Copy note properties
+Author: BinaryBorn
+Category: Adjust
+Version: 1.0
+License: ISC
+
+Description: 
+Writes note properties to a temporary file so they can be applied to other notes by pasting.
+
+Changelog:
+v1.0 (2024-05-30)
+  - initial version
+"""
+
+import flpianoroll as flp
+import copynoteutils as utils
+
+notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+# if there's a timeline selection, only copy notes in that selection
+# and use selection start as time offset
+selection = flp.score.getTimelineSelection()
+offset = 0
+if selection[1] != -1:
+  t0 = selection[0]
+  t1 = selection[1]
+  notes = filter(lambda m: m.time >= t0 and m.time < t1, notes)
+  offset = t0
+
+serialized = utils.serialize(notes, offset)
+
+file = open('.notes', 'w')
+file.write(serialized)
+file.close()

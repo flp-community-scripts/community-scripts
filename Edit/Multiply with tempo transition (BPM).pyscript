@@ -1,41 +1,16 @@
 """flp
-Title: Multiply with tempo transition
+Title: Multiply with tempo transition (BPM)
 Author: BinaryBorn
 Category: Edit
-Version: 1.6
+Version: 1.0
 License: ISC
 
 Description: 
-Repeats notes with a tempo transition from one rate to another.
+Repeats notes with a tempo transition from one tempo to another.
 
 Changelog:
-v1.0 (2023-07-11)
+v1.0 (2024-06-10)
   - initial version
-
-v1.1 (2023-07-17)
-  - replaced tension function
-  - added note.release
-
-v1.2 (2023-10-16)
-  - added ISC license text
-
-v1.3 (2023-10-20)
-  - added getTimelineSelection()
-  - replaced cloning function
-  - fixed behavior when notes with different length are selected
-
-v1.4 (2024-03-08)
-  - FIXED typings for Python engine upgrade
-
-v1.5 (2024-06-06)
-  - ADDED delta length sweep mode
-  - ADDED sweep tension
-  - CHANGED calculation is now discrete instead of algebraically correct
-  - ADDED marker option
-
-v1.6 (2024-06-10)
-  - CHANGED calculation is now done by TempoTransition utility class
-  - FIXED division by zero error
 """
 
 import flpianoroll as flp
@@ -56,15 +31,16 @@ def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
 selection = flp.score.getTimelineSelection()
 
 def createDialog():
-  form = flp.ScriptDialog("Multiply with tempo transition","Start and end rate multiply the sequences's tempo."
+  form = flp.ScriptDialog("Multiply with tempo transition (BPM)","Match project BPM to current BPM to get expected results."
   + "\r\nDuration is in beats."
   + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly, the transition will then include a whole number multiple of the sequence. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
-  + "\r\n\r\nv1.6 (2024-06-10), BinaryBorn")
-  form.AddInputKnob('Start rate', 1, 1/16, 16)
-  form.AddInputKnob('End rate', 2, 1/16, 16)
+  + "\r\n\r\nv1.0 (2024-06-10), BinaryBorn")
+  form.AddInputKnob('Start BPM', 120, 10, 522)
+  form.AddInputKnob('End BPM', 240, 10, 522)
   form.AddInputKnobInt('Copies before', 0, 0, 16)
   form.AddInputKnobInt('Copies after', 0, 0, 16)
   form.AddInputKnobInt('Duration', 8, 1, 32 * 16)
+  form.AddInputKnob('Project BPM', 120, 10, 522)
   form.AddInputCombo('Sweep', ['note frequency', 'note length'], 0)
   form.AddInputKnob('Tension', 0, -1, 1)
   form.AddInputCombo('Phase correction', ['none', 'stretch', 'squash'], 0)
@@ -95,9 +71,11 @@ def apply(form: flp.ScriptDialog):
   # notes per copy
   npc = notesCnt
 
-  # convert rate to pulse length (take selection length)
-  l0 = seldt / float(form.GetInputValue('Start rate'))
-  l1 = seldt / float(form.GetInputValue('End rate'))
+  bpm = float(form.GetInputValue('Project BPM'))
+
+  # convert to pulse length (take selection length)
+  l0 = seldt / (float(form.GetInputValue('Start BPM')) / bpm)
+  l1 = seldt / (float(form.GetInputValue('End BPM')) / bpm)
   # duration in ticks
   dt = int(form.GetInputValue('Duration')) * ppq
 

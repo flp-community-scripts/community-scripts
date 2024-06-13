@@ -1,27 +1,25 @@
-"""
-ISC License
+"""flp
+Title: Select dissonant notes
+Author: D3Mens (idea), BinaryBorn (code)
+Category: Select
+Version: 1.1
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Selects notes that are not in scale.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2024-02-05)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2024-06-05)
+  - ADDED snap scale as fallback
 """
 
 import flpianoroll as flp
-import math
 import _random
 
 random = _random.Random()
-
-"""
-Select dissonant notes
-idea: D3Mens
-code: BinaryBorn
-
-2024-02-05
-  - initial version
-"""
 
 def getScales():
   """Returns a list of scales in the piano roll.
@@ -60,6 +58,10 @@ def getScaleAt(time):
     'time': 0,
     'notes': [True, True, True, True, True, True, True, True, True, True, True, True]
   }
+  # use snap scale as fallback if possible
+  if flp.score.snap_scale_helper:
+    splat = flp.score.snap_scale_helper.split(',')
+    s['notes'] = [s == '0' for s in splat]
 
   # find latest scale before time
   for scale in scales:

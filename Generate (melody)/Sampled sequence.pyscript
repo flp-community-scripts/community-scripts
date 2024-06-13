@@ -1,0 +1,116 @@
+"""flp
+Title: Sampled sequence
+Author: D3Mens (idea), BinaryBorn (code)
+Category: Generate (melody)
+Version: 1.0
+License: ISC
+
+Description: 
+Sample beats from existing score and create a new sequence from it.
+
+Changelog:
+v1.0 (2024-05-13)
+  - initial version
+"""
+
+import flpianoroll as flp
+import math
+import _random
+
+random = _random.Random()
+
+def splitSequenceText(sequenceText: str) -> list[str]:
+  sequenceText = sequenceText.replace(' ', ',')
+  return sequenceText.split(',')
+
+def getNotesFromTo(t0: int, t1: int, notes: list[flp.Note]) -> list[flp.Note]:
+  return list(filter(lambda n: n.time >= t0 and n.time < t1, notes))
+
+def createDialog():
+  form = flp.ScriptDialog("Sampled sequence","Sample beats from existing score and create a new sequence from it."
+  + "\r\nUse comma or space to separate numbers in sequence."
+  + "\r\nUse r in sampling to select a random sample source."
+  + "\r\n\r\nv1.0 (2024-05-13), D3Mens & BinaryBorn")
+  form.AddInputText('Sampling', '1 2 3 4')
+  form.AddInputText('Sequence', '1 1 1 1')
+  form.AddInputCombo('Unit', ['1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)'], 3)
+  form.AddInputCheckbox('Round robin color', True)
+  form.AddInputKnobInt('Seed', 0, 0, 999)
+
+  return form
+
+def apply(form: flp.ScriptDialog):
+  ppq = flp.score.PPQ
+
+  smpText = form.GetInputValue('Sampling')
+  seqText = form.GetInputValue('Sequence')
+  optUnit = form.GetInputValue('Unit')
+  optColor = form.GetInputValue('Round robin color')
+  seed = form.GetInputValue('Seed')
+  random.seed(seed)
+
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+  if len(notes) == 0: return
+
+  # unit option to ticks
+  unitTicks = int(ppq * 4 / [1, 2, 3, 4, 6, 8, 12, 16][optUnit])
+
+  # length of input in unit
+  latest = max(notes, key=lambda n: n.time)
+  inputLen = math.ceil(latest.time / unitTicks)
+
+  sampling = splitSequenceText(smpText)
+  samLen = len(sampling)
+  if samLen == 0:
+    sampling = [1]
+    samLen = 1
+
+  sequence = splitSequenceText(seqText)
+  seqLen = len(sequence)
+
+  if seqLen == 0: return
+
+  newNotes = []
+  curt = 0
+  st0 = 0
+  st1 = 0
+  for i in range(seqLen):
+    # corresponding sampling index
+    j = i % samLen
+    # sampling source (in unit)
+    # always generate a random value for source to prevent jumps on input
+    ssrnd = int(random.random() * 1024)
+    ss = 0
+    if sampling[j] == 'r':
+      ss = ssrnd
+    else:
+      try:
+        ss = float(sampling[j]) - 1
+      except Exception:
+        ss = 0
+        pass
+    # only sample from actual input (wrap after input end)
+    ss %= inputLen
+    # number of copies
+    ccnt = 0
+    try:
+      ccnt = float(sequence[i])
+    except Exception:
+      pass
+    # copy sampled notes
+    for k in range(math.ceil(ccnt)):
+      cdt = int(min(1, ccnt - k) * unitTicks)
+      st0 = int(ss * unitTicks)
+      st1 = st0 + cdt
+      ns = getNotesFromTo(st0, st1, notes)
+      for n in ns:
+        nn = n.clone()
+        nn.time += curt - st0
+        if optColor:
+          nn.color = i % 16
+        newNotes.append(nn)
+      curt += cdt
+
+  flp.score.clearNotes()
+  for n in newNotes:
+    flp.score.addNote(n)
