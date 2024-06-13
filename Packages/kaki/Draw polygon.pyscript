@@ -1,0 +1,144 @@
+"""flp
+Title: Draw polygon
+Author: BinaryBorn
+Category: Packages/kaki
+Version: 1.0
+License: ISC
+
+Description: 
+Draws a pointy polygon.
+
+Changelog:
+v1.0 (2024-05-06)
+  - initial version
+"""
+
+import flpianoroll as flp
+import kaki
+import math
+
+cachedFigure = None
+cachedPath = None
+
+def createDialog():
+  form = flp.ScriptDialog("Draw polygon","")
+
+  mat = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
+  styleMat = kaki.serializePhenotypeToStyle(mat)
+
+  form.AddInputKnobInt('Corners', 4, 3, 16)
+  form.AddInputKnob('Pointedness', 0, 0, 1)
+  # form.AddInputCombo('Sizing', ['outer radius', 'inner radius'], 0)
+  form.AddInputCombo('Align', ['corner', 'edge'], 1)
+  form.AddInputText('Fill style', styleMat)
+
+  form.AddInputSurface('Draw polygon')
+
+  return form
+
+def apply(form: flp.ScriptDialog):
+  global cachedPath, cachedFigure
+
+  cornerCnt = int(form.GetInputValue('Corners'))
+  pointy = float(form.GetInputValue('Pointedness'))
+  # sizing = int(form.GetInputValue('Sizing'))
+  align = int(form.GetInputValue('Align'))
+  style = form.GetInputValue('Fill style')
+
+  scaleUniform = form.GetInputValue('Scale uniform') * 8
+  scaleAspectRatio = 2 ** ((form.GetInputValue('Scale aspect ratio') - 0.5) * 4)
+  rotationX = (form.GetInputValue('Rotation X') - 0.5) * math.pi * 4
+  rotationY = (form.GetInputValue('Rotation Y') - 0.5) * math.pi * 4
+  rotationZ = (form.GetInputValue('Rotation Z') - 0.5) * math.pi * 4
+  positionX = form.GetInputValue('Position X') * 128
+  positionY = form.GetInputValue('Position Y') * 128
+  positionZ = (1 - form.GetInputValue('Position Z')) * -128
+  rotOrder = int(form.GetInputValue('Rotation order'))
+  perspective = form.GetInputValue('Perspective') * 0.04
+  optOversample = int(form.GetInputValue('Oversampling') * 2)
+  fogNear = (form.GetInputValue('Fog near') - 0.5) * 256
+  fogFar = (form.GetInputValue('Fog far') - 0.5) * 256
+
+  scaleX = scaleUniform * scaleAspectRatio
+  scaleY = scaleUniform / scaleAspectRatio
+
+  path = ''
+  isPointy = True if pointy > 0 else False
+
+  offa = math.pi / cornerCnt if align == 1 else 0
+  vertCnt = cornerCnt
+  radius = 12 # arbitrary sensible value
+  # radius factor for inscribed circle in polygon
+  fInner = math.cos(math.pi / cornerCnt)
+  # radius factor for star valleys (if pointy)
+  fValley = 1
+  if isPointy:
+    fValley = fInner * (1 - pointy)
+    vertCnt *= 2
+  # if sizing is set to inner, correct both outer and inner
+  # if sizing == 1:
+  #   radius /= fInner
+  #   fInner = 1
+  # build path
+  for i in range(vertCnt):
+    a = offa + i * 2 * math.pi / vertCnt
+    r = radius
+    if isPointy and i % 2 == 1: r *= fValley
+    x = round(math.cos(a) * r * 1000) / 1000
+    y = round(math.sin(a) * r * 1000) / 1000
+    if i == 0:
+      path += f'M{x} {y}'
+    else:
+      path += f' L{x} {y}'
+  path += ' Z'
+
+  # flp.Utils.log(path)
+
+  if path != cachedPath:
+    cachedPath = path
+    cachedFigure = kaki.parseFigureFromSvgPath(path)
+
+  figure = kaki.cloneFigure(cachedFigure)
+
+  # first: transform up to including rotation (because of lighting)
+  transform3d = kaki.identity4()
+  transform3d = kaki.scale(transform3d, scaleX, -scaleY)
+  if rotOrder == 0:
+    transform3d = kaki.rotateZ(transform3d, rotationZ)
+    transform3d = kaki.rotateY(transform3d, rotationY)
+    transform3d = kaki.rotateX(transform3d, rotationX)
+  else:
+    transform3d = kaki.rotateX(transform3d, rotationX)
+    transform3d = kaki.rotateY(transform3d, rotationY)
+    transform3d = kaki.rotateZ(transform3d, rotationZ)
+
+  # second: lighting (before perspective)
+  # -- no lighting in this script =) --
+
+  # third: move into shot, perspective projection, move shot
+  transform3d = kaki.translate(transform3d, 0, 0, positionZ)
+  transform3d = kaki.perspectiveTransform(transform3d, perspective)
+  transform3d = kaki.translate(transform3d, positionX, positionY, 0)
+  kaki.transformFigure(figure, transform3d)
+  kaki.perspectiveDivideFigure(figure)
+
+  fill = kaki.parsePhenotypeFromStyle(style)
+
+  bbox = kaki.getFigureBoundingBox(figure, True)
+  if bbox is None: return
+
+  # limit bbox to PR and some sensible value for max x
+  kaki.limitBox(bbox, kaki.box(0, 0, 1024, 131))
+
+  buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample, True)
+  buffer.setOrigin(bbox.x0, bbox.y0)
+
+  kaki.drawFigure(buffer, figure, fill)
+
+  buffer.fog(fogNear, fogFar)
+
+  newNotes = kaki.render(buffer, bbox.x0, bbox.y0)
+
+  for n in newNotes:
+    n.group = 1
+    flp.score.addNote(n)

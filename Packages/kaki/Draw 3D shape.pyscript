@@ -1,0 +1,152 @@
+"""flp
+Title: Draw 3D shape
+Author: BinaryBorn
+Category: Packages/kaki
+Version: 1.0
+License: ISC
+
+Description: 
+Draws a basic 3D shape.
+
+Changelog:
+v1.0 (2024-05-06)
+  - initial version
+"""
+
+import flpianoroll as flp
+import kaki
+import math
+
+# don't render back faces (pure optimisation)
+kaki.config.cull_backface = False
+
+shapes = ['Cube', 'Prism', 'Pyramid', 'Pyramid frustum', 'Sphere', 'Cylinder', 'Cone', 'Cone frustum', 'Torus', 'Star']
+
+def createDialog():
+  form = flp.ScriptDialog("Draw 3D shape","")
+
+  mat = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
+  styleMat = kaki.serializePhenotypeToStyle(mat)
+  light = kaki.copyPhenotype(mat)
+  light.vel = 1.0
+  light.col = (light.col + 8) % 16
+  styleLight = kaki.serializePhenotypeToStyle(light)
+
+  form.AddInputCombo('Shape', shapes, 0)
+  form.AddInputKnobInt('Sides', 3, 3, 24)
+  form.AddInputKnob('Ratio', 0.5, 0, 1)
+  form.AddInputText('Material', styleMat)
+  form.AddInputText('Light', styleLight)
+
+  form.AddInputSurface('Draw 3D shape')
+
+  return form
+
+def apply(form: flp.ScriptDialog):
+  optShape = form.GetInputValue('Shape')
+  sides = form.GetInputValue('Sides')
+  ratio = form.GetInputValue('Ratio')
+  styleMat = form.GetInputValue('Material')
+  styleLight = form.GetInputValue('Light')
+
+  scaleX = form.GetInputValue('Scale X') * 128
+  scaleY = form.GetInputValue('Scale Y') * 128
+  scaleZ = form.GetInputValue('Scale Z') * 128
+  rotationX = (form.GetInputValue('Rotation X') - 0.5) * math.pi * 4
+  rotationY = (form.GetInputValue('Rotation Y') - 0.5) * math.pi * 4
+  rotationZ = (form.GetInputValue('Rotation Z') - 0.5) * math.pi * 4
+  positionX = form.GetInputValue('Position X') * 128
+  positionY = form.GetInputValue('Position Y') * 128
+  positionZ = (1 - form.GetInputValue('Position Z')) * -128
+  rotOrder = int(form.GetInputValue('Rotation order'))
+  perspective = form.GetInputValue('Perspective') * 0.04
+  shininess = form.GetInputValue('Shininess')
+  optOversample = int(form.GetInputValue('Oversampling') * 2)
+  fogNear = (form.GetInputValue('Fog near') - 0.5) * 256
+  fogFar = (form.GetInputValue('Fog far') - 0.5) * 256
+  lightPositionX = (form.GetInputValue('Light position - X') - 0.5) * 2
+  lightPositionY = (form.GetInputValue('Light position - Y') - 0.5) * 2
+
+  lightAzimuth = 0
+  lightElevation = math.pi / 4
+  if lightPositionX != 0 or lightPositionY != 0:
+    # these feel right because the XY pad is square
+    lightAzimuth = math.atan2(-lightPositionY, -lightPositionX)
+    lightElevation = min(math.acos(abs(lightPositionX)), math.acos(abs(lightPositionY)))
+
+  shape = shapes[optShape]
+  phenoMat = kaki.parsePhenotypeFromStyle(styleMat)
+  phenoLight = kaki.parsePhenotypeFromStyle(styleLight)
+
+  mesh: kaki.mesh
+  if shape == 'Cube':
+    mesh = kaki.createCube(phenoMat)
+  elif shape == 'Prism':
+    mesh = kaki.createPrism(phenoMat, sides)
+  elif shape == 'Pyramid':
+    mesh = kaki.createPrism(phenoMat, sides, 0)
+  elif shape == 'Pyramid frustum':
+    mesh = kaki.createPrism(phenoMat, sides, ratio)
+  elif shape == 'Sphere':
+    mesh = kaki.createSphere(phenoMat, 24)
+  elif shape == 'Cylinder':
+    mesh = kaki.createCylinder(phenoMat, 24)
+  elif shape == 'Cone':
+    mesh = kaki.createCylinder(phenoMat, 24, 0)
+  elif shape == 'Cone frustum':
+    mesh = kaki.createCylinder(phenoMat, 24, ratio)
+  elif shape == 'Torus':
+    mesh = kaki.createTorus(phenoMat, 24, ratio)
+  elif shape == 'Star':
+    mesh = kaki.createStar(phenoMat, sides, ratio)
+  else:
+    mesh = kaki.mesh([], [], [])
+
+  # first: transform up to including rotation (because of lighting)
+  transform3d = kaki.identity4()
+  transform3d = kaki.scale(transform3d, scaleX, scaleY, scaleZ)
+  if rotOrder == 0:
+    transform3d = kaki.rotateZ(transform3d, rotationZ)
+    transform3d = kaki.rotateY(transform3d, rotationY)
+    transform3d = kaki.rotateX(transform3d, rotationX)
+  else:
+    transform3d = kaki.rotateX(transform3d, rotationX)
+    transform3d = kaki.rotateY(transform3d, rotationY)
+    transform3d = kaki.rotateZ(transform3d, rotationZ)
+  kaki.transformMesh(mesh, transform3d)
+
+  # second: lighting (before perspective)
+  kaki.updateNormalsMesh(mesh)
+  light = kaki.vec4(1, 0, 0)
+  trLight = kaki.identity4()
+  trLight = kaki.rotateY(trLight, lightElevation)
+  trLight = kaki.rotateZ(trLight, lightAzimuth)
+  light = kaki.transform(light, trLight)
+  kaki.lightMesh(mesh, light, phenoLight, shininess)
+
+  # third: move into shot, perspective projection, move shot
+  transform3d = kaki.identity4()
+  transform3d = kaki.translate(transform3d, 0, 0, positionZ)
+  transform3d = kaki.perspectiveTransform(transform3d, perspective)
+  transform3d = kaki.translate(transform3d, positionX, positionY, 0)
+  kaki.transformMesh(mesh, transform3d)
+  kaki.perspectiveDivideMesh(mesh)
+
+  bbox = kaki.getMeshBoundingBox(mesh, True)
+  if bbox is None: return
+
+  # limit bbox to PR and some sensible value for max x
+  kaki.limitBox(bbox, kaki.box(0, 0, 1024, 132))
+
+  buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample, True)
+  buffer.setOrigin(bbox.x0, bbox.y0)
+
+  kaki.drawMesh(buffer, mesh)
+
+  buffer.fog(fogNear, fogFar)
+
+  newNotes = kaki.render(buffer, bbox.x0, bbox.y0)
+
+  for n in newNotes:
+    n.group = 1
+    flp.score.addNote(n)

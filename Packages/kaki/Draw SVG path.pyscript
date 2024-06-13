@@ -1,0 +1,120 @@
+"""flp
+Title: Draw SVG path
+Author: BinaryBorn
+Category: Packages/kaki
+Version: 1.0
+License: ISC
+
+Description: 
+Draws a figure from SVG path data.
+
+Changelog:
+v1.0 (2024-05-06)
+  - initial version
+"""
+
+import flpianoroll as flp
+import kaki
+import math
+
+cachedFigure = None
+cachedPath = None
+
+def createDialog():
+  form = flp.ScriptDialog("Draw SVG path","")
+
+  mat = kaki.getPhenotypeFromNote(flp.score.getDefaultNoteProperties())
+  styleMat = kaki.serializePhenotypeToStyle(mat)
+
+  form.AddInputText('Path','m-16,-16 16,32 16,-16')
+  form.AddInputText('Fill style', styleMat)
+  form.AddInputCombo('Fill rule', ['even-odd', 'nonzero'], 0)
+
+  form.AddInputSurface('Draw SVG path')
+
+  return form
+
+def apply(form: flp.ScriptDialog):
+  global cachedPath, cachedFigure
+
+  path = form.GetInputValue('Path')
+  style = form.GetInputValue('Fill style')
+  fillRule = form.GetInputValue('Fill rule')
+
+  scaleUniform = form.GetInputValue('Scale uniform') * 8
+  scaleAspectRatio = 2 ** ((form.GetInputValue('Scale aspect ratio') - 0.5) * 4)
+  rotationX = (form.GetInputValue('Rotation X') - 0.5) * math.pi * 4
+  rotationY = (form.GetInputValue('Rotation Y') - 0.5) * math.pi * 4
+  rotationZ = (form.GetInputValue('Rotation Z') - 0.5) * math.pi * 4
+  positionX = form.GetInputValue('Position X') * 128
+  positionY = form.GetInputValue('Position Y') * 128
+  positionZ = (1 - form.GetInputValue('Position Z')) * -128
+  rotOrder = int(form.GetInputValue('Rotation order'))
+  perspective = form.GetInputValue('Perspective') * 0.04
+  optOversample = int(form.GetInputValue('Oversampling') * 2)
+  fogNear = (form.GetInputValue('Fog near') - 0.5) * 256
+  fogFar = (form.GetInputValue('Fog far') - 0.5) * 256
+
+  scaleX = scaleUniform * scaleAspectRatio
+  scaleY = scaleUniform / scaleAspectRatio
+
+  if path != cachedPath:
+    cachedPath = path
+    cachedFigure = kaki.parseFigureFromSvgPath(path)
+    bbox = kaki.getFigureBoundingBox(cachedFigure)
+    if bbox is None: return
+    cx = (bbox.x0 + bbox.x1) / 2
+    cy = (bbox.y0 + bbox.y1) / 2
+    w = bbox.x1 - bbox.x0
+    h = bbox.y1 - bbox.y0
+    tr = kaki.identity4()
+    tr = kaki.translate(tr, -cx, -cy)
+    if (h > 128):
+      s = 128 / h
+      tr = kaki.scale(tr, s, s)
+    kaki.transformFigure(cachedFigure, tr)
+
+  figure = kaki.cloneFigure(cachedFigure)
+
+  # first: transform up to including rotation (because of lighting)
+  transform3d = kaki.identity4()
+  transform3d = kaki.scale(transform3d, scaleX, -scaleY)
+  if rotOrder == 0:
+    transform3d = kaki.rotateZ(transform3d, rotationZ)
+    transform3d = kaki.rotateY(transform3d, rotationY)
+    transform3d = kaki.rotateX(transform3d, rotationX)
+  else:
+    transform3d = kaki.rotateX(transform3d, rotationX)
+    transform3d = kaki.rotateY(transform3d, rotationY)
+    transform3d = kaki.rotateZ(transform3d, rotationZ)
+
+  # second: lighting (before perspective)
+  # -- no lighting in this script =) --
+
+  # third: move into shot, perspective projection, move shot
+  transform3d = kaki.translate(transform3d, 0, 0, positionZ)
+  transform3d = kaki.perspectiveTransform(transform3d, perspective)
+  transform3d = kaki.translate(transform3d, positionX, positionY, 0)
+  kaki.transformFigure(figure, transform3d)
+  kaki.perspectiveDivideFigure(figure)
+
+  fill = kaki.parsePhenotypeFromStyle(style)
+
+  bbox = kaki.getFigureBoundingBox(figure, True)
+  if bbox is None: return
+
+  # limit bbox to PR and some sensible value for max x
+  kaki.limitBox(bbox, kaki.box(0, 0, 1024, 132))
+
+  buffer = kaki.Buffer(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, optOversample, True)
+  buffer.setOrigin(bbox.x0, bbox.y0)
+
+  kaki.drawFigure(buffer, figure, fill, fillRule)
+
+  buffer.fog(fogNear, fogFar)
+
+  newNotes = kaki.render(buffer, bbox.x0, bbox.y0)
+
+  for n in newNotes:
+    n.group = 1
+    flp.score.addNote(n)
