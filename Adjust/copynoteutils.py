@@ -23,6 +23,7 @@ def serialize(notes: list[flp.Note], timeOffset: int = 0) -> str:
     fields.append(f'fcut: {note.fcut:.3f}')
     fields.append(f'fres: {note.fres:.3f}')
     fields.append(f'pitchofs: {note.pitchofs}')
+    fields.append(f'repeats: {note.repeats}')
     fields.append(f'slide: {note.slide}')
     fields.append(f'porta: {note.porta}')
     
@@ -71,6 +72,8 @@ def deserialize(serialized: str, timeOffset: int = 0) -> list[flp.Note]:
           note.fres = float(val)
         elif key == 'pitchofs':
           note.pitchofs = int(val)
+        elif key == 'repeats':
+          note.repeats = int(val)
         elif key == 'slide':
           note.slide = True if val == 'True' else False
         elif key == 'porta':
