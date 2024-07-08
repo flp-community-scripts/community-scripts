@@ -2,7 +2,7 @@
 Title: Paste note properties
 Author: BinaryBorn
 Category: Adjust
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
@@ -11,6 +11,9 @@ Reads note properties from a temporary file and applies them to existing notes.
 Changelog:
 v1.0 (2024-05-30)
   - initial version
+
+v1.1 (2024-08-07)
+  - note.repeats property is now copied too
 """
 
 import flpianoroll as flp
@@ -53,6 +56,7 @@ try:
       note.color = ref.color
       note.fcut = ref.fcut
       note.fres = ref.fres
+      note.repeats = ref.repeats
 
 except Exception:
   pass

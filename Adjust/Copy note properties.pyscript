@@ -2,7 +2,7 @@
 Title: Copy note properties
 Author: BinaryBorn
 Category: Adjust
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
@@ -11,6 +11,9 @@ Writes note properties to a temporary file so they can be applied to other notes
 Changelog:
 v1.0 (2024-05-30)
   - initial version
+
+v1.1 (2024-08-07)
+  - note.repeats property is now copied too
 """
 
 import flpianoroll as flp

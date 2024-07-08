@@ -282,6 +282,24 @@ class Note():
     "0.0 to 1.0, default 0.5"
     pitchofs: int
     "-120 to 120"
+    repeats: int
+    """0 to 14, default 0
+    
+    1: 1/4 (beat)
+    2: 1/8 dotted
+    3: 1/4 triplet
+    4: 1/8
+    5: 1/16 dotted
+    6: 1/8 triplet
+    7: 1/16 (step)
+    8: 1/32 dotted
+    9: 1/16 triplet
+    10: 1/32 (half step)
+    11: 1/64 dotted
+    12: 1/32 triplet
+    13: 1/64 (quarter step)
+    14: 1/64 triplet
+    """
     slide: bool
     "slide is enabled"
     porta: bool

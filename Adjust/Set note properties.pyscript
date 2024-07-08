@@ -1,36 +1,35 @@
-"""
-ISC License
+"""flp
+Title: Set note properties
+Author: BinaryBorn
+Category: Adjust
+Version: 1.4
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Set note properties of selected notes.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-06-30)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-07-17)
+  - added note.release
+
+v1.2 (2023-10-16)
+  - added ISC license text
+
+v1.3 (2024-03-08)
+  - fixed typings for Python engine upgrade
+
+v1.4 (2024-07-08)
+  - added note.repeats
 """
 
 import flpianoroll as flp
 
-"""
-Set note properties
-by: BinaryBorn
-
-2023-06-30
-  - initial version
-
-CHANGES
-2023-07-17
-  - added note.release
-
-2023-10-16
-  - added ISC license text
-
-2024-03-08
-  - FIXED typings for Python engine upgrade
-"""
-
 def createDialog():
   form = flp.ScriptDialog("Set note properties","Set note properties of selected notes"
-  + "\r\n\r\n2024-03-08, BinaryBorn")
+  + "\r\n\r\nv1.4 (2024-07-08), BinaryBorn")
   form.AddInputCombo('Set pan', ['leave', 'set'], 0)
   form.AddInputKnobInt('Pan', 0, -100, 100)
   form.AddInputCombo('Set velocity', ['leave', 'set'], 0)
@@ -43,9 +42,11 @@ def createDialog():
   form.AddInputKnobInt('Filter resonance', 0, -100, 100)
   form.AddInputCombo('Set pitch', ['leave', 'set'], 0)
   form.AddInputKnobInt('Pitch', 0, -1200, 1200)
+  form.AddInputCombo('Set repeats', ['leave', 'set'], 0)
+  form.AddInputKnobInt('Repeats', 0, 0, 14)
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 
@@ -62,6 +63,8 @@ def apply(form):
   fRes = float(form.GetInputValue('Filter resonance')) / 200 + 0.5
   setPitch = int(form.GetInputValue('Set pitch'))
   pitch = int(form.GetInputValue('Pitch')) / 10
+  setRepeats = int(form.GetInputValue('Set repeats'))
+  repeats = int(form.GetInputValue('repeats'))
   for note in notes:
     if setPan: note.pan = pan
     if setVelocity: note.velocity = velocity
@@ -69,4 +72,5 @@ def apply(form):
     if setFCut: note.fcut = fCut
     if setFRes: note.fres = fRes
     if setPitch: note.pitchofs = round(pitch)
+    if setRepeats: note.repeats = repeats
 

@@ -1,58 +1,38 @@
-"""
-ISC License
+"""flp
+Title: Reverse
+Author: BinaryBorn
+Category: Edit
+Version: 1.3
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Reverses score preserving slide notes.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-07-02)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-07-17)
+  - added note.release
+
+v1.2 (2023-10-16)
+  - added ISC license text
+
+v1.3 (2024-07-08)
+  - notes are now cloned using note.clone
 """
 
 import flpianoroll as flp
 
-"""
-Reverse
-by: BinaryBorn
-
-2023-07-02
-  - initial version
-
-CHANGES
-2023-07-17
-  - added note.release
-
-2023-10-16
-  - added ISC license text
-"""
-
-# Utility function to get time range of selection / notes
-def getTimeRange(notes):
+def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
+  """Returns the time range spanning notes.
+  """
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
   last = max(notes, key=lambda n: n.time + n.length)
   # return start and end time
   return (first.time, last.time + last.length)
-
-# Utility function to copy a note
-def copyNote(note):
-  cnote = flp.Note()
-  cnote.number = note.number
-  cnote.time = note.time
-  cnote.length = note.length
-  cnote.group = note.group
-  cnote.pan = note.pan
-  cnote.velocity = note.velocity
-  cnote.release = note.release
-  cnote.color = note.color
-  cnote.fcut = note.fcut
-  cnote.fres = note.fres
-  cnote.pitchofs = note.pitchofs
-  cnote.slide = note.slide
-  cnote.porta = note.porta
-  cnote.muted = note.muted
-  cnote.selected = note.selected
-  return cnote
 
 # No GUI required - scripts runs here
 
@@ -80,7 +60,7 @@ for color in range(16):
     if affected:
       # top note in affected notes === leading note
       affected.sort(key=lambda n: n.number, reverse=True)
-      leading = copyNote(affected[0])
+      leading = affected[0].clone()
       # invert slides (switch from/to)
       for n in affected:
         # note number: change relative to leading note
