@@ -1,11 +1,25 @@
-"""
-ISC License
+"""flp
+Title: Frequency chop
+Author: BinaryBorn
+Category: Edit
+Version: 1.3
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Chop notes into pieces at a specific frequency.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-06-30)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-07-17)
+  - added note.release property to copy
+
+v1.2 (2023-09-21)
+  - added ISC license text
+
+v1.3 (2024-07-08)
+  - notes are now cloned using note.clone
 """
 
 import flpianoroll as flp
@@ -28,15 +42,15 @@ by: BinaryBorn
 def createDialog():
   form = flp.ScriptDialog("Frequency chop","Chop notes into pieces at a specific frequency"
   + "\r\nWorks best at higher PPQ and lower frequencies."
-  + "\r\n\r\n2023-09-21, BinaryBorn")
+  + "\r\n\r\nv1.3 (2024-07-08), BinaryBorn")
   form.AddInputCombo('Note', ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'], 0)
   form.AddInputKnobInt('Octave', 4, 0, 6)
   form.AddInputKnobInt('Tempo', 120, 10, 522)
   
   return form
 
-def apply(form):
-  tempo = form.GetInputValue('Tempo')
+def apply(form: flp.ScriptDialog):
+  tempo = int(form.GetInputValue('Tempo'))
 
   noteCount = flp.score.noteCount
 
@@ -44,7 +58,7 @@ def apply(form):
   notes = [flp.score.getNote(i) for i in range(noteCount)]
 
   # calculate frequency in Hz
-  midiPitch = form.GetInputValue('Octave') * 12 + form.GetInputValue('Note')
+  midiPitch = int(form.GetInputValue('Octave')) * 12 + int(form.GetInputValue('Note'))
   freq = 440 * pow(2, (midiPitch - 69) / 12)
   # ... convert to ticks
   timePerTick = (60 / tempo) / (4 * flp.score.PPQ)
@@ -67,18 +81,9 @@ def apply(form):
       s0 = int(t0 + ticksPerOsc * idx)
       s1 = min(int(t0 + ticksPerOsc * (idx + 1)), t1)
 
-      snote = flp.Note()
-      snote.number = note.number
+      snote = note.clone()
       snote.time = s0
       snote.length = s1 - s0
-      snote.pan = note.pan
-      snote.velocity = note.velocity
-      snote.release = note.release
-      snote.color = note.color
-      snote.fcut = note.fcut
-      snote.fres = note.fres
-      snote.pitchofs = note.pitchofs
-      snote.muted = note.muted
       snote.selected = True
 
       newNotes.append(snote)
