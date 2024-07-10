@@ -11,6 +11,9 @@ Draws a figure from SVG path data.
 Changelog:
 v1.0 (2024-05-06)
   - initial version
+
+v1.1 (2024-07-10)
+  - each new path now gets its own group index
 """
 
 import flpianoroll as flp
@@ -115,6 +118,7 @@ def apply(form: flp.ScriptDialog):
 
   newNotes = kaki.render(buffer, bbox.x0, bbox.y0)
 
+  g = flp.score.getNextFreeGroupIndex()
   for n in newNotes:
-    n.group = 1
+    n.group = g
     flp.score.addNote(n)
