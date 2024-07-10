@@ -158,6 +158,14 @@ class __score__():
         """
         pass
 
+    def getNextFreeGroupIndex(self) -> int:
+        """Returns the next free note group index. If your script adds multiple groups, make sure to add the notes of one group using addNote before calling this function again to get the updated next free group index.
+
+        Returns:
+            Note: Next free not group index
+        """
+        pass
+
 #-------------------------------------------------------------------#
 #---Script Dialog Class
 class ScriptDialog():
