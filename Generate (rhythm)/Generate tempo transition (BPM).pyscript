@@ -11,6 +11,9 @@ Generates a transition from one tempo to another.
 Changelog:
 v1.0 (2024-06-10)
   - initial version
+
+v1.1 (2024-07-10)
+  - added note grouping
 """
 
 import flpianoroll as flp
@@ -23,7 +26,7 @@ def createDialog():
   form = flp.ScriptDialog("Generate tempo transition","Match project BPM to current BPM to get expected results."
   + "\r\nDuration is in beats."
   + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
-  + "\r\n\r\nv1.6 (2024-06-10), BinaryBorn")
+  + "\r\n\r\nv1.1 (2024-07-10), BinaryBorn")
 
   # fmax = flp.score.PPQ * 4 # actual technical maximum
   fmax = flp.score.PPQ # feels like the better UX choice
@@ -79,6 +82,7 @@ def apply(form: flp.ScriptDialog):
 
   transition = TempoTransition(l0, l1, dt, p0, p1, sweepMode=mode, tension=tension, phaseMode=corr, phaseTension=corrTension)
 
+  g = flp.score.getNextFreeGroupIndex()
   for i in range(len(transition.pulses) - 1):
     t0 = transition.pulses[i]
     t1 = transition.pulses[i+1]
@@ -88,6 +92,7 @@ def apply(form: flp.ScriptDialog):
       note.number = noteNr
       note.time = t0 + offset
       note.length = 0 if zeroLength else t1 - t0
+      note.group = g
       flp.score.addNote(note)
   
   if optMarkers:
