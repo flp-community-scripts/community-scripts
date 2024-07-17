@@ -2,7 +2,7 @@
 Title: Copy markers
 Author: BinaryBorn
 Category: Markers
-Version: 2.0
+Version: 2.1
 License: ISC
 
 Description: 
@@ -14,6 +14,9 @@ Changelog:
 
 2.0 (2024-05-06)
   - markers now written to temp file
+
+2.1 (2024-07-17)
+  - fixed crash when marker names contain unicode symbols
 """
 
 import flpianoroll as flp
@@ -33,6 +36,6 @@ if selection[1] != -1:
 
 serialized = utils.serialize(markers, offset)
 
-file = open('.markers', 'w')
+file = open('.markers', 'w', encoding='utf-8')
 file.write(serialized)
 file.close()

@@ -2,7 +2,7 @@
 Title: Paste markers
 Author: BinaryBorn
 Category: Markers
-Version: 2.0
+Version: 2.1
 License: ISC
 
 Description: 
@@ -14,13 +14,16 @@ Changelog:
 
 2.0 (2024-05-06)
   - markers now read from temp file
+
+2.1 (2024-07-17)
+  - fixed crash when marker names contain unicode symbols
 """
 
 import flpianoroll as flp
 import copymarkerutils as utils
 
 try:
-  file = open('.markers', 'r')
+  file = open('.markers', 'r', encoding='utf-8')
 
   serialized = file.read()
 

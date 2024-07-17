@@ -24,7 +24,7 @@ def unescape(string: str):
 
   return string
 
-def serialize(markers: list, timeOffset: int = 0) -> str:
+def serialize(markers: list[flp.Marker], timeOffset: int = 0) -> str:
   """Serializes markers to text.
 
   Args:
@@ -65,7 +65,7 @@ def serialize(markers: list, timeOffset: int = 0) -> str:
 
   return serialized
 
-def deserialize(serialized: str, timeOffset: int = 0) -> list:
+def deserialize(serialized: str, timeOffset: int = 0) -> list[flp.Marker]:
   """Deserializes markers from text.
 
   Args:
