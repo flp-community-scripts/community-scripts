@@ -1,0 +1,179 @@
+"""flp
+Title: Random sequence chop
+Author: D3Mens (idea), BinaryBorn (code)
+Category: Edit
+Version: 1.0
+License: ISC
+
+Description: 
+Chops existing notes up into a random sequence.
+
+Changelog:
+v1.0 (2024-07-26)
+  - initial version
+"""
+
+import flpianoroll as flp
+import math
+import time
+import _random
+
+random = _random.Random()
+
+class Step:
+  def __init__(self, time: int, reference: flp.Note = None, number: int = 60, gate: int = 0, gap: bool = False, slide: bool = False, accent: bool = False):
+    self.time = time
+    "step time (PPQ)"
+    self.reference = reference
+    "reference note"
+    self.number = number
+    "note number"
+    self.gate = gate
+    "gate type: 0: 1/16, 1: 1/32, 2: extend previous note"
+    self.gap = gap
+    "gap type: True: gap, False: no gap (play note)"
+    self.slide = slide
+    "slide (true/false)"
+    self.accent = accent
+    "accent (true/false)"
+
+# gathering notes is only required once - they don't update as long as script is active
+
+notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+if len(notes) == 0:
+  flp.Utils.ShowMessage(
+    "No notes provided."
+    + "\r\n\r\nPlease put some notes before running the script."
+  )
+
+def createDialog():
+  form = flp.ScriptDialog("Random sequence chop","Chop existing notes up into a random sequence."
+  + "\r\nOctave jumps, Melody, Rhythm, Slides and Accents knobs are probability for random value."
+  + "\r\n\r\nv1.0 (2024-07-26), D3Mens & BinaryBorn")
+  form.AddInputKnob('Octave jumps', 0, 0, 1.0)
+  form.AddInputCombo('Octave range', ['+1', '+2', '-1', '-1 / +1', '-1 / +2'], 0)
+  form.AddInputKnob('Melody', 0, 0, 1.0)
+  form.AddInputKnob('Rhythm', 0, 0, 1.0)
+  form.AddInputKnob('Gaps', 0, 0, 1.0)
+  form.AddInputKnob('Slides', 0, 0, 1.0)
+  form.AddInputKnob('Accents', 0, 0, 1.0)
+  # randomly initialize seed value - will only ever "rand" back on reset
+  form.AddInputKnobInt('Seed', int(time.time() * 1000) % 1000, 0, 999)
+  
+  return form
+
+def skewedRandom(skew: float):
+  """Returns a random number with controllable probability.
+
+  Args:
+      skew (float): probability of random outcome [0...1]
+        if 0, the result is always 0
+        if 1, the result is always random
+
+  Returns:
+      float: random number [0...1)
+  """
+  p = random.random()
+  r = random.random()
+  if p >= skew:
+    return 0.0
+  else:
+    return r
+
+def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
+  """Returns start and end time of a list of notes as tuple.
+  """
+  if len(notes) == 0: return (0, 0)
+  # find first starting and last ending note
+  first = min(notes, key=lambda n: n.time)
+  last = max(notes, key=lambda n: n.time + n.length)
+  # return start and end time
+  return (first.time, last.time + last.length)
+
+def getNotesAt(notes: list[flp.Note], time: int):
+  """Returns notes playing at given time.
+  """
+  return list(filter(lambda n: n.time <= time and (n.time + n.length) > time, notes))
+
+def apply(form: flp.ScriptDialog):
+  octaves = float(form.GetInputValue('Octave jumps'))
+  octaveRange = int(form.GetInputValue('Octave range'))
+  melody = float(form.GetInputValue('Melody'))
+  rhythm = float(form.GetInputValue('Rhythm'))
+  gaps = float(form.GetInputValue('Gaps'))
+  slides = float(form.GetInputValue('Slides'))
+  accents = float(form.GetInputValue('Accents'))
+
+  # octave jumping works by randomly picking one of these options
+  octaveOptions = [0, 1]
+  if octaveRange == 1: octaveOptions = [0, 1, 2]
+  if octaveRange == 2: octaveOptions = [0, -1]
+  if octaveRange == 3: octaveOptions = [0, -1, 1]
+  if octaveRange == 4: octaveOptions = [0, -1, 1, 2]
+  octaveOptionsCnt = len(octaveOptions)
+
+  # always seed with user provided seed
+  seed = int(form.GetInputValue('Seed'))
+  random.seed(seed)
+
+  ppq = flp.score.PPQ
+  pp16th = ppq // 4
+  pp32th = pp16th // 2
+
+  # take timings from existing notes
+  times = getTimeRange(notes)
+  t0 = times[0]
+  t1 = times[1]
+  # first and last step covering half a step
+  step0 = math.floor((t0 + pp32th) / pp16th)
+  step1 = math.ceil((t1 - pp32th) / pp16th)
+  dsteps = step1 - step0
+    
+  # generate steps (as in step sequencer)
+  # always generate all random values for all possible steps, prevents unexpected jumps on input change
+  steps: list[Step] = []
+  for i in range(dsteps):
+    time = (step0 + i) * pp16th
+    # reference note(s) at step time + half a step to include strums
+    refs = getNotesAt(notes, time + pp32th)
+    refs.sort(key=lambda n: (n.number))
+    # only activate step if there's a reference
+    active = True if len(refs) > 0 else False
+    octj = int(skewedRandom(octaves) * octaveOptionsCnt)
+    octn = octaveOptions[octj] * 12
+    meli = int(skewedRandom(melody) * len(refs))
+    reference = refs[meli] if active else None
+    number = reference.number + octn if active else 60
+    step = Step(
+      time=time,
+      reference=reference,
+      number=number,
+      gate=int(skewedRandom(rhythm) * 3),
+      gap=int(skewedRandom(gaps) * 2) == 1 or active == False,
+      slide=int(skewedRandom(slides) * 2) == 1,
+      accent=int(skewedRandom(accents) * 2) == 1,
+    )
+    steps.append(step)
+
+  # convert steps to notes
+  flp.score.clearNotes()
+  prevNote = None
+  for i in range(len(steps)):
+    step = steps[i]
+    # don't fill gaps
+    if step.gap:
+      prevNote = None
+      continue
+    # extend previous note if there is one
+    if prevNote and step.gate == 2:
+      prevNote.length += pp16th
+      continue
+    # place step as note
+    note = step.reference.clone()
+    note.time = step.time
+    note.number = step.number
+    note.length = pp16th if step.gate == 0 else pp32th
+    if step.accent: note.velocity *= 1.28
+    note.porta = step.slide
+    flp.score.addNote(note)
+    prevNote = note
