@@ -1,37 +1,57 @@
-"""
-ISC License
+"""flp
+Title: Random sequence
+Author: BinaryBorn
+Category: Generate (melody)
+Version: 1.2
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Generates a random sequence.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-10-13)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2024-03-08)
+  - fixed typings for Python engine upgrade
+  - changed seed range to 999 for better UX
+
+v1.2 (2024-07-26)
+  - added timeline selection support
+  - added gap option
 """
 
 import flpianoroll as flp
+import math
+import time
 import _random
 
 random = _random.Random()
-
-"""
-Random sequence
-by: BinaryBorn
-
-2023-10-13
-  - initial version
-
-2024-03-08
-  - FIXED typings for Python engine upgrade
-  - CHANGED seed range limited to 999 for better UX
-"""
-
-# gathering markers is only required once - they don't update as long as script is active
 
 class Scale:
   __slots__ = ['time', 'notes']
   def __init__(self, time: int, notes: list[bool]):
     self.time = time
     self.notes = notes
+
+class Step:
+  def __init__(self, time: int, reference: flp.Note = None, number: int = 60, gate: int = 0, gap: bool = False, slide: bool = False, accent: bool = False):
+    self.time = time
+    "step time (PPQ)"
+    self.reference = reference
+    "reference note"
+    self.number = number
+    "note number"
+    self.gate = gate
+    "gate type: 0: 1/16, 1: 1/32, 2: extend previous note"
+    self.gap = gap
+    "gap type: True: gap, False: no gap (play note)"
+    self.slide = slide
+    "slide (true/false)"
+    self.accent = accent
+    "accent (true/false)"
+
+# gathering markers is only required once - they don't update as long as script is active
 
 scales: list[Scale] = []
 
@@ -56,28 +76,50 @@ for m in range(flp.score.markerCount):
         notes = [True, True, True, True, True, True, True, True, True, True, True, True]
       ))
 
+# get reference timeline selection
+
+ppq = flp.score.PPQ
+pp16th = ppq // 4
+pp32th = pp16th // 2
+
+tselection = flp.score.getTimelineSelection()
+# first and last step covering half a step
+step0 = math.floor((tselection[0] + pp32th) / pp16th)
+step1 = math.ceil((tselection[1] - pp32th) / pp16th)
+if tselection[1] == -1:
+  step0 = 0
+dsteps = step1 - step0
 
 def createDialog():
   form = flp.ScriptDialog("Random sequence","Generate a random sequence."
-  + "\r\nOctave jumps, Melody, Rhythm, Slides and Accents knobs are probability for random value."
-  + "\r\n\r\n2024-03-08, BinaryBorn")
+  + "\r\nOctave jumps, Melody, Rhythm, Gaps, Slides and Accents knobs are probability for random value."
+  + "\r\nSequence length can be overwritten by timeline selection."
+  + "\r\n\r\nv1.2 (2024-07-26), BinaryBorn")
   form.AddInputKnobInt('Root note', 60, 48, 72)
   form.AddInputKnobInt('Sequence length', 16, 4, 64)
   form.AddInputKnob('Octave jumps', 0, 0, 1.0)
   form.AddInputCombo('Octave range', ['+1', '+2', '-1', '-1 / +1', '-1 / +2'], 0)
   form.AddInputKnob('Melody', 0, 0, 1.0)
   form.AddInputKnob('Rhythm', 0, 0, 1.0)
+  form.AddInputKnob('Gaps', 0, 0, 1.0)
   form.AddInputKnob('Slides', 0, 0, 1.0)
   form.AddInputKnob('Accents', 0, 0, 1.0)
-  form.AddInputKnobInt('Seed', 0, 0, 999)
+  # randomly initialize seed value - will only ever "rand" back on reset
+  form.AddInputKnobInt('Seed', int(time.time() * 1000) % 1000, 0, 999)
   
   return form
 
-# skewed random function
-# if skew = 0, the result is always 0
-# if skew = 1, the result is random
-# (skew is basically the probability of a random outcome)
 def skewedRandom(skew: float):
+  """Returns a random number with controllable probability.
+
+  Args:
+      skew (float): probability of random outcome [0...1]
+        if 0, the result is always 0
+        if 1, the result is always random
+
+  Returns:
+      float: random number [0...1)
+  """
   p = random.random()
   r = random.random()
   if p >= skew:
@@ -85,8 +127,12 @@ def skewedRandom(skew: float):
   else:
     return r
 
-# return scale active at "time" (use "Default" as fallback)
 def relevantScaleAt(time: int):
+  """Returns scale active at given time (or "Default" all True as fallback).
+
+  Args:
+      time (int): time in ticks
+  """
   s = Scale(
     time = 0,
     notes = [True, True, True, True, True, True, True, True, True, True, True, True]
@@ -94,12 +140,20 @@ def relevantScaleAt(time: int):
 
   # find latest scale before time
   for scale in scales:
-    if time >= scale['time']: s = scale
+    if time >= scale.time: s = scale
 
   return s
 
-# transpose note into scale
 def transposeIntoScale(number: int, scale: Scale):
+  """Transposes a given note number into scale.
+
+  Args:
+      number (int): source note number
+      scale (Scale): scale to transpose into
+
+  Returns:
+      int: target note number
+  """
   # look for "True" in scale above and below original note with increasing distance
   s = scale.notes
   for t in range(12):
@@ -108,17 +162,16 @@ def transposeIntoScale(number: int, scale: Scale):
   # return original if nothing was found
   return number
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   root = int(form.GetInputValue('Root note'))
   length = int(form.GetInputValue('Sequence length'))
   octaves = float(form.GetInputValue('Octave jumps'))
   octaveRange = int(form.GetInputValue('Octave range'))
   melody = float(form.GetInputValue('Melody'))
   rhythm = float(form.GetInputValue('Rhythm'))
+  gaps = float(form.GetInputValue('Gaps'))
   slides = float(form.GetInputValue('Slides'))
   accents = float(form.GetInputValue('Accents'))
-
-  ppq = flp.score.PPQ
 
   # octave jumping works by randomly picking one of these options
   octaveOptions = [0, 1]
@@ -131,46 +184,49 @@ def apply(form):
   # always seed with user provided seed
   seed = int(form.GetInputValue('Seed'))
   random.seed(seed)
+
+  # overwrite sequence length if timeline selection was made
+  if tselection[1] >= 0:
+    length = dsteps
     
   # generate steps (as in step sequencer)
-  steps: list[dict[str, int]] = []
+  # always generate all random values for all possible steps, prevents unexpected jumps on input change
+  steps: list[Step] = []
   for i in range(length):
+    time = (step0 + i) * pp16th
+    scale = relevantScaleAt(time)
     octj = int(skewedRandom(octaves) * octaveOptionsCnt)
-    octn = int(octaveOptions[octj] * 12)
+    octn = octaveOptions[octj] * 12
     meln = int(skewedRandom(melody) * 12)
-    step = {
-      # midi note
-      'number': root + octn + meln,
-      # 0: 1/16, 1: 1/32, 2: extend previous note 
-      'gate': int(skewedRandom(rhythm) * 3),
-      # true/false
-      'slide': int(skewedRandom(slides) * 2),
-      # true/false
-      'accent': int(skewedRandom(accents) * 2)
-    }
+    step = Step(
+      time=time,
+      # reference=reference,
+      number=transposeIntoScale(root + octn + meln, scale),
+      gate=int(skewedRandom(rhythm) * 3),
+      gap=int(skewedRandom(gaps) * 2) == 1,
+      slide=int(skewedRandom(slides) * 2) == 1,
+      accent=int(skewedRandom(accents) * 2) == 1,
+    )
     steps.append(step)
 
   # convert steps to notes
-  prevNote = False
+  prevNote = None
   for i in range(len(steps)):
     step = steps[i]
-    # only put first note and all that aren't gate type 2
-    put = True if i == 0 else step['gate'] != 2
-    if put:
-      # when to put this note
-      time = int(i * ppq / 4)
-      # relevant marker at that time
-      scale = relevantScaleAt(time)
-
-      note = flp.Note()
-      note.number = transposeIntoScale(step['number'], scale)
-      note.time = time
-      note.length = int(ppq / 4) if step['gate'] == 0 else int(ppq / 8)
-      note.velocity = 0.78 if not step['accent'] else 1.0
-      note.porta = step['slide'] == 1
-
-      flp.score.addNote(note)
-      prevNote = note
-
-    else:
-      prevNote.length += int(ppq / 4)
+    # don't fill gaps
+    if step.gap:
+      prevNote = None
+      continue
+    # extend previous note if there is one
+    if prevNote and step.gate == 2:
+      prevNote.length += pp16th
+      continue
+    # place step as note
+    note = flp.Note()
+    note.time = step.time
+    note.number = step.number
+    note.length = pp16th if step.gate == 0 else pp32th
+    note.velocity = 0.78 if not step.accent else 1.0
+    note.porta = step.slide
+    flp.score.addNote(note)
+    prevNote = note
