@@ -2,7 +2,7 @@
 Title: Random sequence
 Author: BinaryBorn
 Category: Generate (melody)
-Version: 1.2
+Version: 1.3
 License: ISC
 
 Description: 
@@ -19,6 +19,9 @@ v1.1 (2024-03-08)
 v1.2 (2024-07-26)
   - added timeline selection support
   - added gap option
+
+v1.3 (2024-07-29)
+  - added clear selection option
 """
 
 import flpianoroll as flp
@@ -94,7 +97,7 @@ def createDialog():
   form = flp.ScriptDialog("Random sequence","Generate a random sequence."
   + "\r\nOctave jumps, Melody, Rhythm, Gaps, Slides and Accents knobs are probability for random value."
   + "\r\nSequence length can be overwritten by timeline selection."
-  + "\r\n\r\nv1.2 (2024-07-26), BinaryBorn")
+  + "\r\n\r\nv1.3 (2024-07-29), BinaryBorn")
   form.AddInputKnobInt('Root note', 60, 48, 72)
   form.AddInputKnobInt('Sequence length', 16, 4, 64)
   form.AddInputKnob('Octave jumps', 0, 0, 1.0)
@@ -106,6 +109,7 @@ def createDialog():
   form.AddInputKnob('Accents', 0, 0, 1.0)
   # randomly initialize seed value - will only ever "rand" back on reset
   form.AddInputKnobInt('Seed', int(time.time() * 1000) % 1000, 0, 999)
+  form.AddInputCheckbox('Clear selection', True)
   
   return form
 
@@ -172,6 +176,7 @@ def apply(form: flp.ScriptDialog):
   gaps = float(form.GetInputValue('Gaps'))
   slides = float(form.GetInputValue('Slides'))
   accents = float(form.GetInputValue('Accents'))
+  clearSelection = bool(form.GetInputValue('Clear selection'))
 
   # octave jumping works by randomly picking one of these options
   octaveOptions = [0, 1]
@@ -208,6 +213,17 @@ def apply(form: flp.ScriptDialog):
       accent=int(skewedRandom(accents) * 2) == 1,
     )
     steps.append(step)
+
+  # first: recreate score, apply deletion
+  if clearSelection:
+    notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+    tdel0 = step0 * pp16th
+    tdel1 = (step0 + length) * pp16th
+    flp.score.clearNotes()
+    for n in notes:
+      # re-place notes that are outside the selection
+      if n.time < tdel0 or n.time >= tdel1:
+        flp.score.addNote(n)
 
   # convert steps to notes
   prevNote = None
