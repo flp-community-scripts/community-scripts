@@ -146,7 +146,7 @@ class __score__():
         """gets the selected timeline range
 
         Returns:
-            tuple[int, int]: selection start, selection end (start is -1 if no selection was made)
+            tuple[int, int]: selection start time, selection end time in ticks (end is -1 if no selection was made or if it's been collapsed)
         """
         pass
 
