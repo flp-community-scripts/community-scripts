@@ -1,0 +1,46 @@
+"""flp
+Title: Interlaced repeat
+Author: BinaryBorn
+Category: Edit
+Version: 1.0
+License: ISC
+
+Description: 
+Create interlaced repetitions of small time windows.
+
+Changelog:
+v1.0 (2024-07-31)
+  - initial version
+"""
+
+import flpianoroll as flp
+import math
+
+def createDialog():
+  form = flp.ScriptDialog("Interlaced repeat","Create interlaced repetitions of small time windows."
+  + "\r\n\r\nv1.0 (2024-07-31), BinaryBorn")
+  form.AddInputKnobInt('Window size', 1, 1, 16)
+  form.AddInputCombo('Window unit', ['step', 'beat', 'bar'], 1)
+  form.AddInputKnobInt('Repetitions', 2, 2, 16)
+  
+  return form
+
+def apply(form: flp.ScriptDialog):
+  ppq = flp.score.PPQ
+  pp16th = ppq // 4
+
+  winSize = int(form.GetInputValue('Window size'))
+  winUnit = [1, 4, 16][int(form.GetInputValue('Window unit'))] * pp16th
+  winTime = winSize * winUnit
+  repetitions = int(form.GetInputValue('Repetitions'))
+
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  flp.score.clearNotes()
+
+  for n in notes:
+    iwin = math.floor(n.time / winTime)
+    for icp in range(repetitions):
+      note = n.clone()
+      note.time += (iwin * (repetitions - 1) + icp) * winTime
+      flp.score.addNote(note)
