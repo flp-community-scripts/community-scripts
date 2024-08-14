@@ -1,0 +1,524 @@
+"""flp
+Title: Polymetric property sequence
+Author: BinaryBorn
+Category: Generate (melody)
+Version: 1.0
+License: ISC
+
+Description: 
+Create a complex sequence from sequencing note properties individually.
+
+Changelog:
+v1.0 (2024-08-14)
+  - initial version
+"""
+
+import flpianoroll as flp
+import re
+
+ppq = flp.score.PPQ
+pp16th = ppq // 4
+ppbar = ppq * 4
+
+DEFAULT = flp.Note()
+DEFAULT.length = pp16th
+CURRENT = flp.score.getDefaultNoteProperties()
+
+SPACE_UNIT_PRECISION = 100000
+
+class Step:
+  def __init__(self, value: str|float|bool|None = None, unit: str|None = None, options: str|None = None, error: bool = False) -> None:
+    self.value = value
+    "Step value"
+    self.unit = unit
+    "Step unit"
+    self.options = options or ''
+    "Step options"
+    self.error = error
+    "True if step is erroneous"
+
+  def fallbackOnError(self, value: str|float|bool) -> bool:
+    """If the step is erroneous, sets the *property* value and returns `True`. Otherwise it simply returns `False`."""
+    if self.error:
+      self.value = value
+    return self.error
+  
+  def setDefaultUnit(self, unit: str):
+    """Sets the step's unit if its None yet."""
+    if self.unit is None: self.unit = unit
+  
+  def applyUnits(self, defaultProperty: str|None = None, units: dict[str, float]|None = None, propMapMul = 1.0, propMapOff = 0.0):
+    """Applies units to the value.
+
+    Args:
+        defaultProperty (str | None, optional): If set, will look up unit from default (D) or current (C) note. Defaults to None.
+        units (dict[str, float] | None, optional): Additional units to apply. Defaults to None.
+        propMapMul (float, optional): Multiplication for the mapping from UI value to technical *property* value. Defaults to 1.0.
+        propMapOff (float, optional): Offset for the mapping from UI value to technical *property* value. Defaults to 0.0.
+    """
+    # if a unit is specified, None value must fall back to 1.0
+    if self.unit is not None and self.value is None:
+      self.value = 1.0
+    # apply defaults if a default property is specified
+    if defaultProperty is not None and (self.unit == 'D' or self.unit == 'C'):
+      if self.unit == 'D':
+        unit = getattr(DEFAULT, defaultProperty)
+      elif self.unit == 'C':
+        unit = getattr(CURRENT, defaultProperty)
+      unit = (unit - propMapOff) / propMapMul
+      self.value = float(self.value * unit)
+    # apply user-defined units
+    elif units is not None and self.unit is not None:
+      self.value = float(self.value * units[self.unit])
+
+  def propertyMapping(self, mul: float, off = 0.0):
+    """Maps the value from its UI notation to its technical *property* value.
+    E.g. `note.pan` has a UI value range of (-1 to +1) but its *property* value range is (0 to 1), thus the conversion is: multiply by 0.5, add 0.5.
+
+    Args:
+        mul (float): UI to *property* multiplicator.
+        off (float, optional): UI to *property* offset. Defaults to 0.0.
+    """
+    self.value = float(self.value * mul + off)
+  
+  def round(self):
+    """Rounds this steps' value."""
+    self.value = round(self.value)
+
+  def clamp(self, min: float|None = None, max: float|None = None):
+    """Sets this steps' *property* value range.
+
+    Args:
+        min (float | None, optional): If set, defines the minimum value. Defaults to None.
+        max (float | None, optional): If set, defines the maximum value. Defaults to None.
+    """
+    if min is not None and self.value < min:
+      self.value = min
+    elif max is not None and self.value > max:
+      self.value = max
+
+def sequence(seq: str, valueType = 'number', unitPattern = '[DC]', optionsPattern = '') -> list[Step]:
+  """Sequences (the verb) a sequence (the noun) from its stringyfied form to a list of Steps
+  
+  Args:
+      seq (str): Text to sequence.
+      valueType (str): Type of values in this sequence. Defaults to `number`.
+      unitPattern (str): Regular expression for catching units. Defaults to `[DC]`.
+      optionsPattern (str): Regular expression for catching options. Defaults to the empty string.
+  """
+
+  initialSeq = seq
+
+  def expandRepetitions(match: re.Match) -> str:
+    nonlocal expanded
+    expanded = True
+    reps = int(str(match.group('repetitions')).replace('x', ''))
+    pattern = str(match.group('pattern'))
+    return " ".join([pattern] * reps)
+
+  # before sequencing: expand repetitions of form 3x(...)
+  # (in a loop to allow nested repetitions)
+  while True:
+    expanded = False
+    # disallow ( in pattern to catch innermost occurences
+    seq = re.sub(r'\b(?P<repetitions>\d+x)\((?P<pattern>[^\(\)]*)\)', expandRepetitions, seq)
+    if not expanded: break
+
+  # expand repetitions of form 3x...
+  # disallow spaces in pattern to limit to one expression
+  seq = re.sub(r'\b(?P<repetitions>\d+x)(?P<pattern>[^\s]*)', expandRepetitions, seq)
+
+  exps = seq.split(' ')
+  # remove other leading/trailing whitespace
+  exps = list([exp.strip() for exp in exps])
+  # remove empty entries
+  exps = filter(lambda exp: exp != '', exps)
+
+  # prepare pattern for expression
+
+  if valueType == 'note':
+    # whole number or note with octave
+    valuePattern = '(\d+|([A-Ga-g]#?\d*))'
+  else:
+    # any number
+    valuePattern = '-?\d+(\.\d+)?'
+
+  pval = f'(?P<value>{valuePattern})?'
+  punit = f'(?P<unit>{unitPattern})?'
+  popts = f'(?P<options>{optionsPattern})?'
+
+  # every expression must contain exactly the given patterns, hence the ^$ fence
+  pattern = re.compile(f'^{pval}{punit}{popts}$')
+
+  # parse every expression in sequence
+  steps: list[Step] = []
+  for exp in exps:
+    match = pattern.match(exp)
+    if match is None:
+      flp.Utils.log('')
+      flp.Utils.log(f'Error in expression: {exp}')
+      flp.Utils.log(f'\tIn sequence (expanded): {seq}')
+      flp.Utils.log(f'\tIn sequence: {initialSeq}')
+      steps.append(Step(error=True))
+    else:
+      value = match.group('value')
+      if value is not None:
+        if valueType == 'note':
+          if value.isnumeric():
+            value = float(value)
+          else:
+            value = str(value) # just here to coerce the type
+        else:
+          value = float(value) # just here to coerce the type
+      else:
+        value = None # just here to coerce the type
+      steps.append(Step(
+        value=value,
+        unit=match.group('unit'),
+        options=match.group('options'),
+      ))
+
+  return steps
+
+def createDialog():
+  form = flp.ScriptDialog("Polymetric property sequence","Create a complex sequence from sequencing note properties individually."
+  + '\r\n'
+  + '\r\nThe basic grammar is a space-separated sequence of expressions.'
+  + '\r\n\te.g. 60 80 60'
+  + '\r\n'
+  + '\r\nThe syntax for expressions is:'
+  + '\r\n\texpression ::= value unit? options?'
+  + '\r\n\te.g. 0.5s-'
+  + '\r\n'
+  + '\r\nPossible values for value, unit and options depend on the property they\'re used on and are detailed down below.'
+  + '\r\n'
+  + '\r\n'
+  + '\r\nSYNTAX GUIDE:'
+  + '\r\n'
+  + '\r\nThe syntax for a sequence is a space-separated list of sub-sequences or expressions:'
+  + '\r\n\tsequence ::= subSeqOrExpr (" " subSeqOrExpr)*'
+  + '\r\n\tsubSeqOrExpr ::= subSequence | expression'
+  + '\r\n'
+  + '\r\nA sub-sequence is a short notation form for repetitions, either for another nested sequence in brackets or a single expression:'
+  + '\r\n\tsubSequence ::='
+  + '\r\n\t\t<positive integer> "x" "(" sequence ")" |'
+  + '\r\n\t\t<positive integer> "x" expression'
+  + '\r\n\te.g. 3x(60 2x80) 70'
+  + '\r\n'
+  + '\r\n'
+  + '\r\nPROPERTIES:'
+  + '\r\n'
+  + '\r\nRhythm is the most complex one in terms of available units and options:'
+  + '\r\n\tvalue_rhythm ::= <number>'
+  + '\r\n\tunit_rhythm ::='
+  + '\r\n\t\t"s" (*step*) |'
+  + '\r\n\t\t"b" (*beat*) |'
+  + '\r\n\t\t"h" (*half step*) |'
+  + '\r\n\t\t"q" (*quarter step*) |'
+  + '\r\n\t\t"t" (*one third of a step*) |'
+  + '\r\n\t\t"d" (*dotted step*) |'
+  + '\r\n\t\t"T" (*tick*) |'
+  + '\r\n\t\t"f" (*free space to nearest full step*) |'
+  + '\r\n\t\t"F" (*free space to nearest full beat*) |'
+  + '\r\n\t\tunit_defaults'
+  + '\r\n\toptions_rhythm ::= ('
+  + '\r\n\t\t"-" (*pause*) |'
+  + '\r\n\t\t"_" (*pause but increase other sequences\' index*) |'
+  + '\r\n\t\t"," (*hold other sequences\' index*) |'
+  + '\r\n\t\t"." (*reset other sequences\' index*) |'
+  + '\r\n\t\t"e" (*extend to nearest full step*) |'
+  + '\r\n\t\t"E" (*extend to nearest full beat*) |'
+  + '\r\n\t\t"!" (*cut at the nearest multiple of defined duration*)'
+  + '\r\n\t)*'
+  + '\r\n'
+  + '\r\nOptions can be combined, e.g. 0.7Fe- is a pause (-) extended to the nearest step (e) with base length 70% of the space to the nearest beat (0.7F)'
+  + '\r\n'
+  + '\r\n'
+  + '\r\nFor melody, either a MIDI note number or a pitch can be used as value:'
+  + '\r\n\tvalue_melody ::='
+  + '\r\n\t\t<whole number 0-131> |'
+  + '\r\n\t\t([A-G] "#"? <number 0-10, default 5>)'
+  + '\r\n'
+  + '\r\n'
+  + '\r\nFor pan, left and right (default) can be used as unit:'
+  + '\r\n\tvalue_pan ::= <number -1.0 to 1.0>'
+  + '\r\n\tunit_pan ::= "l" (*left*) | "r" (*right*) | unit_defaults'
+  + '\r\n'
+  + '\r\n'
+  + '\r\nThe rest of the properties have the following number ranges:'
+  + '\r\n\tvalue_velocity ::= <number 0.0 to 1.0>'
+  + '\r\n\tvalue_release ::= <number 0.0 to 1.0>'
+  + '\r\n\tvalue_modx ::= <number -1.0 to 1.0>'
+  + '\r\n\tvalue_mody ::= <number -1.0 to 1.0>'
+  + '\r\n\tvalue_finepitch ::= <whole number -1200 to 1200>'
+  + '\r\n\tvalue_repeats ::= <whole number 0 to 14>'
+  + '\r\n\tvalue_color ::= <whole number 0 to 15>'
+  + '\r\n\tvalue_porta ::= <whole number 0 or 1>'
+  + '\r\n'
+  + '\r\nThey all have access to the default units:'
+  + '\r\n\tunit_defaults ::= "D" (*default value*) | "C" (*current value*)'
+  + '\r\n'
+  + '\r\nValues can be omitted if a unit is given. It will then fall back to 1.'
+  + '\r\n'
+  + '\r\n'
+  + "\r\nv1.0 (2024-08-14), BinaryBorn")
+  form.AddInputKnobInt('Duration', 16, 1, 512)
+  form.AddInputCombo('Duration unit', ['beats', 'bars', 'iterations'], 0)
+  form.AddInputCheckbox('Clear score', True)
+  form.AddInputText('Rhythm', '3xs 0.5s 0.5s-')
+  form.AddInputText('Melody', 'C4 C5 C6')
+  form.AddInputText('Pan', '0 0 0.5r 0.5l r l')
+  form.AddInputText('Velocity', '4xD 1')
+  form.AddInputText('Release', 'D')
+  form.AddInputText('Mod X', '0')
+  form.AddInputText('Mod Y', '0')
+  form.AddInputText('Fine Pitch', '0')
+  form.AddInputText('Repeats', '0')
+  form.AddInputText('Color', 'C')
+  form.AddInputText('Porta', '0')
+  
+  return form
+
+def apply(form: flp.ScriptDialog):
+  duration = int(form.GetInputValue('Duration'))
+  durationUnit = int(form.GetInputValue('Duration unit'))
+  optClearScore = bool(form.GetInputValue('Clear score'))
+
+  rtmStr = form.GetInputValue('Rhythm')
+  melStr = form.GetInputValue('Melody')
+  panStr = form.GetInputValue('Pan')
+  velStr = form.GetInputValue('Velocity')
+  relStr = form.GetInputValue('Release')
+  cutStr = form.GetInputValue('Mod X')
+  resStr = form.GetInputValue('Mod Y')
+  pofStr = form.GetInputValue('Fine Pitch')
+  repStr = form.GetInputValue('Repeats')
+  colStr = form.GetInputValue('Color')
+  porStr = form.GetInputValue('Porta')
+
+  rtmSeq = sequence(rtmStr, unitPattern="[DCsbhqtdTfF]", optionsPattern="[-_,.eE!]*")
+  melSeq = sequence(melStr, valueType='note', unitPattern='')
+  panSeq = sequence(panStr, unitPattern='[DClr]')
+  velSeq = sequence(velStr)
+  relSeq = sequence(relStr)
+  cutSeq = sequence(cutStr)
+  resSeq = sequence(resStr)
+  pofSeq = sequence(pofStr)
+  repSeq = sequence(repStr)
+  colSeq = sequence(colStr)
+  porSeq = sequence(porStr)
+
+  # assert minimum sequence lengths
+  if len(rtmSeq) == 0: rtmSeq = [Step(error=True)]
+  if len(melSeq) == 0: melSeq = [Step(error=True)]
+  if len(panSeq) == 0: panSeq = [Step(error=True)]
+  if len(velSeq) == 0: velSeq = [Step(error=True)]
+  if len(relSeq) == 0: relSeq = [Step(error=True)]
+  if len(cutSeq) == 0: cutSeq = [Step(error=True)]
+  if len(resSeq) == 0: resSeq = [Step(error=True)]
+  if len(pofSeq) == 0: pofSeq = [Step(error=True)]
+  if len(repSeq) == 0: repSeq = [Step(error=True)]
+  if len(colSeq) == 0: colSeq = [Step(error=True)]
+  if len(porSeq) == 0: porSeq = [Step(error=True)]
+
+  # replace defaults, units and apply options etc.
+
+  for s in rtmSeq:
+    if s.fallbackOnError(pp16th): continue
+    s.setDefaultUnit('s')
+    s.applyUnits(
+      defaultProperty='length',
+      units={
+        's': pp16th,
+        'b': ppq,
+        'h': pp16th // 2,
+        'q': pp16th // 4,
+        't': pp16th // 3,
+        'd': pp16th * 1.5,
+        'T': 1,
+        'f': SPACE_UNIT_PRECISION,
+        'F': SPACE_UNIT_PRECISION,
+      }
+    )
+    s.clamp(1)
+    s.round()
+
+  for s in melSeq:
+    if s.fallbackOnError(60): continue
+    # if value is stringy, it has to be a note
+    if type(s.value) is str:
+      # format has already been asserted by sequence(),
+      # hence match will always be valid
+      match = re.match(r"(?P<note>[A-Ga-g]#?)(?P<octave>\d)?", s.value)
+      note = str(match.group('note'))
+      noteNr = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].index(note.upper())
+      octave = int(match.group('octave') or 5)
+      s.value = 12 * octave + noteNr
+    s.clamp(0, 131)
+    s.round()
+
+  for s in panSeq:
+    if s.fallbackOnError(0.5): continue
+    s.applyUnits(
+      defaultProperty='pan',
+      units={
+        'l': -1.0,
+        'r': 1.0
+      },
+      propMapMul=0.5,
+      propMapOff=0.5
+    )
+    s.propertyMapping(0.5, 0.5)
+    s.clamp(0, 1)
+
+  for s in velSeq:
+    if s.fallbackOnError(100/128): continue
+    s.applyUnits('velocity')
+    s.clamp(0, 1)
+
+  for s in relSeq:
+    if s.fallbackOnError(0.5): continue
+    s.applyUnits('release')
+    s.clamp(0, 1)
+
+  for s in cutSeq:
+    if s.fallbackOnError(0.5): continue
+    s.applyUnits('fcut', propMapMul=0.5, propMapOff=0.5)
+    s.propertyMapping(0.5, 0.5)
+    s.clamp(0, 1)
+
+  for s in resSeq:
+    if s.fallbackOnError(0.5): continue
+    s.applyUnits('fres', propMapMul=0.5, propMapOff=0.5)
+    s.propertyMapping(0.5, 0.5)
+    s.clamp(0, 1)
+
+  for s in pofSeq:
+    if s.fallbackOnError(0): continue
+    s.applyUnits('pitchofs', propMapMul=0.1)
+    s.propertyMapping(0.1)
+    s.clamp(-120, 120)
+    s.round()
+
+  for s in repSeq:
+    if s.fallbackOnError(0): continue
+    s.applyUnits('repeats')
+    s.clamp(0, 14)
+    s.round()
+
+  for s in colSeq:
+    if s.fallbackOnError(0): continue
+    s.applyUnits('color')
+    s.clamp(0, 15)
+    s.round()
+
+  for s in porSeq:
+    if s.fallbackOnError(False): continue
+    s.applyUnits('porta')
+    s.value = bool(s.value)
+
+  # sequences have been prepared - turn into one long sequence
+  
+  notes: list[flp.Note] = []
+  t = 0
+  i = -1 # rhythm sequence index
+  j = 0 # other sequences' index
+
+  # convert duration to its actual meaning
+  if durationUnit == 0:
+    duration *= ppq
+  elif durationUnit == 1:
+    duration *= ppbar
+
+  while True:
+    i += 1
+
+    # this step's starting time
+    t0 = t
+
+    # index and t0 up-to-date, check ending condition
+    if durationUnit == 2:
+      if i >= duration: break
+    else:
+      if t0 >= duration: break
+
+    rtmStep = rtmSeq[i % len(rtmSeq)]
+
+    # sync index j according to step options
+    if '.' in rtmStep.options:
+      j = 0
+    elif '-' in rtmStep.options or ',' in rtmStep.options:
+      pass
+    elif i > 0:
+      j += 1
+
+    melStep = melSeq[j % len(melSeq)]
+    panStep = panSeq[j % len(panSeq)]
+    velStep = velSeq[j % len(velSeq)]
+    relStep = relSeq[j % len(relSeq)]
+    cutStep = cutSeq[j % len(cutSeq)]
+    resStep = resSeq[j % len(resSeq)]
+    pofStep = pofSeq[j % len(pofSeq)]
+    repStep = repSeq[j % len(repSeq)]
+    colStep = colSeq[j % len(colSeq)]
+    porStep = porSeq[j % len(porSeq)]
+
+    dt = rtmStep.value
+    # apply space filling units
+    if rtmStep.unit == 'f':
+      space = pp16th - (t0 % pp16th)
+      dt = round(rtmStep.value / SPACE_UNIT_PRECISION * space)
+      if dt < 1: dt = 1
+    elif rtmStep.unit == 'F':
+      space = ppq - (t0 % ppq)
+      dt = round(rtmStep.value / SPACE_UNIT_PRECISION * space)
+      if dt < 1: dt = 1
+    # apply extending options
+    if 'e' in rtmStep.options:
+      t1 = t + dt
+      dt += (pp16th - (t1 % pp16th)) % pp16th # second modulo prevents rounding up whole step
+    elif 'E' in rtmStep.options:
+      t1 = t + dt
+      dt += (ppq - (t1 % ppq)) % ppq # second modulo prevents rounding up whole beat
+    elif '!' in rtmStep.options:
+      dt = (dt - (t % dt))
+
+    t += dt
+
+    # pause? skip placing a note
+    if '-' in rtmStep.options or '_' in rtmStep.options: continue
+
+    note = flp.Note()
+    note.time = t0
+    note.length = dt
+    note.number = melStep.value
+    note.pan = panStep.value
+    note.velocity = velStep.value
+    note.release = relStep.value
+    note.fcut = cutStep.value
+    note.fres = resStep.value
+    note.pitchofs = pofStep.value
+    note.repeats = repStep.value
+    note.color = colStep.value
+    note.porta = porStep.value
+
+    # select erroneous notes as a hint
+    note.selected = (
+      rtmStep.error or
+      melStep.error or
+      panStep.error or
+      velStep.error or
+      relStep.error or
+      cutStep.error or
+      resStep.error or
+      pofStep.error or
+      repStep.error or
+      colStep.error or
+      porStep.error
+    )
+    notes.append(note)
+  
+  if optClearScore: flp.score.clearNotes()
+
+  for n in notes:
+    flp.score.addNote(n)
