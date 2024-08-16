@@ -13,6 +13,7 @@ v1.0 (2024-08-14)
   - initial version
 
 v1.1 (2024-08-16)
+  - fixed timing errors when using rhythms relying on sub-tick precision
   - added markers option
   - added limit to one option
   - added note length sequence
@@ -29,7 +30,7 @@ DEFAULT = flp.Note()
 DEFAULT.length = pp16th
 CURRENT = flp.score.getDefaultNoteProperties()
 
-SPACE_UNIT_PRECISION = 100000
+TIME_PRECISION = 100 # internal tick-subdivision
 
 class Step:
   def __init__(self, value: str|float|bool|None = None, unit: str|None = None, options: str|None = None, error: bool = False) -> None:
@@ -349,12 +350,11 @@ def apply(form: flp.ScriptDialog):
         't': pp16th // 3,
         'd': pp16th * 1.5,
         'T': 1,
-        'f': SPACE_UNIT_PRECISION,
-        'F': SPACE_UNIT_PRECISION,
+        'f': 1,
+        'F': 1,
       }
     )
-    s.clamp(1)
-    s.round()
+    s.clamp(0)
 
   for s in melSeq:
     if s.fallbackOnError(60): continue
@@ -454,7 +454,7 @@ def apply(form: flp.ScriptDialog):
   
   notes: list[flp.Note] = []
   markers: list[flp.Marker] = []
-  t = 0
+  t_precise = 0 # high-precision time
   i = -1 # rhythm sequence index
   j = 0 # other sequences' index
   revs = 0
@@ -469,7 +469,7 @@ def apply(form: flp.ScriptDialog):
     i += 1
 
     # this step's starting time
-    t0 = t
+    t0 = round(t_precise / TIME_PRECISION)
 
     # index and t0 up-to-date, check ending condition
     if durationUnit == 2:
@@ -526,25 +526,25 @@ def apply(form: flp.ScriptDialog):
     colStep = colSeq[j % len(colSeq)]
     porStep = porSeq[j % len(porSeq)]
 
-    dt = rtmStep.value
+    dt = float(rtmStep.value)
     # apply space filling units
     if rtmStep.unit == 'f':
       space = pp16th - (t0 % pp16th)
-      dt = round(rtmStep.value / SPACE_UNIT_PRECISION * space)
+      dt *= space
       if dt < 1: dt = 1
     elif rtmStep.unit == 'F':
       space = ppq - (t0 % ppq)
-      dt = round(rtmStep.value / SPACE_UNIT_PRECISION * space)
+      dt *= space
       if dt < 1: dt = 1
     # apply extending options
     if 'e' in rtmStep.options:
-      t1 = t + dt
+      t1 = t_precise + dt
       dt += (pp16th - (t1 % pp16th)) % pp16th # second modulo prevents rounding up whole step
     elif 'E' in rtmStep.options:
-      t1 = t + dt
+      t1 = t_precise + dt
       dt += (ppq - (t1 % ppq)) % ppq # second modulo prevents rounding up whole beat
     elif '!' in rtmStep.options:
-      dt = (dt - (t % dt))
+      dt = (dt - (t_precise % dt))
 
     # init note length with absolute value
     length = lenStep.value
@@ -563,13 +563,13 @@ def apply(form: flp.ScriptDialog):
 
     # apply duration sequence
 
-    t += dt
+    t_precise += round(dt * TIME_PRECISION)
 
     # pause? skip placing a note
     if '-' in rtmStep.options or '_' in rtmStep.options: continue
 
     note = flp.Note()
-    note.time = t0
+    note.time = round(t0)
     note.length = round(length)
     note.number = melStep.value
     note.pan = panStep.value
