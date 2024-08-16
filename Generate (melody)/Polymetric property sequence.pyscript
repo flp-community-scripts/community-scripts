@@ -2,7 +2,7 @@
 Title: Polymetric property sequence
 Author: BinaryBorn
 Category: Generate (melody)
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
@@ -11,6 +11,10 @@ Create a complex sequence from sequencing note properties individually.
 Changelog:
 v1.0 (2024-08-14)
   - initial version
+
+v1.1 (2024-08-16)
+  - added markers option
+  - added limit to one option
 """
 
 import flpianoroll as flp
@@ -261,10 +265,12 @@ def createDialog():
   + '\r\nValues can be omitted if a unit is given. It will then fall back to 1.'
   + '\r\n'
   + '\r\n'
-  + "\r\nv1.0 (2024-08-14), BinaryBorn")
+  + "\r\nv1.1 (2024-08-14), BinaryBorn")
   form.AddInputKnobInt('Duration', 16, 1, 512)
   form.AddInputCombo('Duration unit', ['beats', 'bars', 'iterations'], 0)
   form.AddInputCheckbox('Clear score', True)
+  form.AddInputCheckbox('Place markers', True)
+  form.AddInputCheckbox('Limit to one', False)
   form.AddInputText('Rhythm', '3xs 0.5s 0.5s-')
   form.AddInputText('Melody', 'C4 C5 C6')
   form.AddInputText('Pan', '0 0 0.5r 0.5l r l')
@@ -283,6 +289,8 @@ def apply(form: flp.ScriptDialog):
   duration = int(form.GetInputValue('Duration'))
   durationUnit = int(form.GetInputValue('Duration unit'))
   optClearScore = bool(form.GetInputValue('Clear score'))
+  optMarkers = bool(form.GetInputValue('Place markers'))
+  optLimit = bool(form.GetInputValue('Limit to one'))
 
   rtmStr = form.GetInputValue('Rhythm')
   melStr = form.GetInputValue('Melody')
@@ -420,9 +428,11 @@ def apply(form: flp.ScriptDialog):
   # sequences have been prepared - turn into one long sequence
   
   notes: list[flp.Note] = []
+  markers: list[flp.Marker] = []
   t = 0
   i = -1 # rhythm sequence index
   j = 0 # other sequences' index
+  revs = 0
 
   # convert duration to its actual meaning
   if durationUnit == 0:
@@ -451,6 +461,32 @@ def apply(form: flp.ScriptDialog):
       pass
     elif i > 0:
       j += 1
+
+    # new start?
+    if (
+      i % len(rtmSeq) == 0 and
+      j % len(melSeq) == 0 and
+      j % len(panSeq) == 0 and
+      j % len(velSeq) == 0 and
+      j % len(relSeq) == 0 and
+      j % len(cutSeq) == 0 and
+      j % len(resSeq) == 0 and
+      j % len(pofSeq) == 0 and
+      j % len(repSeq) == 0 and
+      j % len(colSeq) == 0 and
+      j % len(porSeq) == 0
+    ):
+      revs += 1
+      if optMarkers:
+        marker = flp.Marker()
+        markers.append(marker)
+        marker.time = t0
+        marker.name = f'Revolution {revs}'
+      if optLimit and revs == 2:
+        if marker:
+          marker.name = 'End'
+          marker.mode = 6
+        break
 
     melStep = melSeq[j % len(melSeq)]
     panStep = panSeq[j % len(panSeq)]
@@ -518,7 +554,12 @@ def apply(form: flp.ScriptDialog):
     )
     notes.append(note)
   
-  if optClearScore: flp.score.clearNotes()
+  if optClearScore:
+    flp.score.clearNotes()
+    flp.score.clearMarkers()
 
   for n in notes:
     flp.score.addNote(n)
+
+  for m in markers:
+    flp.score.addMarker(m)
