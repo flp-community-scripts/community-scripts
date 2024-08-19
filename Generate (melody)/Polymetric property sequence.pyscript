@@ -615,14 +615,12 @@ def apply(form: flp.ScriptDialog):
       if lenStep.unit == 'f':
         space = PP16TH - (t0 % PP16TH)
         length *= space
-        if length < 1: length = 1
       elif lenStep.unit == 'F':
         space = PPQ - (t0 % PPQ)
         length *= space
-        if length < 1: length = 1
       elif lenStep.unit == '*':
         length *= dt
-        if length < 1: length = 1
+      if length < 1: length = 1
 
       # pause? skip placing a note
       if '-' in rtmStep.options or '_' in rtmStep.options: continue
@@ -630,15 +628,15 @@ def apply(form: flp.ScriptDialog):
       note = flp.Note()
       note.time = t0
       note.length = round(length)
-      note.number = round(pitStep.value)
-      note.pan = panStep.value * 0.5 + 0.5
-      note.velocity = velStep.value
-      note.release = relStep.value
-      note.fcut = cutStep.value * 0.5 + 0.5
-      note.fres = resStep.value * 0.5 + 0.5
-      note.pitchofs = round(pofStep.value / 10)
-      note.repeats = round(repStep.value)
-      note.color = round(colStep.value)
+      note.number = min(max(round(pitStep.value), 0), 131)
+      note.pan = min(max(panStep.value * 0.5 + 0.5, 0), 1)
+      note.velocity = min(max(velStep.value, 0), 1)
+      note.release = min(max(relStep.value, 0), 1)
+      note.fcut = min(max(cutStep.value * 0.5 + 0.5, 0), 1)
+      note.fres = min(max(resStep.value * 0.5 + 0.5, 0), 1)
+      note.pitchofs = min(max(round(pofStep.value / 10), -120), 120)
+      note.repeats = min(max(round(repStep.value), 0), 14)
+      note.color = min(max(round(colStep.value), 0), 15)
       note.porta = bool(round(porStep.value))
 
       # select erroneous notes as a hint
