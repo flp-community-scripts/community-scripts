@@ -2,15 +2,19 @@
 Title: Apply color sequence
 Author: D3Mens (idea), BinaryBorn (code)
 Category: Color
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
-Changes note color following a defined sequence.
+Rotates note color every few notes or steps following the defined sequence.
 
 Changelog:
 v1.0 (2024-02-19)
   - initial version
+
+v1.1 (2024-08-19)
+  - added note deselection for visibility
+  - changed script description
 """
 
 import flpianoroll as flp
@@ -20,9 +24,9 @@ import _random
 random = _random.Random()
 
 def createDialog():
-  form = flp.ScriptDialog("Apply color sequence","Changes note color following a defined sequence."
+  form = flp.ScriptDialog("Apply color sequence","Rotates note color every few notes or steps following the defined sequence."
   + "\r\nUse comma or space to separate numbers in sequence."
-  + "\r\n\r\nv1.0 (2024-02-19), D3Mens & BinaryBorn")
+  + "\r\n\r\nv1.1 (2024-08-19), D3Mens & BinaryBorn")
   form.AddInputText('Sequence', '1')
   form.AddInputKnobInt('Seq. multiplier', 1, 1, 32)
   form.AddInputCombo('Unit', ['note index', '1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)'], 0)
@@ -35,7 +39,7 @@ def createDialog():
 
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   ppq = flp.score.PPQ
 
   seqText = form.GetInputValue('Sequence')
@@ -102,6 +106,9 @@ def apply(form):
   colRange = max(colMin, colMax) - min(colMin, colMax)
   for i in range(flp.score.noteCount):
     note = flp.score.getNote(i)
+
+    # deselect note to make color noticeable
+    note.selected = False
     
     # note based
     if seqUnit == 0:
