@@ -22,15 +22,17 @@ v1.1 (2024-08-16)
 import flpianoroll as flp
 import re
 
-ppq = flp.score.PPQ
-pp16th = ppq // 4
-ppbar = ppq * 4
+PPQ = flp.score.PPQ
+PP16TH = PPQ // 4
+PPBAR = PPQ * 4
 
 DEFAULT = flp.Note()
-DEFAULT.length = pp16th
+DEFAULT.length = PP16TH
 CURRENT = flp.score.getDefaultNoteProperties()
 
 TIME_PRECISION = 100 # internal tick-subdivision
+PPQ_PRECISE = PPQ * TIME_PRECISION
+PP16TH_PRECISE = PP16TH * TIME_PRECISION
 
 class Step:
   def __init__(self, value: str|float|bool|None = None, unit: str|None = None, options: str|None = None, error: bool = False) -> None:
@@ -344,17 +346,17 @@ def apply(form: flp.ScriptDialog):
   # replace defaults, units and apply options etc.
 
   for s in rtmSeq:
-    if s.fallbackOnError(pp16th): continue
+    if s.fallbackOnError(PP16TH): continue
     s.setDefaultUnit('s')
     s.applyUnits(
       defaultProperty='length',
       units={
-        's': pp16th,
-        'b': ppq,
-        'h': pp16th // 2,
-        'q': pp16th // 4,
-        't': pp16th // 3,
-        'd': pp16th * 1.5,
+        's': PP16TH,
+        'b': PPQ,
+        'h': PP16TH // 2,
+        'q': PP16TH // 4,
+        't': PP16TH // 3,
+        'd': PP16TH * 1.5,
         'T': 1,
         'f': 1,
         'F': 1,
@@ -382,12 +384,12 @@ def apply(form: flp.ScriptDialog):
     s.applyUnits(
       defaultProperty='length',
       units={
-        's': pp16th,
-        'b': ppq,
-        'h': pp16th // 2,
-        'q': pp16th // 4,
-        't': pp16th // 3,
-        'd': pp16th * 1.5,
+        's': PP16TH,
+        'b': PPQ,
+        'h': PP16TH // 2,
+        'q': PP16TH // 4,
+        't': PP16TH // 3,
+        'd': PP16TH * 1.5,
         'T': 1,
         'f': 1,
         'F': 1,
@@ -467,15 +469,16 @@ def apply(form: flp.ScriptDialog):
 
   # convert duration to its actual meaning
   if durationUnit == 0:
-    duration *= ppq
+    duration *= PPQ
   elif durationUnit == 1:
-    duration *= ppbar
+    duration *= PPBAR
 
   while True:
     i += 1
 
     # this step's starting time
-    t0 = round(t_precise / TIME_PRECISION)
+    t0_precise = t_precise
+    t0 = round(t0_precise / TIME_PRECISION)
 
     # index and t0 up-to-date, check ending condition
     if durationUnit == 2:
@@ -532,50 +535,53 @@ def apply(form: flp.ScriptDialog):
     colStep = colSeq[j % len(colSeq)]
     porStep = porSeq[j % len(porSeq)]
 
-    dt = float(rtmStep.value)
+    # derive delta time from precise timing to preserve jitter
+    t1_precise = round(t0_precise + rtmStep.value * TIME_PRECISION)
+    dt_precise = t1_precise - t0_precise
     # apply space filling units
     if rtmStep.unit == 'f':
-      space = pp16th - (t0 % pp16th)
-      dt *= space
-      if dt < 1: dt = 1
+      space = PP16TH_PRECISE - (t0_precise % PP16TH_PRECISE)
+      dt_precise = round(rtmStep.value * space)
     elif rtmStep.unit == 'F':
-      space = ppq - (t0 % ppq)
-      dt *= space
-      if dt < 1: dt = 1
+      space = PPQ_PRECISE - (t0_precise % PPQ_PRECISE)
+      dt_precise = round(rtmStep.value * space)
     # apply extending options
     if 'e' in rtmStep.options:
-      t1 = t_precise + dt
-      dt += (pp16th - (t1 % pp16th)) % pp16th # second modulo prevents rounding up whole step
+      dt_precise += (PP16TH_PRECISE - (t1_precise % PP16TH_PRECISE)) % PP16TH_PRECISE # second modulo prevents rounding up whole step
     elif 'E' in rtmStep.options:
-      t1 = t_precise + dt
-      dt += (ppq - (t1 % ppq)) % ppq # second modulo prevents rounding up whole beat
+      dt_precise += (PPQ - (t1_precise % PPQ)) % PPQ # second modulo prevents rounding up whole beat
     elif '!' in rtmStep.options:
-      dt = (dt - (t_precise % dt))
+      dt_precise = (dt_precise - (t0_precise % dt_precise))
 
+    # delta time shall never be less than one tick
+    if dt_precise < TIME_PRECISION: dt_precise = TIME_PRECISION
+    t1_precise = t0_precise + dt_precise
+    # next step's starting time is this step's end time
+    t_precise = t1_precise
+
+    # calculate length in tick space
+    t1 = round(t1_precise / TIME_PRECISION)
+    dt = t1 - t0 
     # init note length with absolute value
     length = lenStep.value
     # apply dynamic units
     if lenStep.unit == 'f':
-      space = pp16th - (t0 % pp16th)
+      space = PP16TH - (t0 % PP16TH)
       length *= space
       if length < 1: length = 1
     elif lenStep.unit == 'F':
-      space = ppq - (t0 % ppq)
+      space = PPQ - (t0 % PPQ)
       length *= space
       if length < 1: length = 1
     elif lenStep.unit == '*':
       length *= dt
       if length < 1: length = 1
 
-    # apply duration sequence
-
-    t_precise += round(dt * TIME_PRECISION)
-
     # pause? skip placing a note
     if '-' in rtmStep.options or '_' in rtmStep.options: continue
 
     note = flp.Note()
-    note.time = round(t0)
+    note.time = t0
     note.length = round(length)
     note.number = melStep.value
     note.pan = panStep.value
