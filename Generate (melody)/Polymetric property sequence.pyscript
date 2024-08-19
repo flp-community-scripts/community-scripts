@@ -21,6 +21,7 @@ v1.1 (2024-08-16)
 
 import flpianoroll as flp
 import re
+from typing import Callable
 
 PPQ = flp.score.PPQ
 PP16TH = PPQ // 4
@@ -34,8 +35,175 @@ TIME_PRECISION = 100 # internal tick-subdivision
 PPQ_PRECISE = PPQ * TIME_PRECISION
 PP16TH_PRECISE = PP16TH * TIME_PRECISION
 
+def parseNoteValue(value: str) -> float:
+  """Parses a note value text.
+
+  Args:
+      value (str): Note value text, either a MIDI note number or a pitch (e.g. C4)
+
+  Returns:
+      float: MIDI note number.
+  """
+  if value.isnumeric():
+    return float(value)
+  # if value is stringy, it has to be a note
+  match = re.match(r"(?P<note>[A-Ga-g]#?)(?P<octave>\d)?", value)
+  note = str(match.group('note'))
+  noteNr = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].index(note.upper())
+  octave = int(match.group('octave') or 5)
+  return 12 * octave + noteNr
+
+# property traits
+class Traits:
+  def __init__(self, valuePattern = '-?\d+(\.\d+)?', valueParser: Callable[[str], float] = lambda t: float(t), unitPattern = '', units: dict[str, float] = [], defaultUnit: str|None = None, optionsPattern = '', errorValue = 0.0) -> None:
+    self.valuePattern = valuePattern
+    "Regex for value"
+    self.valueParser = valueParser
+    "Function to parse value"
+    self.unitPattern = unitPattern
+    "Regex for units"
+    self.units = units
+    "Dictionary for units and their respective values"
+    self.defaultUnit = defaultUnit
+    "Default unit"
+    self.optionsPattern = optionsPattern
+    "Regex for options"
+    self.errorValue = errorValue
+    "Fallback value to use on errors"
+
+TRAITS_RHYTHM = Traits(
+  unitPattern='[DCsbhqtdTfF]',
+  units={
+    'D': DEFAULT.length,
+    'C': CURRENT.length,
+    's': PP16TH,
+    'b': PPQ,
+    'h': PP16TH // 2,
+    'q': PP16TH // 4,
+    't': PP16TH // 3,
+    'd': PP16TH * 1.5,
+    'T': 1,
+    'f': 1, # re-interpreted in apply()
+    'F': 1, # re-interpreted in apply()
+  },
+  defaultUnit='s',
+  optionsPattern="[-_,.eE!]*",
+  # options are interpreted in apply()
+  errorValue=PP16TH,
+)
+
+TRAITS_PITCH = Traits(
+  valuePattern='(\d+|([A-Ga-g]#?\d*))',
+  valueParser=parseNoteValue,
+  errorValue=60,
+)
+
+TRAITS_LENGTH = Traits(
+  unitPattern='[DCsbhqtdTfF*]',
+  units={
+    'D': DEFAULT.length,
+    'C': CURRENT.length,
+    's': PP16TH,
+    'b': PPQ,
+    'h': PP16TH // 2,
+    'q': PP16TH // 4,
+    't': PP16TH // 3,
+    'd': PP16TH * 1.5,
+    'T': 1,
+    'f': 1, # re-interpreted in apply()
+    'F': 1, # re-interpreted in apply()
+    '*': 1, # re-interpreted in apply()
+  },
+  defaultUnit='*',
+  errorValue=1,
+)
+
+TRAITS_PAN = Traits(
+  unitPattern='[DClr]',
+  units={
+    'D': DEFAULT.pan * 2 - 1,
+    'C': CURRENT.pan * 2 - 1,
+    'l': -1,
+    'r': 1,
+  },
+  defaultUnit='r',
+  errorValue=0,
+)
+
+TRAITS_VELOCITY = Traits(
+  unitPattern='[DC]',
+  units={
+    'D': DEFAULT.velocity,
+    'C': CURRENT.velocity,
+  },
+  errorValue=100/128
+)
+
+TRAITS_RELEASE = Traits(
+  unitPattern='[DC]',
+  units={
+    'D': DEFAULT.release,
+    'C': CURRENT.release,
+  },
+  errorValue=0.5
+)
+
+TRAITS_FCUT = Traits(
+  unitPattern='[DC]',
+  units={
+    'D': DEFAULT.fcut * 2 - 1,
+    'C': CURRENT.fcut * 2 - 1,
+  },
+  errorValue=0
+)
+
+TRAITS_FRES = Traits(
+  unitPattern='[DC]',
+  units={
+    'D': DEFAULT.fres * 2 - 1,
+    'C': CURRENT.fres * 2 - 1,
+  },
+  errorValue=0
+)
+
+TRAITS_PITCHOFS = Traits(
+  unitPattern='[DC]',
+  units={
+    'D': DEFAULT.pitchofs * 10,
+    'C': CURRENT.pitchofs * 10,
+  },
+  errorValue=0
+)
+
+TRAITS_REPEATS = Traits(
+  unitPattern='[DC]',
+  units={
+    'D': DEFAULT.repeats,
+    'C': CURRENT.repeats,
+  },
+  errorValue=0
+)
+
+TRAITS_COLOR = Traits(
+  unitPattern='[DC]',
+  units={
+    'D': DEFAULT.color,
+    'C': CURRENT.color,
+  },
+  errorValue=0
+)
+
+TRAITS_PORTA = Traits(
+  unitPattern='[DC]',
+  units={
+    'D': int(DEFAULT.porta),
+    'C': int(CURRENT.porta),
+  },
+  errorValue=0
+)
+
 class Step:
-  def __init__(self, value: str|float|bool|None = None, unit: str|None = None, options: str|None = None, error: bool = False) -> None:
+  def __init__(self, value: float, unit: str|None = None, options: str|None = None, error: bool = False) -> None:
     self.value = value
     "Step value"
     self.unit = unit
@@ -45,75 +213,48 @@ class Step:
     self.error = error
     "True if step is erroneous"
 
-  def fallbackOnError(self, value: str|float|bool) -> bool:
-    """If the step is erroneous, sets the *property* value and returns `True`. Otherwise it simply returns `False`."""
-    if self.error:
-      self.value = value
-    return self.error
-  
-  def setDefaultUnit(self, unit: str):
-    """Sets the step's unit if its None yet."""
-    if self.unit is None: self.unit = unit
-  
-  def applyUnits(self, defaultProperty: str|None = None, units: dict[str, float]|None = None, propMapMul = 1.0, propMapOff = 0.0):
-    """Applies units to the value.
+def stepFromDescription(valueStr: str|None, unit: str|None, options: str|None, traits: Traits) -> Step:
+  """Creates a Step from descriptor texts.
+  """
+  if unit is None:
+    unit = traits.defaultUnit
 
-    Args:
-        defaultProperty (str | None, optional): If set, will look up unit from default (D) or current (C) note. Defaults to None.
-        units (dict[str, float] | None, optional): Additional units to apply. Defaults to None.
-        propMapMul (float, optional): Multiplication for the mapping from UI value to technical *property* value. Defaults to 1.0.
-        propMapOff (float, optional): Offset for the mapping from UI value to technical *property* value. Defaults to 0.0.
-    """
-    # if a unit is specified, None value must fall back to 1.0
-    if self.unit is not None and self.value is None:
-      self.value = 1.0
-    # apply defaults if a default property is specified
-    if defaultProperty is not None and (self.unit == 'D' or self.unit == 'C'):
-      if self.unit == 'D':
-        unit = getattr(DEFAULT, defaultProperty)
-      elif self.unit == 'C':
-        unit = getattr(CURRENT, defaultProperty)
-      unit = (unit - propMapOff) / propMapMul
-      self.value = float(self.value * unit)
-    # apply user-defined units
-    elif units is not None and self.unit is not None:
-      self.value = float(self.value * units[self.unit])
+  if valueStr is None:
+    value = 1
+  else:
+    value = traits.valueParser(valueStr)
 
-  def propertyMapping(self, mul: float, off = 0.0):
-    """Maps the value from its UI notation to its technical *property* value.
-    E.g. `note.pan` has a UI value range of (-1 to +1) but its *property* value range is (0 to 1), thus the conversion is: multiply by 0.5, add 0.5.
+  if unit:
+    value = value * traits.units[unit]
 
-    Args:
-        mul (float): UI to *property* multiplicator.
-        off (float, optional): UI to *property* offset. Defaults to 0.0.
-    """
-    self.value = float(self.value * mul + off)
-  
-  def round(self):
-    """Rounds this steps' value."""
-    self.value = round(self.value)
+  step = Step(
+    value=value,
+    unit=unit,
+    options=options
+  )
+  return step
 
-  def clamp(self, min: float|None = None, max: float|None = None):
-    """Sets this steps' *property* value range.
+callstack: list[str] = []
+def stepFromError(error: str, traits: Traits) -> Step:
+  """Creates a Step indicating an error. Logs the error."""
+  flp.Utils.log('')
+  flp.Utils.log(error)
+  for cs in callstack:
+    flp.Utils.log(f'\t{cs}')
+  return Step(
+    value=traits.errorValue,
+    error=True,
+  )
 
-    Args:
-        min (float | None, optional): If set, defines the minimum value. Defaults to None.
-        max (float | None, optional): If set, defines the maximum value. Defaults to None.
-    """
-    if min is not None and self.value < min:
-      self.value = min
-    elif max is not None and self.value > max:
-      self.value = max
-
-def sequence(seq: str, valueType = 'number', unitPattern = '[DC]', optionsPattern = '') -> list[Step]:
+def sequence(seq: str, traits: Traits) -> list[Step]:
   """Sequences (the verb) a sequence (the noun) from its stringyfied form to a list of Steps
   
   Args:
       seq (str): Text to sequence.
-      valueType (str): Type of values in this sequence. Defaults to `number`.
-      unitPattern (str): Regular expression for catching units. Defaults to `[DC]`.
-      optionsPattern (str): Regular expression for catching options. Defaults to the empty string.
+      traits (Traits): Traits to apply.
   """
+
+  global callstack
 
   initialSeq = seq
 
@@ -144,47 +285,32 @@ def sequence(seq: str, valueType = 'number', unitPattern = '[DC]', optionsPatter
 
   # prepare pattern for expression
 
-  if valueType == 'note':
-    # whole number or note with octave
-    valuePattern = '(\d+|([A-Ga-g]#?\d*))'
-  else:
-    # any number
-    valuePattern = '-?\d+(\.\d+)?'
-
-  pval = f'(?P<value>{valuePattern})?'
-  punit = f'(?P<unit>{unitPattern})?'
-  popts = f'(?P<options>{optionsPattern})?'
+  pval = f'(?P<value>{traits.valuePattern})?'
+  punit = f'(?P<unit>{traits.unitPattern})?'
+  popts = f'(?P<options>{traits.optionsPattern})?'
 
   # every expression must contain exactly the given patterns, hence the ^$ fence
   pattern = re.compile(f'^{pval}{punit}{popts}$')
+
+  callstack = [
+    f'In sequence (expanded): {seq}',
+    f'In sequence: {initialSeq}',
+  ]
 
   # parse every expression in sequence
   steps: list[Step] = []
   for exp in exps:
     match = pattern.match(exp)
     if match is None:
-      flp.Utils.log('')
-      flp.Utils.log(f'Error in expression: {exp}')
-      flp.Utils.log(f'\tIn sequence (expanded): {seq}')
-      flp.Utils.log(f'\tIn sequence: {initialSeq}')
-      steps.append(Step(error=True))
+      steps.append(stepFromError(f'Error in expression: {exp}', traits))
     else:
-      value = match.group('value')
-      if value is not None:
-        if valueType == 'note':
-          if value.isnumeric():
-            value = float(value)
-          else:
-            value = str(value) # just here to coerce the type
-        else:
-          value = float(value) # just here to coerce the type
-      else:
-        value = None # just here to coerce the type
-      steps.append(Step(
-        value=value,
-        unit=match.group('unit'),
-        options=match.group('options'),
-      ))
+      step = stepFromDescription(
+        match.group('value'),
+        match.group('unit'),
+        match.group('options'),
+        traits,
+      )
+      steps.append(step)
 
   return steps
 
@@ -297,6 +423,8 @@ def createDialog():
   return form
 
 def apply(form: flp.ScriptDialog):
+  global callstack
+
   duration = int(form.GetInputValue('Duration'))
   durationUnit = int(form.GetInputValue('Duration unit'))
   optClearScore = bool(form.GetInputValue('Clear score'))
@@ -316,147 +444,34 @@ def apply(form: flp.ScriptDialog):
   colStr = form.GetInputValue('Color')
   porStr = form.GetInputValue('Porta')
 
-  rtmSeq = sequence(rtmStr, unitPattern="[DCsbhqtdTfF]", optionsPattern="[-_,.eE!]*")
-  melSeq = sequence(melStr, valueType='note', unitPattern='')
-  lenSeq = sequence(lenStr, unitPattern='[DCsbhqtdTfF*]')
-  panSeq = sequence(panStr, unitPattern='[DClr]')
-  velSeq = sequence(velStr)
-  relSeq = sequence(relStr)
-  cutSeq = sequence(cutStr)
-  resSeq = sequence(resStr)
-  pofSeq = sequence(pofStr)
-  repSeq = sequence(repStr)
-  colSeq = sequence(colStr)
-  porSeq = sequence(porStr)
+  rtmSeq = sequence(rtmStr, TRAITS_RHYTHM)
+  melSeq = sequence(melStr, TRAITS_PITCH)
+  lenSeq = sequence(lenStr, TRAITS_LENGTH)
+  panSeq = sequence(panStr, TRAITS_PAN)
+  velSeq = sequence(velStr, TRAITS_VELOCITY)
+  relSeq = sequence(relStr, TRAITS_RELEASE)
+  cutSeq = sequence(cutStr, TRAITS_FCUT)
+  resSeq = sequence(resStr, TRAITS_FRES)
+  pofSeq = sequence(pofStr, TRAITS_PITCHOFS)
+  repSeq = sequence(repStr, TRAITS_REPEATS)
+  colSeq = sequence(colStr, TRAITS_COLOR)
+  porSeq = sequence(porStr, TRAITS_PORTA)
+
+  callstack = []
 
   # assert minimum sequence lengths
-  if len(rtmSeq) == 0: rtmSeq = [Step(error=True)]
-  if len(melSeq) == 0: melSeq = [Step(error=True)]
-  if len(lenSeq) == 0: lenSeq = [Step(error=True)]
-  if len(panSeq) == 0: panSeq = [Step(error=True)]
-  if len(velSeq) == 0: velSeq = [Step(error=True)]
-  if len(relSeq) == 0: relSeq = [Step(error=True)]
-  if len(cutSeq) == 0: cutSeq = [Step(error=True)]
-  if len(resSeq) == 0: resSeq = [Step(error=True)]
-  if len(pofSeq) == 0: pofSeq = [Step(error=True)]
-  if len(repSeq) == 0: repSeq = [Step(error=True)]
-  if len(colSeq) == 0: colSeq = [Step(error=True)]
-  if len(porSeq) == 0: porSeq = [Step(error=True)]
-
-  # replace defaults, units and apply options etc.
-
-  for s in rtmSeq:
-    if s.fallbackOnError(PP16TH): continue
-    s.setDefaultUnit('s')
-    s.applyUnits(
-      defaultProperty='length',
-      units={
-        's': PP16TH,
-        'b': PPQ,
-        'h': PP16TH // 2,
-        'q': PP16TH // 4,
-        't': PP16TH // 3,
-        'd': PP16TH * 1.5,
-        'T': 1,
-        'f': 1,
-        'F': 1,
-      }
-    )
-    s.clamp(0)
-
-  for s in melSeq:
-    if s.fallbackOnError(60): continue
-    # if value is stringy, it has to be a note
-    if type(s.value) is str:
-      # format has already been asserted by sequence(),
-      # hence match will always be valid
-      match = re.match(r"(?P<note>[A-Ga-g]#?)(?P<octave>\d)?", s.value)
-      note = str(match.group('note'))
-      noteNr = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].index(note.upper())
-      octave = int(match.group('octave') or 5)
-      s.value = 12 * octave + noteNr
-    s.clamp(0, 131)
-    s.round()
-
-  for s in lenSeq:
-    if s.fallbackOnError(1): continue
-    s.setDefaultUnit('*')
-    s.applyUnits(
-      defaultProperty='length',
-      units={
-        's': PP16TH,
-        'b': PPQ,
-        'h': PP16TH // 2,
-        'q': PP16TH // 4,
-        't': PP16TH // 3,
-        'd': PP16TH * 1.5,
-        'T': 1,
-        'f': 1,
-        'F': 1,
-        '*': 1,
-      }
-    )
-    s.clamp(0)
-  
-  for s in panSeq:
-    if s.fallbackOnError(0.5): continue
-    s.applyUnits(
-      defaultProperty='pan',
-      units={
-        'l': -1.0,
-        'r': 1.0
-      },
-      propMapMul=0.5,
-      propMapOff=0.5
-    )
-    s.propertyMapping(0.5, 0.5)
-    s.clamp(0, 1)
-
-  for s in velSeq:
-    if s.fallbackOnError(100/128): continue
-    s.applyUnits('velocity')
-    s.clamp(0, 1)
-
-  for s in relSeq:
-    if s.fallbackOnError(0.5): continue
-    s.applyUnits('release')
-    s.clamp(0, 1)
-
-  for s in cutSeq:
-    if s.fallbackOnError(0.5): continue
-    s.applyUnits('fcut', propMapMul=0.5, propMapOff=0.5)
-    s.propertyMapping(0.5, 0.5)
-    s.clamp(0, 1)
-
-  for s in resSeq:
-    if s.fallbackOnError(0.5): continue
-    s.applyUnits('fres', propMapMul=0.5, propMapOff=0.5)
-    s.propertyMapping(0.5, 0.5)
-    s.clamp(0, 1)
-
-  for s in pofSeq:
-    if s.fallbackOnError(0): continue
-    s.applyUnits('pitchofs', propMapMul=0.1)
-    s.propertyMapping(0.1)
-    s.clamp(-120, 120)
-    s.round()
-
-  for s in repSeq:
-    if s.fallbackOnError(0): continue
-    s.applyUnits('repeats')
-    s.clamp(0, 14)
-    s.round()
-
-  for s in colSeq:
-    if s.fallbackOnError(0): continue
-    s.applyUnits('color')
-    s.clamp(0, 15)
-    s.round()
-
-  for s in porSeq:
-    if s.fallbackOnError(False): continue
-    s.applyUnits('porta')
-    s.value = bool(s.value)
+  if len(rtmSeq) == 0: rtmSeq = [stepFromError('Empty sequence', TRAITS_RHYTHM)]
+  if len(melSeq) == 0: melSeq = [stepFromError('Empty sequence', TRAITS_PITCH)]
+  if len(lenSeq) == 0: lenSeq = [stepFromError('Empty sequence', TRAITS_LENGTH)]
+  if len(panSeq) == 0: panSeq = [stepFromError('Empty sequence', TRAITS_PAN)]
+  if len(velSeq) == 0: velSeq = [stepFromError('Empty sequence', TRAITS_VELOCITY)]
+  if len(relSeq) == 0: relSeq = [stepFromError('Empty sequence', TRAITS_RELEASE)]
+  if len(cutSeq) == 0: cutSeq = [stepFromError('Empty sequence', TRAITS_FCUT)]
+  if len(resSeq) == 0: resSeq = [stepFromError('Empty sequence', TRAITS_FRES)]
+  if len(pofSeq) == 0: pofSeq = [stepFromError('Empty sequence', TRAITS_PITCHOFS)]
+  if len(repSeq) == 0: repSeq = [stepFromError('Empty sequence', TRAITS_REPEATS)]
+  if len(colSeq) == 0: colSeq = [stepFromError('Empty sequence', TRAITS_COLOR)]
+  if len(porSeq) == 0: porSeq = [stepFromError('Empty sequence', TRAITS_PORTA)]
 
   # sequences have been prepared - turn into one long sequence
   
@@ -583,16 +598,16 @@ def apply(form: flp.ScriptDialog):
     note = flp.Note()
     note.time = t0
     note.length = round(length)
-    note.number = melStep.value
-    note.pan = panStep.value
+    note.number = round(melStep.value)
+    note.pan = panStep.value * 0.5 + 0.5
     note.velocity = velStep.value
     note.release = relStep.value
-    note.fcut = cutStep.value
-    note.fres = resStep.value
-    note.pitchofs = pofStep.value
-    note.repeats = repStep.value
-    note.color = colStep.value
-    note.porta = porStep.value
+    note.fcut = cutStep.value * 0.5 + 0.5
+    note.fres = resStep.value * 0.5 + 0.5
+    note.pitchofs = round(pofStep.value / 10)
+    note.repeats = round(repStep.value)
+    note.color = round(colStep.value)
+    note.porta = bool(round(porStep.value))
 
     # select erroneous notes as a hint
     note.selected = (
