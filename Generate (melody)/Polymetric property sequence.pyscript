@@ -268,11 +268,11 @@ class Quantity:
     return self.dynamicValue if self.dynamicValue is not None else self.value
 
 class Assignment:
-  def __init__(self, prop: str, op: str, quantity: Quantity, priority: str|None = None) -> None:
+  def __init__(self, prop: str, operator: str, quantity: Quantity, priority: str|None = None) -> None:
     self.prop = prop
     "Property (LHS)"
-    self.op = op
-    "Operation (=, *, +, -)"
+    self.operator = operator
+    "Operator (=, *, +, -)"
     self.quantity = quantity
     "Quantity (RHS)"
     # parse priority
@@ -285,7 +285,7 @@ class Assignment:
     self.priority = p
     "Priority - lower priority assignments are evaluated first"
 
-class Step():
+class Expression():
   def __init__(self, base: Assignment, overrides: list[Assignment] = []) -> None:
     self.base = base
     "Base assignment"
@@ -293,7 +293,7 @@ class Step():
     "Override assignment"
 
 def quantityFromDescription(valueStr: str|None, unit: str|None, options: str|None, traits: Traits) -> Quantity:
-  """Creates a Step from descriptor texts.
+  """Creates a Quantity from descriptor texts.
   """
   if unit is None:
     unit = traits.defaultUnit
@@ -329,10 +329,10 @@ def quantityFromError(error: str, traits: Traits) -> Quantity:
     error=True,
   )
 
-def stepFromError(error: str, traits: Traits) -> Step:
-  """Creates a Step indicating an error. Logs the error.
+def expressionFromError(error: str, traits: Traits) -> Expression:
+  """Creates an Expression indicating an error. Logs the error.
   """
-  return Step(
+  return Expression(
     base=Assignment(
       traits.property,
       '=',
@@ -340,8 +340,8 @@ def stepFromError(error: str, traits: Traits) -> Step:
     )
   )
 
-def sequence(seq: str, traits: Traits) -> list[Step]:
-  """Sequences (the verb) a sequence (the noun) from its stringyfied form to a list of Steps
+def parseSequence(seq: str, traits: Traits) -> list[Expression]:
+  """Sequences (the verb) a sequence (the noun) from its stringyfied form to a list of Expressions.
   
   Args:
       seq (str): Text to sequence.
@@ -371,11 +371,11 @@ def sequence(seq: str, traits: Traits) -> list[Step]:
   # disallow spaces in pattern to limit to one expression
   seq = re.sub(r'\b(?P<repetitions>\d+x)(?P<pattern>[^\s]*)', expandRepetitions, seq)
 
-  exps = seq.split(' ')
+  etexts = seq.split(' ')
   # remove other leading/trailing whitespace
-  exps = list([exp.strip() for exp in exps])
+  etexts = list([txt.strip() for txt in etexts])
   # remove empty entries
-  exps = filter(lambda exp: exp != '', exps)
+  etexts = filter(lambda txt: txt != '', etexts)
 
   # prepare pattern for expression
 
@@ -394,11 +394,11 @@ def sequence(seq: str, traits: Traits) -> list[Step]:
   ]
 
   # parse every expression in sequence
-  steps: list[Step] = []
-  for exp in exps:
-    match = pattern.match(exp)
+  exps: list[Expression] = []
+  for txt in etexts:
+    match = pattern.match(txt)
     if match is None:
-      steps.append(stepFromError(f'Error in expression: {exp}', traits))
+      exps.append(expressionFromError(f'Error in expression: {txt}', traits))
     else:
       # base assignment
       assignment = Assignment(
@@ -417,14 +417,14 @@ def sequence(seq: str, traits: Traits) -> list[Step]:
       overrides = None
       if overridesStr:
         overrides = parseOverrides(overridesStr)
-      steps.append(
-        Step(
+      exps.append(
+        Expression(
           base=assignment,
           overrides=overrides
         )
       )
 
-  return steps
+  return exps
 
 def parseOverride(text: str, traits: Traits) -> Assignment|None:
   """Parses one override of form `[property=quantity]` into an Assignment.
@@ -664,15 +664,15 @@ def apply(form: flp.ScriptDialog):
   sequenceTexts[INDEX_COLOR] = form.GetInputValue('Color')
   sequenceTexts[INDEX_PORTA] = form.GetInputValue('Porta')
 
-  sequences: list[list[Step]] = [None] * INDEX_STOP
+  sequences: list[list[Expression]] = [None] * INDEX_STOP
   lens: list[int] = [None] * INDEX_STOP
   for p in range(INDEX_STOP):
-    sequences[p] = sequence(sequenceTexts[p], TRAITS[p])
+    sequences[p] = parseSequence(sequenceTexts[p], TRAITS[p])
     callstack = []
     # assert minimum sequence lengths
     if len(sequences[p]) == 0:
       sequences[p] = [
-        stepFromError(f'Empty sequence for {TRAITS[p].property}', TRAITS[p])
+        expressionFromError(f'Empty sequence for {TRAITS[p].property}', TRAITS[p])
       ]
     lens[p] = len(sequences[p])
 
@@ -705,14 +705,14 @@ def apply(form: flp.ScriptDialog):
   elif durationUnit == 1:
     duration *= PPBAR
 
-  stp: list[Step] = [None] * INDEX_STOP
+  exp: list[Expression] = [None] * INDEX_STOP
   val: list[float] = [0] * INDEX_STOP
   assignments: list[list[Assignment]] = [None] * INDEX_STOP
 
   while True:
     i += 1
 
-    # this step's starting time
+    # this interation's starting time
     t0_precise = t_precise
     t0 = round(t0_precise / TIME_PRECISION)
 
@@ -723,10 +723,10 @@ def apply(form: flp.ScriptDialog):
       if t0 >= duration: break
 
     # keep these shorthand
-    stpRhythm = sequences[INDEX_RHYTHM][i % lens[INDEX_RHYTHM]]
-    qtyRhythm = stpRhythm.base.quantity
+    expRhythm = sequences[INDEX_RHYTHM][i % lens[INDEX_RHYTHM]]
+    qtyRhythm = expRhythm.base.quantity
 
-    # sync index j according to step options
+    # sync index j according to rhythm expression options
     if '.' in qtyRhythm.options:
       j = 0
     elif '-' in qtyRhythm.options or ',' in qtyRhythm.options:
@@ -775,7 +775,7 @@ def apply(form: flp.ScriptDialog):
     # delta time shall never be less than one tick
     if dt_precise < TIME_PRECISION: dt_precise = TIME_PRECISION
     t1_precise = t0_precise + dt_precise
-    # next step's starting time is this step's end time
+    # next iteration's starting time is this iterations's end time
     t_precise = t1_precise
 
     # sub-divide and place notes
@@ -806,16 +806,16 @@ def apply(form: flp.ScriptDialog):
       # pause? skip placing a note
       if '-' in qtyRhythm.options or '_' in qtyRhythm.options: continue
 
-      # collect all properties' steps and base and overrides
+      # collect all properties' expressions and base and overrides
       allOvrs: list[Assignment] = []
       for p in range(INDEX_STOP):
         idx = i if p == 0 else j
-        stp[p] = sequences[p][idx % lens[p]]
+        exp[p] = sequences[p][idx % lens[p]]
         # base goes directly to assignment - target index is known
-        assignments[p] = [stp[p].base]
+        assignments[p] = [exp[p].base]
         # overrides go to container first for triage - target index not known yet
-        if stp[p].overrides:
-          allOvrs.extend(stp[p].overrides)
+        if exp[p].overrides:
+          allOvrs.extend(exp[p].overrides)
 
       # triage overrides (after all have been collected)
       for p in range(INDEX_STOP):
@@ -837,7 +837,7 @@ def apply(form: flp.ScriptDialog):
           length *= space
         elif q.unit == '*':
           # SPECIAL CASE: if assignment is multiplication, don't mix dt in
-          if ass.op != '*':
+          if ass.operator != '*':
             length *= dt
         # store
         q.dynamicValue = length
@@ -849,13 +849,13 @@ def apply(form: flp.ScriptDialog):
         asses = sorted(assignments[p], key=lambda a: a.priority)
         # apply assignments to value
         for ass in asses:
-          if ass.op == '=':
+          if ass.operator == '=':
             val[p] = ass.quantity.getFinalValue()
-          elif ass.op == '*':
+          elif ass.operator == '*':
             val[p] *= ass.quantity.getFinalValue()
-          elif ass.op == '+':
+          elif ass.operator == '+':
             val[p] += ass.quantity.getFinalValue()
-          elif ass.op == '-':
+          elif ass.operator == '-':
             val[p] -= ass.quantity.getFinalValue()
 
       note = flp.Note()
@@ -872,10 +872,10 @@ def apply(form: flp.ScriptDialog):
       note.color = min(max(round(val[INDEX_COLOR]), 0), 15)
       note.porta = bool(round(val[INDEX_PORTA]))
 
-      # select erroneous notes as a hint (only actual step - no overrides)
+      # select erroneous notes as a hint (only base quantity - no overrides)
       anyError = False
       for p in range(INDEX_STOP):
-        anyError |= stp[p].base.quantity.error
+        anyError |= exp[p].base.quantity.error
       note.selected = anyError
       notes.append(note)
   
