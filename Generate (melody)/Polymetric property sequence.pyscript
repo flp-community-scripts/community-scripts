@@ -12,7 +12,7 @@ Changelog:
 v1.0 (2024-08-14)
   - initial version
 
-v1.1 (2024-08-16)
+v1.1 (2024-08-21)
   - fixed timing errors when using rhythms relying on sub-tick precision
   - added markers option
   - added limit to one option
@@ -21,6 +21,7 @@ v1.1 (2024-08-16)
   - added overrides
   - added fractional value notation
   - added priority notation
+  - added generic sequence
   - changed 'Melody' to 'Pitch'
   - changed end on grid option to '#'
 """
@@ -53,8 +54,9 @@ INDEX_FINEPITCH = 8
 INDEX_REPEATS = 9
 INDEX_COLOR = 10
 INDEX_PORTA = 11
+INDEX_GENERIC = 12
 
-INDEX_MAX = INDEX_PORTA
+INDEX_MAX = INDEX_GENERIC
 INDEX_STOP = INDEX_MAX + 1
 
 def parseNoteValue(value: str) -> float:
@@ -247,6 +249,12 @@ TRAITS[INDEX_PORTA] = Traits(
     'C': int(CURRENT.porta),
   },
   errorValue=0
+)
+
+TRAITS[INDEX_GENERIC] = Traits(
+  property='generic',
+  valuePattern='\.?',
+  valueParser=lambda s: 0,
 )
 
 class Quantity:
@@ -620,7 +628,11 @@ def createDialog():
   + '\r\nValues can be omitted if a unit is given. It will then fall back to 1.'
   + '\r\n'
   + '\r\n'
-  + "\r\nv1.1 (2024-08-14), BinaryBorn")
+  + '\r\nGeneric sequence is not bound to any property and can only be used for overrides. Its only allowed value is a decimal point to indicate a blank which can be omitted if overrides are specified:'
+  + '\r\n\tvalue_generic ::= "."?'
+  + '\r\n'
+  + '\r\n'
+  + "\r\nv1.1 (2024-08-21), BinaryBorn")
   form.AddInputKnobInt('Duration', 16, 1, 512)
   form.AddInputCombo('Duration unit', ['beats', 'bars', 'iterations'], 0)
   form.AddInputCheckbox('Clear score', True)
@@ -638,6 +650,7 @@ def createDialog():
   form.AddInputText('Repeats', '0')
   form.AddInputText('Color', 'C')
   form.AddInputText('Porta', '0')
+  form.AddInputText('Generic', '.')
   
   return form
 
@@ -663,6 +676,7 @@ def apply(form: flp.ScriptDialog):
   sequenceTexts[INDEX_REPEATS] = form.GetInputValue('Repeats')
   sequenceTexts[INDEX_COLOR] = form.GetInputValue('Color')
   sequenceTexts[INDEX_PORTA] = form.GetInputValue('Porta')
+  sequenceTexts[INDEX_GENERIC] = form.GetInputValue('Generic')
 
   sequences: list[list[Expression]] = [None] * INDEX_STOP
   lens: list[int] = [None] * INDEX_STOP
