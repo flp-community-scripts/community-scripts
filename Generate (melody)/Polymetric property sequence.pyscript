@@ -21,6 +21,7 @@ v1.1 (2024-08-16)
   - added overrides
   - added fractional value notation
   - changed 'Melody' to 'Pitch'
+  - changed end on grid option to '#'
 """
 
 import flpianoroll as flp
@@ -121,7 +122,7 @@ TRAITS[INDEX_RHYTHM] = Traits(
     'F': 1, # re-interpreted in apply()
   },
   defaultUnit='s',
-  optionsPattern="(?:[-_,.eE!]|[:;]\d+)*",
+  optionsPattern="(?:[-_,.eE#]|[:;]\d+)*",
   # options are interpreted in apply()
   errorValue=PP16TH,
 )
@@ -561,7 +562,7 @@ def createDialog():
   + '\r\n\t\t"." (*reset other sequences\' index*) |'
   + '\r\n\t\t"e" (*extend to nearest full step*) |'
   + '\r\n\t\t"E" (*extend to nearest full beat*) |'
-  + '\r\n\t\t"!" (*cut at the nearest multiple of defined duration*) |'
+  + '\r\n\t\t"#" (*end at the nearest multiple of defined duration*) |'
   + '\r\n\t\t":" <number> (*sub-divide*) |'
   + '\r\n\t\t";" <number> (*sub-divide, hold other sequences\' index*)'
   + '\r\n\t)*'
@@ -751,7 +752,7 @@ def apply(form: flp.ScriptDialog):
       dt_precise += (PP16TH_PRECISE - (t1_precise % PP16TH_PRECISE)) % PP16TH_PRECISE # second modulo prevents rounding up whole step
     elif 'E' in qtyRhythm.options:
       dt_precise += (PPQ_PRECISE - (t1_precise % PPQ_PRECISE)) % PPQ_PRECISE # second modulo prevents rounding up whole beat
-    elif '!' in qtyRhythm.options:
+    elif '#' in qtyRhythm.options:
       dt_precise = (dt_precise - (t0_precise % dt_precise))
 
     # delta time shall never be less than one tick
