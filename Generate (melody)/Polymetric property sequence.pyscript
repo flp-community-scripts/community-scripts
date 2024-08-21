@@ -18,6 +18,7 @@ v1.1 (2024-08-16)
   - added limit to one option
   - added note length sequence
   - added rhythm sub-division option
+  - added overrides
   - changed 'Melody' to 'Pitch'
 """
 
@@ -36,6 +37,22 @@ CURRENT = flp.score.getDefaultNoteProperties()
 TIME_PRECISION = 100 # internal tick-subdivision
 PPQ_PRECISE = PPQ * TIME_PRECISION
 PP16TH_PRECISE = PP16TH * TIME_PRECISION
+
+INDEX_RHYTHM = 0
+INDEX_PITCH = 1
+INDEX_LENGTH = 2
+INDEX_PAN = 3
+INDEX_VELOCITY = 4
+INDEX_RELEASE = 5
+INDEX_FCUT = 6
+INDEX_FRES = 7
+INDEX_PITCHOFS = 8
+INDEX_REPEATS = 9
+INDEX_COLOR = 10
+INDEX_PORTA = 11
+
+INDEX_MAX = INDEX_PORTA
+INDEX_STOP = INDEX_MAX + 1
 
 def parseNoteValue(value: str) -> float:
   """Parses a note value text.
@@ -57,7 +74,9 @@ def parseNoteValue(value: str) -> float:
 
 # property traits
 class Traits:
-  def __init__(self, valuePattern = '-?\d+(\.\d+)?', valueParser: Callable[[str], float] = lambda t: float(t), unitPattern = '', units: dict[str, float] = [], defaultUnit: str|None = None, optionsPattern = '', errorValue = 0.0) -> None:
+  def __init__(self, property: str, valuePattern = '-?\d+(\.\d+)?', valueParser: Callable[[str], float] = lambda t: float(t), unitPattern = '', units: dict[str, float] = [], defaultUnit: str|None = None, optionsPattern = '', errorValue = 0.0) -> None:
+    self.property = property
+    "Target property"
     self.valuePattern = valuePattern
     "Regex for value"
     self.valueParser = valueParser
@@ -73,7 +92,10 @@ class Traits:
     self.errorValue = errorValue
     "Fallback value to use on errors"
 
-TRAITS_RHYTHM = Traits(
+TRAITS: list[Traits] = [None] * INDEX_STOP
+
+TRAITS[INDEX_RHYTHM] = Traits(
+  property='rhythm',
   unitPattern='[DCsbhqtdTfF]',
   units={
     'D': DEFAULT.length,
@@ -94,13 +116,15 @@ TRAITS_RHYTHM = Traits(
   errorValue=PP16TH,
 )
 
-TRAITS_PITCH = Traits(
+TRAITS[INDEX_PITCH] = Traits(
+  property='pitch',
   valuePattern='(\d+|([A-Ga-g]#?\d*))',
   valueParser=parseNoteValue,
   errorValue=60,
 )
 
-TRAITS_LENGTH = Traits(
+TRAITS[INDEX_LENGTH] = Traits(
+  property='length',
   unitPattern='[DCsbhqtdTfF*]',
   units={
     'D': DEFAULT.length,
@@ -120,7 +144,8 @@ TRAITS_LENGTH = Traits(
   errorValue=1,
 )
 
-TRAITS_PAN = Traits(
+TRAITS[INDEX_PAN] = Traits(
+  property='pan',
   unitPattern='[DClr]',
   units={
     'D': DEFAULT.pan * 2 - 1,
@@ -132,7 +157,8 @@ TRAITS_PAN = Traits(
   errorValue=0,
 )
 
-TRAITS_VELOCITY = Traits(
+TRAITS[INDEX_VELOCITY] = Traits(
+  property='velocity',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.velocity,
@@ -141,7 +167,8 @@ TRAITS_VELOCITY = Traits(
   errorValue=100/128
 )
 
-TRAITS_RELEASE = Traits(
+TRAITS[INDEX_RELEASE] = Traits(
+  property='release',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.release,
@@ -150,7 +177,8 @@ TRAITS_RELEASE = Traits(
   errorValue=0.5
 )
 
-TRAITS_FCUT = Traits(
+TRAITS[INDEX_FCUT] = Traits(
+  property='fcut',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.fcut * 2 - 1,
@@ -159,7 +187,8 @@ TRAITS_FCUT = Traits(
   errorValue=0
 )
 
-TRAITS_FRES = Traits(
+TRAITS[INDEX_FRES] = Traits(
+  property='fres',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.fres * 2 - 1,
@@ -168,7 +197,8 @@ TRAITS_FRES = Traits(
   errorValue=0
 )
 
-TRAITS_PITCHOFS = Traits(
+TRAITS[INDEX_PITCHOFS] = Traits(
+  property='pitchofs',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.pitchofs * 10,
@@ -177,7 +207,8 @@ TRAITS_PITCHOFS = Traits(
   errorValue=0
 )
 
-TRAITS_REPEATS = Traits(
+TRAITS[INDEX_REPEATS] = Traits(
+  property='repeats',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.repeats,
@@ -186,7 +217,8 @@ TRAITS_REPEATS = Traits(
   errorValue=0
 )
 
-TRAITS_COLOR = Traits(
+TRAITS[INDEX_COLOR] = Traits(
+  property='color',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.color,
@@ -195,7 +227,8 @@ TRAITS_COLOR = Traits(
   errorValue=0
 )
 
-TRAITS_PORTA = Traits(
+TRAITS[INDEX_PORTA] = Traits(
+  property='porta',
   unitPattern='[DC]',
   units={
     'D': int(DEFAULT.porta),
@@ -204,18 +237,43 @@ TRAITS_PORTA = Traits(
   errorValue=0
 )
 
-class Step:
+class Quantity:
   def __init__(self, value: float, unit: str|None = None, options: str|None = None, error: bool = False) -> None:
     self.value = value
-    "Step value"
+    "Quantity value"
     self.unit = unit
-    "Step unit"
+    "Quantity unit"
     self.options = options or ''
-    "Step options"
+    "Quantity options"
     self.error = error
-    "True if step is erroneous"
+    "True if Quantity is erroneous"
+    self.dynamicValue: float|None = None
+    "Calculated value if dynamic units are used"
 
-def stepFromDescription(valueStr: str|None, unit: str|None, options: str|None, traits: Traits) -> Step:
+  def getFinalValue(self):
+    """Returns the calculated or set value - whichever is relevant.
+    """
+    return self.dynamicValue if self.dynamicValue is not None else self.value
+
+class Assignment:
+  def __init__(self, prop: str, op: str, quantity: Quantity, priority = -1) -> None:
+    self.prop = prop
+    "Property (LHS)"
+    self.op = op
+    "Operation (=, *, +, -)"
+    self.quantity = quantity
+    "Quantity (RHS)"
+    self.priority = priority
+    "Priority - lower priority assignments are evaluated first"
+
+class Step():
+  def __init__(self, base: Assignment, overrides: list[Assignment] = []) -> None:
+    self.base = base
+    "Base assignment"
+    self.overrides = overrides
+    "Override assignment"
+
+def quantityFromDescription(valueStr: str|None, unit: str|None, options: str|None, traits: Traits) -> Quantity:
   """Creates a Step from descriptor texts.
   """
   if unit is None:
@@ -229,23 +287,38 @@ def stepFromDescription(valueStr: str|None, unit: str|None, options: str|None, t
   if unit:
     value = value * traits.units[unit]
 
-  step = Step(
+  quantity = Quantity(
     value=value,
     unit=unit,
     options=options
   )
-  return step
+  return quantity
 
 callstack: list[str] = []
-def stepFromError(error: str, traits: Traits) -> Step:
-  """Creates a Step indicating an error. Logs the error."""
+def logError(error: str):
   flp.Utils.log('')
   flp.Utils.log(error)
   for cs in callstack:
     flp.Utils.log(f'\t{cs}')
-  return Step(
+
+def quantityFromError(error: str, traits: Traits) -> Quantity:
+  """Creates a Quantity indicating an error. Logs the error.
+  """
+  logError(error)
+  return Quantity(
     value=traits.errorValue,
     error=True,
+  )
+
+def stepFromError(error: str, traits: Traits) -> Step:
+  """Creates a Step indicating an error. Logs the error.
+  """
+  return Step(
+    base=Assignment(
+      traits.property,
+      '=',
+      quantityFromError(error, traits)
+    )
   )
 
 def sequence(seq: str, traits: Traits) -> list[Step]:
@@ -290,9 +363,10 @@ def sequence(seq: str, traits: Traits) -> list[Step]:
   pval = f'(?P<value>{traits.valuePattern})?'
   punit = f'(?P<unit>{traits.unitPattern})?'
   popts = f'(?P<options>{traits.optionsPattern})?'
+  povrs = f'(?P<overrides>(?:\[[^\]]*\])+)?'
 
   # every expression must contain exactly the given patterns, hence the ^$ fence
-  pattern = re.compile(f'^{pval}{punit}{popts}$')
+  pattern = re.compile(f'^{pval}{punit}{popts}{povrs}$')
 
   callstack = [
     f'In sequence (expanded): {seq}',
@@ -306,24 +380,112 @@ def sequence(seq: str, traits: Traits) -> list[Step]:
     if match is None:
       steps.append(stepFromError(f'Error in expression: {exp}', traits))
     else:
-      step = stepFromDescription(
-        match.group('value'),
-        match.group('unit'),
-        match.group('options'),
-        traits,
+      # base assignment
+      assignment = Assignment(
+        traits.property,
+        '=',
+        quantityFromDescription(
+          match.group('value'),
+          match.group('unit'),
+          match.group('options'),
+          traits,
+        )
       )
-      steps.append(step)
+      # parse overrides
+      overridesStr = match.group('overrides')
+      overrides = None
+      if overridesStr:
+        overrides = parseOverrides(overridesStr)
+      steps.append(
+        Step(
+          base=assignment,
+          overrides=overrides
+        )
+      )
 
   return steps
+
+def parseOverride(text: str, traits: Traits) -> Assignment|None:
+  """Parses one override of form `[property=quantity]` into an Assignment.
+  """
+
+  # prepare pattern for expression
+  pprop = f'{traits.property}'
+  # operator matches any one symbol - validate later on
+  poperator = '(?P<operator>.)'
+  pquantity = '(?P<quantity>[^\]]*)'
+  pval = f'(?P<value>{traits.valuePattern})?'
+  punit = f'(?P<unit>{traits.unitPattern})?'
+  popts = f'(?P<options>{traits.optionsPattern})?'
+  # every expression must contain exactly the given patterns, hence the ^$ fence
+  match = re.match(f'^\[{pprop}{poperator}{pquantity}\]$', text)
+  if match is None:
+    # no error handling here - no match can simply mean "different prop"
+    return None
+  else:
+    operator = match.group('operator')
+    # get Quantity
+    qtext = match.group('quantity')
+    match = re.match(f'^{pval}{punit}{popts}$', qtext)
+    # no valid quantity or invalid operator
+    if match is None or operator not in '=*+-':
+      return Assignment(
+        traits.property,
+        '=',
+        quantityFromError(f'Error in override: {text}', traits)
+      )
+    else:
+      return Assignment(
+        traits.property,
+        operator,
+        quantityFromDescription(
+          match.group('value'),
+          match.group('unit'),
+          match.group('options'),
+          traits,
+        )
+      )
+
+
+def parseOverrides(text: str) -> list[Assignment]:
+  """Parses a list of overrides of form [p1=v1][p2=v2][p3=v3]
+  into a list of Assignments.
+  """
+
+  global callstack
+  # temporary callstack for overrides
+  callstack_ = callstack
+  callstack = callstack.copy()
+  callstack.insert(0,f'In overrides: {text}')
+
+  # split into single overrides (square bracketed terms)
+  matches = re.findall(r"\[[^\]]*\]", text)
+
+  ovrs: list[Assignment] = []
+
+  for match in matches:
+    for p in range(INDEX_STOP):
+      ovr = parseOverride(match, TRAITS[p])
+      if ovr:
+        ovrs.append(ovr)
+        break
+    else:
+      # if match reaches here, it hasn't been parsed as override, i.e. erroroneous override
+      logError(f'Unknown property in override: {match}')
+
+  # restore callstack
+  callstack = callstack_
+
+  return ovrs
 
 def createDialog():
   form = flp.ScriptDialog("Polymetric property sequence","Create a complex sequence from sequencing note properties individually."
   + '\r\n'
-  + '\r\nThe basic grammar is a space-separated sequence of expressions.'
+  + '\r\nThe basic grammar is a space-separated sequence of quantities.'
   + '\r\n\te.g. 60 80 60'
   + '\r\n'
-  + '\r\nThe syntax for expressions is:'
-  + '\r\n\texpression ::= value unit? options?'
+  + '\r\nThe syntax for quantity is:'
+  + '\r\n\tquantity ::= value unit? options?'
   + '\r\n\te.g. 0.5s-'
   + '\r\n'
   + '\r\nPossible values for value, unit and options depend on the property they\'re used on and are detailed down below.'
@@ -340,6 +502,31 @@ def createDialog():
   + '\r\n\t\t<positive integer> "x" "(" sequence ")" |'
   + '\r\n\t\t<positive integer> "x" expression'
   + '\r\n\te.g. 3x(60 2x80) 70'
+  + '\r\n'
+  + '\r\nAn expression is a quantity optionally followed by overrides:'
+  + '\r\n\texpression ::= quantity override*'
+  + '\r\n\te.g. 70[velocity=0.8][pitch=G5]'
+  + '\r\n'
+  + '\r\nAn override is a property assignment in square brackets:'
+  + '\r\n\toverride ::= "[" property operator quantity "]"'
+  + '\r\n\tproperty ::='
+  + '\r\n\t\t"pitch" |'
+  + '\r\n\t\t"length" |'
+  + '\r\n\t\t"pan" |'
+  + '\r\n\t\t"velocity" |'
+  + '\r\n\t\t"release" |'
+  + '\r\n\t\t"fcut" |'
+  + '\r\n\t\t"fres" |'
+  + '\r\n\t\t"pitchofs" |'
+  + '\r\n\t\t"repeats" |'
+  + '\r\n\t\t"color" |'
+  + '\r\n\t\t"porta"'
+  + '\r\n\toperator ::='
+  + '\r\n\t\t"=" (*assign value*) |'
+  + '\r\n\t\t"*" (*multiply value*) |'
+  + '\r\n\t\t"+" (*add value*) |'
+  + '\r\n\t\t"-" (*subtract value*) |'
+  + '\r\n\te.g. [velocity=0.8]'
   + '\r\n'
   + '\r\n'
   + '\r\nPROPERTIES:'
@@ -435,47 +622,31 @@ def apply(form: flp.ScriptDialog):
   optMarkers = bool(form.GetInputValue('Place markers'))
   optLimit = bool(form.GetInputValue('Limit to one'))
 
-  rtmStr = form.GetInputValue('Rhythm')
-  pitStr = form.GetInputValue('Pitch')
-  lenStr = form.GetInputValue('Length')
-  panStr = form.GetInputValue('Pan')
-  velStr = form.GetInputValue('Velocity')
-  relStr = form.GetInputValue('Release')
-  cutStr = form.GetInputValue('Mod X')
-  resStr = form.GetInputValue('Mod Y')
-  pofStr = form.GetInputValue('Fine Pitch')
-  repStr = form.GetInputValue('Repeats')
-  colStr = form.GetInputValue('Color')
-  porStr = form.GetInputValue('Porta')
+  sequenceTexts: list[str] = [None] * INDEX_STOP
+  sequenceTexts[INDEX_RHYTHM] = form.GetInputValue('Rhythm')
+  sequenceTexts[INDEX_PITCH] = form.GetInputValue('Pitch')
+  sequenceTexts[INDEX_LENGTH] = form.GetInputValue('Length')
+  sequenceTexts[INDEX_PAN] = form.GetInputValue('Pan')
+  sequenceTexts[INDEX_VELOCITY] = form.GetInputValue('Velocity')
+  sequenceTexts[INDEX_RELEASE] = form.GetInputValue('Release')
+  sequenceTexts[INDEX_FCUT] = form.GetInputValue('Mod X')
+  sequenceTexts[INDEX_FRES] = form.GetInputValue('Mod Y')
+  sequenceTexts[INDEX_PITCHOFS] = form.GetInputValue('Fine Pitch')
+  sequenceTexts[INDEX_REPEATS] = form.GetInputValue('Repeats')
+  sequenceTexts[INDEX_COLOR] = form.GetInputValue('Color')
+  sequenceTexts[INDEX_PORTA] = form.GetInputValue('Porta')
 
-  rtmSeq = sequence(rtmStr, TRAITS_RHYTHM)
-  pitSeq = sequence(pitStr, TRAITS_PITCH)
-  lenSeq = sequence(lenStr, TRAITS_LENGTH)
-  panSeq = sequence(panStr, TRAITS_PAN)
-  velSeq = sequence(velStr, TRAITS_VELOCITY)
-  relSeq = sequence(relStr, TRAITS_RELEASE)
-  cutSeq = sequence(cutStr, TRAITS_FCUT)
-  resSeq = sequence(resStr, TRAITS_FRES)
-  pofSeq = sequence(pofStr, TRAITS_PITCHOFS)
-  repSeq = sequence(repStr, TRAITS_REPEATS)
-  colSeq = sequence(colStr, TRAITS_COLOR)
-  porSeq = sequence(porStr, TRAITS_PORTA)
-
-  callstack = []
-
-  # assert minimum sequence lengths
-  if len(rtmSeq) == 0: rtmSeq = [stepFromError('Empty sequence', TRAITS_RHYTHM)]
-  if len(pitSeq) == 0: pitSeq = [stepFromError('Empty sequence', TRAITS_PITCH)]
-  if len(lenSeq) == 0: lenSeq = [stepFromError('Empty sequence', TRAITS_LENGTH)]
-  if len(panSeq) == 0: panSeq = [stepFromError('Empty sequence', TRAITS_PAN)]
-  if len(velSeq) == 0: velSeq = [stepFromError('Empty sequence', TRAITS_VELOCITY)]
-  if len(relSeq) == 0: relSeq = [stepFromError('Empty sequence', TRAITS_RELEASE)]
-  if len(cutSeq) == 0: cutSeq = [stepFromError('Empty sequence', TRAITS_FCUT)]
-  if len(resSeq) == 0: resSeq = [stepFromError('Empty sequence', TRAITS_FRES)]
-  if len(pofSeq) == 0: pofSeq = [stepFromError('Empty sequence', TRAITS_PITCHOFS)]
-  if len(repSeq) == 0: repSeq = [stepFromError('Empty sequence', TRAITS_REPEATS)]
-  if len(colSeq) == 0: colSeq = [stepFromError('Empty sequence', TRAITS_COLOR)]
-  if len(porSeq) == 0: porSeq = [stepFromError('Empty sequence', TRAITS_PORTA)]
+  sequences: list[list[Step]] = [None] * INDEX_STOP
+  lens: list[int] = [None] * INDEX_STOP
+  for p in range(INDEX_STOP):
+    sequences[p] = sequence(sequenceTexts[p], TRAITS[p])
+    callstack = []
+    # assert minimum sequence lengths
+    if len(sequences[p]) == 0:
+      sequences[p] = [
+        stepFromError(f'Empty sequence for {TRAITS[p].property}', TRAITS[p])
+      ]
+    lens[p] = len(sequences[p])
 
   # sequences have been prepared - turn into one long sequence
   
@@ -492,6 +663,10 @@ def apply(form: flp.ScriptDialog):
   elif durationUnit == 1:
     duration *= PPBAR
 
+  stp: list[Step] = [None] * INDEX_STOP
+  val: list[float] = [0] * INDEX_STOP
+  assignments: list[list[Assignment]] = [None] * INDEX_STOP
+
   while True:
     i += 1
 
@@ -505,31 +680,24 @@ def apply(form: flp.ScriptDialog):
     else:
       if t0 >= duration: break
 
-    rtmStep = rtmSeq[i % len(rtmSeq)]
+    # keep these shorthand
+    stpRhythm = sequences[INDEX_RHYTHM][i % lens[INDEX_RHYTHM]]
+    qtyRhythm = stpRhythm.base.quantity
 
     # sync index j according to step options
-    if '.' in rtmStep.options:
+    if '.' in qtyRhythm.options:
       j = 0
-    elif '-' in rtmStep.options or ',' in rtmStep.options:
+    elif '-' in qtyRhythm.options or ',' in qtyRhythm.options:
       pass
     elif i > 0:
       j += 1
 
     # new start?
-    if (
-      i % len(rtmSeq) == 0 and
-      j % len(pitSeq) == 0 and
-      j % len(lenSeq) == 0 and
-      j % len(panSeq) == 0 and
-      j % len(velSeq) == 0 and
-      j % len(relSeq) == 0 and
-      j % len(cutSeq) == 0 and
-      j % len(resSeq) == 0 and
-      j % len(pofSeq) == 0 and
-      j % len(repSeq) == 0 and
-      j % len(colSeq) == 0 and
-      j % len(porSeq) == 0
-    ):
+    istart = i % lens[INDEX_RHYTHM] == 0
+    jstart = True
+    for p in range(1, INDEX_STOP):
+      jstart &= j % lens[p] == 0
+    if (istart and jstart):
       revs += 1
       if optMarkers:
         marker = flp.Marker()
@@ -545,21 +713,21 @@ def apply(form: flp.ScriptDialog):
     # update timings
 
     # derive delta time from precise timing to preserve jitter
-    t1_precise = round(t0_precise + rtmStep.value * TIME_PRECISION)
+    t1_precise = round(t0_precise + qtyRhythm.value * TIME_PRECISION)
     dt_precise = t1_precise - t0_precise
     # apply space filling units
-    if rtmStep.unit == 'f':
+    if qtyRhythm.unit == 'f':
       space = PP16TH_PRECISE - (t0_precise % PP16TH_PRECISE)
-      dt_precise = round(rtmStep.value * space)
-    elif rtmStep.unit == 'F':
+      dt_precise = round(qtyRhythm.value * space)
+    elif qtyRhythm.unit == 'F':
       space = PPQ_PRECISE - (t0_precise % PPQ_PRECISE)
-      dt_precise = round(rtmStep.value * space)
+      dt_precise = round(qtyRhythm.value * space)
     # apply extending options
-    if 'e' in rtmStep.options:
+    if 'e' in qtyRhythm.options:
       dt_precise += (PP16TH_PRECISE - (t1_precise % PP16TH_PRECISE)) % PP16TH_PRECISE # second modulo prevents rounding up whole step
-    elif 'E' in rtmStep.options:
+    elif 'E' in qtyRhythm.options:
       dt_precise += (PPQ_PRECISE - (t1_precise % PPQ_PRECISE)) % PPQ_PRECISE # second modulo prevents rounding up whole beat
-    elif '!' in rtmStep.options:
+    elif '!' in qtyRhythm.options:
       dt_precise = (dt_precise - (t0_precise % dt_precise))
 
     # delta time shall never be less than one tick
@@ -571,8 +739,9 @@ def apply(form: flp.ScriptDialog):
     # sub-divide and place notes
 
     subdiv = 1
-    if '/' in rtmStep.options:
-      match = re.search(r"\/(?P<subdiv>\d+)", rtmStep.options)
+    if '/' in qtyRhythm.options:
+      # TODO: move this out of loop - can be prepared
+      match = re.search(r"\/(?P<subdiv>\d+)", qtyRhythm.options)
       if match and match.group('subdiv'):
         subdiv = int(match.group('subdiv'))
         if subdiv < 1: subdiv = 1
@@ -594,66 +763,83 @@ def apply(form: flp.ScriptDialog):
 
       # update index j unless option prevents it
       if isub > 0:
-        if not ';' in rtmStep.options:
+        if not ';' in qtyRhythm.options:
           j += 1
 
-      pitStep = pitSeq[j % len(pitSeq)]
-      lenStep = lenSeq[j % len(lenSeq)]
-      panStep = panSeq[j % len(panSeq)]
-      velStep = velSeq[j % len(velSeq)]
-      relStep = relSeq[j % len(relSeq)]
-      cutStep = cutSeq[j % len(cutSeq)]
-      resStep = resSeq[j % len(resSeq)]
-      pofStep = pofSeq[j % len(pofSeq)]
-      repStep = repSeq[j % len(repSeq)]
-      colStep = colSeq[j % len(colSeq)]
-      porStep = porSeq[j % len(porSeq)]
-
-      # init note length with absolute value
-      length = lenStep.value
-      # apply dynamic units
-      if lenStep.unit == 'f':
-        space = PP16TH - (t0 % PP16TH)
-        length *= space
-      elif lenStep.unit == 'F':
-        space = PPQ - (t0 % PPQ)
-        length *= space
-      elif lenStep.unit == '*':
-        length *= dt
-      if length < 1: length = 1
-
       # pause? skip placing a note
-      if '-' in rtmStep.options or '_' in rtmStep.options: continue
+      if '-' in qtyRhythm.options or '_' in qtyRhythm.options: continue
+
+      # collect all properties' steps and base and overrides
+      allOvrs: list[Assignment] = []
+      for p in range(INDEX_STOP):
+        idx = i if p == 0 else j
+        stp[p] = sequences[p][idx % lens[p]]
+        # base goes directly to assignment - target index is known
+        assignments[p] = [stp[p].base]
+        # overrides go to container first for triage - target index not known yet
+        if stp[p].overrides:
+          allOvrs.extend(stp[p].overrides)
+
+      # triage overrides (after all have been collected)
+      for p in range(INDEX_STOP):
+        assignments[p].extend(
+          filter(lambda o: o.prop == TRAITS[p].property, allOvrs)
+        )
+
+      # apply dynamic units
+      for ass in assignments[INDEX_LENGTH]:
+        q = ass.quantity
+        # init with absolute value
+        length = q.value
+        # adapt
+        if q.unit == 'f':
+          space = PP16TH - (t0 % PP16TH)
+          length *= space
+        elif q.unit == 'F':
+          space = PPQ - (t0 % PPQ)
+          length *= space
+        elif q.unit == '*':
+          # SPECIAL CASE: if assignment is multiplication, don't mix dt in
+          if ass.op != '*':
+            length *= dt
+        # store
+        q.dynamicValue = length
+
+      # gather properties' values
+      for p in range(1, INDEX_STOP):
+        # reset property's value
+        val[p] = 0
+        asses = sorted(assignments[p], key=lambda a: a.priority)
+        # apply assignments to value
+        for ass in asses:
+          if ass.op == '=':
+            val[p] = ass.quantity.getFinalValue()
+          elif ass.op == '*':
+            val[p] *= ass.quantity.getFinalValue()
+          elif ass.op == '+':
+            val[p] += ass.quantity.getFinalValue()
+          elif ass.op == '-':
+            val[p] -= ass.quantity.getFinalValue()
 
       note = flp.Note()
       note.time = t0
-      note.length = round(length)
-      note.number = min(max(round(pitStep.value), 0), 131)
-      note.pan = min(max(panStep.value * 0.5 + 0.5, 0), 1)
-      note.velocity = min(max(velStep.value, 0), 1)
-      note.release = min(max(relStep.value, 0), 1)
-      note.fcut = min(max(cutStep.value * 0.5 + 0.5, 0), 1)
-      note.fres = min(max(resStep.value * 0.5 + 0.5, 0), 1)
-      note.pitchofs = min(max(round(pofStep.value / 10), -120), 120)
-      note.repeats = min(max(round(repStep.value), 0), 14)
-      note.color = min(max(round(colStep.value), 0), 15)
-      note.porta = bool(round(porStep.value))
+      note.length = max(round(val[INDEX_LENGTH]), 1)
+      note.number = min(max(round(val[INDEX_PITCH]), 0), 131)
+      note.pan = min(max(val[INDEX_PAN] * 0.5 + 0.5, 0), 1)
+      note.velocity = min(max(val[INDEX_VELOCITY], 0), 1)
+      note.release = min(max(val[INDEX_RELEASE], 0), 1)
+      note.fcut = min(max(val[INDEX_FCUT] * 0.5 + 0.5, 0), 1)
+      note.fres = min(max(val[INDEX_FRES] * 0.5 + 0.5, 0), 1)
+      note.pitchofs = min(max(round(val[INDEX_PITCHOFS] / 10), -120), 120)
+      note.repeats = min(max(round(val[INDEX_REPEATS]), 0), 14)
+      note.color = min(max(round(val[INDEX_COLOR]), 0), 15)
+      note.porta = bool(round(val[INDEX_PORTA]))
 
-      # select erroneous notes as a hint
-      note.selected = (
-        rtmStep.error or
-        pitStep.error or
-        lenStep.error or
-        panStep.error or
-        velStep.error or
-        relStep.error or
-        cutStep.error or
-        resStep.error or
-        pofStep.error or
-        repStep.error or
-        colStep.error or
-        porStep.error
-      )
+      # select erroneous notes as a hint (only actual step - no overrides)
+      anyError = False
+      for p in range(INDEX_STOP):
+        anyError |= stp[p].base.quantity.error
+      note.selected = anyError
       notes.append(note)
   
   if optClearScore:
