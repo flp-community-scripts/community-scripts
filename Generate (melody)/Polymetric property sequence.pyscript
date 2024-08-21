@@ -111,7 +111,7 @@ TRAITS[INDEX_RHYTHM] = Traits(
     'F': 1, # re-interpreted in apply()
   },
   defaultUnit='s',
-  optionsPattern="(?:[-_,.eE!]|\/\d+;?)*",
+  optionsPattern="(?:[-_,.eE!]|[:;]\d+)*",
   # options are interpreted in apply()
   errorValue=PP16TH,
 )
@@ -552,8 +552,8 @@ def createDialog():
   + '\r\n\t\t"e" (*extend to nearest full step*) |'
   + '\r\n\t\t"E" (*extend to nearest full beat*) |'
   + '\r\n\t\t"!" (*cut at the nearest multiple of defined duration*) |'
-  + '\r\n\t\t"/" <number> (*sub-divide*) |'
-  + '\r\n\t\t"/" <number> ";" (*sub-divide, hold other sequences\' index*)'
+  + '\r\n\t\t":" <number> (*sub-divide*) |'
+  + '\r\n\t\t";" <number> (*sub-divide, hold other sequences\' index*)'
   + '\r\n\t)*'
   + '\r\n'
   + '\r\nOptions can be combined, e.g. 0.7Fe- is a pause (-) extended to the nearest step (e) with base length 70% of the space to the nearest beat (0.7F)'
@@ -648,6 +648,20 @@ def apply(form: flp.ScriptDialog):
       ]
     lens[p] = len(sequences[p])
 
+  # sequence finishing
+
+  # expand sub-division option, cache value
+  for s in sequences[INDEX_RHYTHM]:
+    qty = s.base.quantity
+    if ':' in qty.options or ';' in qty.options:
+      match = re.search(r"[:;](?P<subdiv>\d+)", qty.options)
+      subdiv = 1
+      if match and match.group('subdiv'):
+        subdiv = int(match.group('subdiv'))
+        if subdiv < 1: subdiv = 1
+        if subdiv > 96: subdiv = 96
+      qty.subdiv = subdiv
+
   # sequences have been prepared - turn into one long sequence
   
   notes: list[flp.Note] = []
@@ -739,13 +753,8 @@ def apply(form: flp.ScriptDialog):
     # sub-divide and place notes
 
     subdiv = 1
-    if '/' in qtyRhythm.options:
-      # TODO: move this out of loop - can be prepared
-      match = re.search(r"\/(?P<subdiv>\d+)", qtyRhythm.options)
-      if match and match.group('subdiv'):
-        subdiv = int(match.group('subdiv'))
-        if subdiv < 1: subdiv = 1
-        if subdiv > 96: subdiv = 96
+    if ':' in qtyRhythm.options or ';' in qtyRhythm.options:
+      subdiv = qtyRhythm.subdiv
 
     for isub in range(subdiv):
       # subdiv timings
