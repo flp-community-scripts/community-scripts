@@ -47,9 +47,9 @@ INDEX_LENGTH = 2
 INDEX_PAN = 3
 INDEX_VELOCITY = 4
 INDEX_RELEASE = 5
-INDEX_FCUT = 6
-INDEX_FRES = 7
-INDEX_PITCHOFS = 8
+INDEX_MODX = 6
+INDEX_MODY = 7
+INDEX_FINEPITCH = 8
 INDEX_REPEATS = 9
 INDEX_COLOR = 10
 INDEX_PORTA = 11
@@ -189,8 +189,8 @@ TRAITS[INDEX_RELEASE] = Traits(
   errorValue=0.5
 )
 
-TRAITS[INDEX_FCUT] = Traits(
-  property='fcut',
+TRAITS[INDEX_MODX] = Traits(
+  property='modx',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.fcut * 2 - 1,
@@ -199,8 +199,8 @@ TRAITS[INDEX_FCUT] = Traits(
   errorValue=0
 )
 
-TRAITS[INDEX_FRES] = Traits(
-  property='fres',
+TRAITS[INDEX_MODY] = Traits(
+  property='mody',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.fres * 2 - 1,
@@ -209,8 +209,8 @@ TRAITS[INDEX_FRES] = Traits(
   errorValue=0
 )
 
-TRAITS[INDEX_PITCHOFS] = Traits(
-  property='pitchofs',
+TRAITS[INDEX_FINEPITCH] = Traits(
+  property='finepitch',
   unitPattern='[DC]',
   units={
     'D': DEFAULT.pitchofs * 10,
@@ -538,9 +538,9 @@ def createDialog():
   + '\r\n\t\t"pan" |'
   + '\r\n\t\t"velocity" |'
   + '\r\n\t\t"release" |'
-  + '\r\n\t\t"fcut" |'
-  + '\r\n\t\t"fres" |'
-  + '\r\n\t\t"pitchofs" |'
+  + '\r\n\t\t"modx" |'
+  + '\r\n\t\t"mody" |'
+  + '\r\n\t\t"finepitch" |'
   + '\r\n\t\t"repeats" |'
   + '\r\n\t\t"color" |'
   + '\r\n\t\t"porta"'
@@ -657,9 +657,9 @@ def apply(form: flp.ScriptDialog):
   sequenceTexts[INDEX_PAN] = form.GetInputValue('Pan')
   sequenceTexts[INDEX_VELOCITY] = form.GetInputValue('Velocity')
   sequenceTexts[INDEX_RELEASE] = form.GetInputValue('Release')
-  sequenceTexts[INDEX_FCUT] = form.GetInputValue('Mod X')
-  sequenceTexts[INDEX_FRES] = form.GetInputValue('Mod Y')
-  sequenceTexts[INDEX_PITCHOFS] = form.GetInputValue('Fine Pitch')
+  sequenceTexts[INDEX_MODX] = form.GetInputValue('Mod X')
+  sequenceTexts[INDEX_MODY] = form.GetInputValue('Mod Y')
+  sequenceTexts[INDEX_FINEPITCH] = form.GetInputValue('Fine Pitch')
   sequenceTexts[INDEX_REPEATS] = form.GetInputValue('Repeats')
   sequenceTexts[INDEX_COLOR] = form.GetInputValue('Color')
   sequenceTexts[INDEX_PORTA] = form.GetInputValue('Porta')
@@ -865,9 +865,9 @@ def apply(form: flp.ScriptDialog):
       note.pan = min(max(val[INDEX_PAN] * 0.5 + 0.5, 0), 1)
       note.velocity = min(max(val[INDEX_VELOCITY], 0), 1)
       note.release = min(max(val[INDEX_RELEASE], 0), 1)
-      note.fcut = min(max(val[INDEX_FCUT] * 0.5 + 0.5, 0), 1)
-      note.fres = min(max(val[INDEX_FRES] * 0.5 + 0.5, 0), 1)
-      note.pitchofs = min(max(round(val[INDEX_PITCHOFS] / 10), -120), 120)
+      note.fcut = min(max(val[INDEX_MODX] * 0.5 + 0.5, 0), 1)
+      note.fres = min(max(val[INDEX_MODY] * 0.5 + 0.5, 0), 1)
+      note.pitchofs = min(max(round(val[INDEX_FINEPITCH] / 10), -120), 120)
       note.repeats = min(max(round(val[INDEX_REPEATS]), 0), 14)
       note.color = min(max(round(val[INDEX_COLOR]), 0), 15)
       note.porta = bool(round(val[INDEX_PORTA]))
