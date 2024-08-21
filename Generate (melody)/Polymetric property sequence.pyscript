@@ -19,6 +19,7 @@ v1.1 (2024-08-16)
   - added note length sequence
   - added rhythm sub-division option
   - added overrides
+  - added fractional value notation
   - changed 'Melody' to 'Pitch'
 """
 
@@ -72,9 +73,18 @@ def parseNoteValue(value: str) -> float:
   octave = int(match.group('octave') or 5)
   return 12 * octave + noteNr
 
+def parseValue(value: str) -> float:
+  """Default value parser.
+  """
+  if '/' not in value:
+    return float(value)
+  else:
+    nom, den = value.split('/')
+    return float(nom) / float(den)
+
 # property traits
 class Traits:
-  def __init__(self, property: str, valuePattern = '-?\d+(\.\d+)?', valueParser: Callable[[str], float] = lambda t: float(t), unitPattern = '', units: dict[str, float] = [], defaultUnit: str|None = None, optionsPattern = '', errorValue = 0.0) -> None:
+  def __init__(self, property: str, valuePattern = '-?(\d+(\.\d+)?)|(\d+\/\d+)', valueParser: Callable[[str], float] = parseValue, unitPattern = '', units: dict[str, float] = [], defaultUnit: str|None = None, optionsPattern = '', errorValue = 0.0) -> None:
     self.property = property
     "Target property"
     self.valuePattern = valuePattern
@@ -532,7 +542,7 @@ def createDialog():
   + '\r\nPROPERTIES:'
   + '\r\n'
   + '\r\nRhythm is the most complex one in terms of available units and options:'
-  + '\r\n\tvalue_rhythm ::= <number>'
+  + '\r\n\tvalue_rhythm ::= <number or fraction>'
   + '\r\n\tunit_rhythm ::='
   + '\r\n\t\t"s" (*step*) |'
   + '\r\n\t\t"b" (*beat*) |'
@@ -562,7 +572,7 @@ def createDialog():
   + '\r\nFor pitch, either a MIDI note number or a pitch can be used as value:'
   + '\r\n\tvalue_pitch ::='
   + '\r\n\t\t<whole number 0-131> |'
-  + '\r\n\t\t([A-G] "#"? <number 0-10, default 5>)'
+  + '\r\n\t\t([A-G] "#"? <whole number 0-10, default 5>)'
   + '\r\n'
   + '\r\n'
   + '\r\nFor length, the same units as for rhythm can be used. Additionally the note length derived from rhythm can be referenced with * (default, can be omitted):'
@@ -572,15 +582,15 @@ def createDialog():
   + '\r\n'
   + '\r\n'
   + '\r\nFor pan, left and right (default) can be used as unit:'
-  + '\r\n\tvalue_pan ::= <number -1.0 to 1.0>'
+  + '\r\n\tvalue_pan ::= <number or fraction -1.0 to 1.0>'
   + '\r\n\tunit_pan ::= "l" (*left*) | "r" (*right*) | unit_defaults'
   + '\r\n'
   + '\r\n'
   + '\r\nThe rest of the properties have the following number ranges:'
-  + '\r\n\tvalue_velocity ::= <number 0.0 to 1.0>'
-  + '\r\n\tvalue_release ::= <number 0.0 to 1.0>'
-  + '\r\n\tvalue_modx ::= <number -1.0 to 1.0>'
-  + '\r\n\tvalue_mody ::= <number -1.0 to 1.0>'
+  + '\r\n\tvalue_velocity ::= <number or fraction 0.0 to 1.0>'
+  + '\r\n\tvalue_release ::= <number or fraction 0.0 to 1.0>'
+  + '\r\n\tvalue_modx ::= <number or fraction -1.0 to 1.0>'
+  + '\r\n\tvalue_mody ::= <number or fraction -1.0 to 1.0>'
   + '\r\n\tvalue_finepitch ::= <whole number -1200 to 1200>'
   + '\r\n\tvalue_repeats ::= <whole number 0 to 14>'
   + '\r\n\tvalue_color ::= <whole number 0 to 15>'
