@@ -20,6 +20,7 @@ v1.1 (2024-08-16)
   - added rhythm sub-division option
   - added overrides
   - added fractional value notation
+  - added priority notation
   - changed 'Melody' to 'Pitch'
   - changed end on grid option to '#'
 """
@@ -267,14 +268,21 @@ class Quantity:
     return self.dynamicValue if self.dynamicValue is not None else self.value
 
 class Assignment:
-  def __init__(self, prop: str, op: str, quantity: Quantity, priority = -1) -> None:
+  def __init__(self, prop: str, op: str, quantity: Quantity, priority: str|None = None) -> None:
     self.prop = prop
     "Property (LHS)"
     self.op = op
     "Operation (=, *, +, -)"
     self.quantity = quantity
     "Quantity (RHS)"
-    self.priority = priority
+    # parse priority
+    p = -1
+    if priority is not None:
+      if len(priority) == 1:
+        p = 2 ** 30 # just use some random really big number
+      else:
+        p = int(priority[1:])
+    self.priority = p
     "Priority - lower priority assignments are evaluated first"
 
 class Step():
@@ -374,10 +382,11 @@ def sequence(seq: str, traits: Traits) -> list[Step]:
   pval = f'(?P<value>{traits.valuePattern})?'
   punit = f'(?P<unit>{traits.unitPattern})?'
   popts = f'(?P<options>{traits.optionsPattern})?'
+  pprio = f'(?P<priority>!\d*)?'
   povrs = f'(?P<overrides>(?:\[[^\]]*\])+)?'
 
   # every expression must contain exactly the given patterns, hence the ^$ fence
-  pattern = re.compile(f'^{pval}{punit}{popts}{povrs}$')
+  pattern = re.compile(f'^{pval}{punit}{popts}{pprio}{povrs}$')
 
   callstack = [
     f'In sequence (expanded): {seq}',
@@ -400,7 +409,8 @@ def sequence(seq: str, traits: Traits) -> list[Step]:
           match.group('unit'),
           match.group('options'),
           traits,
-        )
+        ),
+        match.group('priority'),
       )
       # parse overrides
       overridesStr = match.group('overrides')
@@ -428,6 +438,7 @@ def parseOverride(text: str, traits: Traits) -> Assignment|None:
   pval = f'(?P<value>{traits.valuePattern})?'
   punit = f'(?P<unit>{traits.unitPattern})?'
   popts = f'(?P<options>{traits.optionsPattern})?'
+  pprio = f'(?P<priority>!\d*)?'
   # every expression must contain exactly the given patterns, hence the ^$ fence
   match = re.match(f'^\[{pprop}{poperator}{pquantity}\]$', text)
   if match is None:
@@ -437,7 +448,7 @@ def parseOverride(text: str, traits: Traits) -> Assignment|None:
     operator = match.group('operator')
     # get Quantity
     qtext = match.group('quantity')
-    match = re.match(f'^{pval}{punit}{popts}$', qtext)
+    match = re.match(f'^{pval}{punit}{popts}{pprio}$', qtext)
     # no valid quantity or invalid operator
     if match is None or operator not in '=*+-':
       return Assignment(
@@ -454,7 +465,8 @@ def parseOverride(text: str, traits: Traits) -> Assignment|None:
           match.group('unit'),
           match.group('options'),
           traits,
-        )
+        ),
+        match.group('priority'),
       )
 
 
@@ -496,7 +508,7 @@ def createDialog():
   + '\r\n\te.g. 60 80 60'
   + '\r\n'
   + '\r\nThe syntax for quantity is:'
-  + '\r\n\tquantity ::= value unit? options?'
+  + '\r\n\tquantity ::= value unit? options? priority?'
   + '\r\n\te.g. 0.5s-'
   + '\r\n'
   + '\r\nPossible values for value, unit and options depend on the property they\'re used on and are detailed down below.'
@@ -538,6 +550,11 @@ def createDialog():
   + '\r\n\t\t"+" (*add value*) |'
   + '\r\n\t\t"-" (*subtract value*) |'
   + '\r\n\te.g. [velocity=0.8]'
+  + '\r\n'
+  + '\r\nTo control which quantities have priority (base values and overrides), use the priority notation:'
+  + '\r\n\tpriority ::= "!" <whole number>?'
+  + '\r\n\te.g. 70!5'
+  + '\r\nThe number can be omitted, it will then revert to something really high. Higher priority will override lower priority quantities.'
   + '\r\n'
   + '\r\n'
   + '\r\nPROPERTIES:'
