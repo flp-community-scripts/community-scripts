@@ -761,7 +761,7 @@ def apply(form: flp.ScriptDialog):
         marker.time = t0
         marker.name = f'Revolution {revs}'
       if optLimit and revs == 2:
-        if marker:
+        if optMarkers:
           marker.name = 'End'
           marker.mode = 6
         break
