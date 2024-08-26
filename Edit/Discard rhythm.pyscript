@@ -1,0 +1,68 @@
+"""flp
+Title: Discard rhythm
+Author: D3Mens (idea), BinaryBorn (code)
+Category: Edit
+Version: 1.0
+License: ISC
+
+Description: 
+Discards score rhythm and spreads notes equidistantly.
+
+Changelog:
+v1.0 (2024-08-26)
+  - initial version
+"""
+
+import flpianoroll as flp
+
+def createDialog():
+  form = flp.ScriptDialog("Discard rhythm","Discards score rhythm and spreads notes equidistantly."
+  + "\r\n\r\nv1.0 (2024-08-26), D3Mens & BinaryBorn")
+  form.AddInputKnobInt('Distance', 1, 1, 16)
+  form.AddInputCombo('Distance unit', ['step', 'beat', 'bar'], 0)
+  form.AddInputKnob('Tolerance', 0, 0, 1)
+  
+  return form
+
+def apply(form: flp.ScriptDialog):
+  ppq = flp.score.PPQ
+
+  distBase = int(form.GetInputValue('Distance'))
+  distMulOpt = int(form.GetInputValue('Distance unit'))
+  distMul = [ppq // 4, ppq, ppq * 4][distMulOpt]
+  dist = distBase * distMul
+  # arbitrarily scale tolerance by one beat (current time scale)
+  overlapTolerance = ppq * float(form.GetInputValue('Tolerance'))
+
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  # collect distinct (out-of-tolerance) note on events
+  events: list[int] = []
+  lastEvent: int|None = None
+  for n in notes:
+    t = n.time
+    if lastEvent is None or t > lastEvent + overlapTolerance:
+      events.append(t)
+      lastEvent = t
+
+  def eventIndexForTime(t: int):
+    """Returns the index of the last event before t"""
+    # no need to check zeroth - is always equal to lowest possible t
+    for i in range(1, len(events)):
+      # past t, return one before
+      if events[i] > t: return i-1
+    # none past t, return last
+    return len(events) - 1
+
+  # distribute notes between events
+  for n in notes:
+    # quantize start and end time
+    t0 = n.time
+    t1 = t0 + n.length
+    i0 = eventIndexForTime(t0)
+    i1 = eventIndexForTime(t1) + 1 # "round up" end to next index
+    # re-place
+    t0n = i0 * dist
+    t1n = i1 * dist
+    n.time = t0n
+    n.length = t1n - t0n
