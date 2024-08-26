@@ -1,33 +1,33 @@
-"""
-ISC License
+"""flp
+Title: Round robin color
+Author: BinaryBorn
+Category: Color
+Version: 1.1
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Colors all notes cycling through the palette.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2024-01-26)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2024-08-26)
+  - added note deselection for visibility
 """
 
 import flpianoroll as flp
 
-"""
-Round robin color
-by: BinaryBorn
-
-2024-01-26
-  - initial version
-"""
-
 def createDialog():
   form = flp.ScriptDialog("Round robin color","Colors all notes cycling through the palette."
-  + "\r\n\r\n2024-01-26, BinaryBorn")
+  + "\r\n\r\nv1.1 (2024-08-26), BinaryBorn")
   form.AddInputKnobInt('Min color', 0, 0, 15)
   form.AddInputKnobInt('Max color', 15, 0, 15)
   form.AddInputKnobInt('Start color', 0, 0, 15)
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
   # order by start time
@@ -35,9 +35,9 @@ def apply(form):
 
   if not notes: return
 
-  col0 = form.GetInputValue('Start color')
-  _colMin = form.GetInputValue('Min color')
-  _colMax = form.GetInputValue('Max color')
+  col0 = int(form.GetInputValue('Start color'))
+  _colMin = int(form.GetInputValue('Min color'))
+  _colMax = int(form.GetInputValue('Max color'))
 
   # make sure min is min and max is max
   colMin = min(_colMin, _colMax)
@@ -52,3 +52,5 @@ def apply(form):
     # cycle through range, offset by min
     n.color = (col0 + i - colMin) % colRange + colMin
     i += colAdd
+    # deselect note to make color noticeable
+    n.selected = False
