@@ -1,39 +1,42 @@
-"""
-ISC License
+"""flp
+Title: Randomize note color
+Author: D3Mens (idea), BinaryBorn (code)
+Category: Color
+Version: 1.3
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Randomize note color/MIDI channel.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-07-11)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-07-17)
+  - replaced tension function
+
+v1.2 (2023-10-16)
+  - added ISC license text
+
+v1.3 (2024-08-26)
+  - added note deselection for visibility
+  - changed seed range to 999 for better UX
 """
 
 import flpianoroll as flp
-import time
+import math
 import _random
 
 random = _random.Random()
 
-"""
-Randomize note color
-idea: D3Mens
-code: BinaryBorn
+def Tension(value: float, rate: float, knob=True):
+  """Applies the FL Studio Tension function to a value.
 
-2023-07-11
-  - initial version
-
-CHANGES
-2023-07-17
-  - replaced tension function
-
-2023-10-16
-  - added ISC license text
-"""
-
-# Utility function, Tension.
-# If knob is True it behaves like the tension knob in scale levels,
-# if knob is False it behaves like the Tension function in Formula Controller.
-def Tension(value, rate, knob=True):
+  Args:
+    value (float): value to skew
+    rate (float): tension rate
+    knob (bool): if True, function behaves like the one behind knobs (e.g. scale levels), if False, it behaves like the one in Formula Controller
+  """
   if rate == 0: return value
   # rate mapping
   R = rate
@@ -48,27 +51,27 @@ def Tension(value, rate, knob=True):
 def createDialog():
   form = flp.ScriptDialog("Randomize note color","Randomize note color/MIDI channel"
   + "\r\nIf seed is 0, a new random sequence is generated every time."
-  + "\r\n\r\n2023-10-16, D3Mens & BinaryBorn")
+  + "\r\n\r\nv1.3 (2024-08-26), D3Mens & BinaryBorn")
   form.AddInputKnobInt('Min color', 0, 0, 15)
   form.AddInputKnobInt('Max color', 15, 0, 15)
   form.AddInputKnob('Uniform', 0, -1, 1)
-  form.AddInputKnobInt('Seed', 0, 0, 0x7fffffff)
+  form.AddInputKnobInt('Seed', 0, 0, 999)
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   # set seed if seed is nonzero, otherwise use system time (default)
-  seed = form.GetInputValue('Seed')
+  seed = int(form.GetInputValue('Seed'))
   if seed > 0:
     random.seed(seed)
   else:
     random.seed()
 
-  col0 = form.GetInputValue('Min color')
-  col1 = form.GetInputValue('Max color')
+  col0 = int(form.GetInputValue('Min color'))
+  col1 = int(form.GetInputValue('Max color'))
   dcol = col1 - col0
 
-  tension = form.GetInputValue('Uniform')
+  tension = float(form.GetInputValue('Uniform'))
 
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
@@ -77,3 +80,5 @@ def apply(form):
   for note in notes:
     colRnd = Tension(random.random(), tension)
     note.color = col0 + round(colRnd * dcol)
+    # deselect note to make color noticeable
+    note.selected = False
