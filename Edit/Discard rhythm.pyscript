@@ -11,6 +11,9 @@ Discards score rhythm and spreads notes equidistantly.
 Changelog:
 v1.0 (2024-08-26)
   - initial version
+
+v1.1 (2024-08-28)
+  - added timeline selection support
 """
 
 import flpianoroll as flp
@@ -26,6 +29,8 @@ def createDialog():
 
 def apply(form: flp.ScriptDialog):
   ppq = flp.score.PPQ
+  selection = flp.score.getTimelineSelection()
+  toffset = selection[0] if selection[1] != -1 else 0
 
   distBase = int(form.GetInputValue('Distance'))
   distMulOpt = int(form.GetInputValue('Distance unit'))
@@ -64,5 +69,5 @@ def apply(form: flp.ScriptDialog):
     # re-place
     t0n = i0 * dist
     t1n = i1 * dist
-    n.time = t0n
+    n.time = t0n + toffset
     n.length = t1n - t0n
