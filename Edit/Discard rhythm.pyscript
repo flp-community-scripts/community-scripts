@@ -2,7 +2,7 @@
 Title: Discard rhythm
 Author: D3Mens (idea), BinaryBorn (code)
 Category: Edit
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
@@ -15,6 +15,7 @@ v1.0 (2024-08-26)
 v1.1 (2024-08-28)
   - fixed merger of quickly played notes
   - added timeline selection support
+  - added keep length option
 """
 
 import flpianoroll as flp
@@ -29,10 +30,11 @@ class Event:
 
 def createDialog():
   form = flp.ScriptDialog("Discard rhythm","Discards score rhythm and spreads notes equidistantly."
-  + "\r\n\r\nv1.0 (2024-08-26), D3Mens & BinaryBorn")
+  + "\r\n\r\nv1.1 (2024-08-28), D3Mens & BinaryBorn")
   form.AddInputKnobInt('Distance', 1, 1, 16)
   form.AddInputCombo('Distance unit', ['step', 'beat', 'bar'], 0)
   form.AddInputKnob('Tolerance', 0, 0, 1)
+  form.AddInputCheckbox('Keep length', False)
   
   return form
 
@@ -47,6 +49,7 @@ def apply(form: flp.ScriptDialog):
   dist = distBase * distMul
   # arbitrarily scale tolerance by one beat (current time scale)
   overlapTolerance = ppq * float(form.GetInputValue('Tolerance'))
+  keepLengthOpt = bool(form.GetInputValue('Keep length'))
 
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 
@@ -94,4 +97,5 @@ def apply(form: flp.ScriptDialog):
     t0n = i0 * dist
     t1n = i1 * dist
     n.time = t0n + toffset
-    n.length = t1n - t0n
+    if not keepLengthOpt:
+      n.length = t1n - t0n
