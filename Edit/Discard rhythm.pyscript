@@ -13,10 +13,19 @@ v1.0 (2024-08-26)
   - initial version
 
 v1.1 (2024-08-28)
+  - fixed merger of quickly played notes
   - added timeline selection support
 """
 
 import flpianoroll as flp
+
+class Event:
+  __slots__ = ['time', 'type']
+  def __init__(self, time: int, type: bool):
+    self.time = time
+    "time in ticks"
+    self.type = type
+    "note on (True), note off (False)"
 
 def createDialog():
   form = flp.ScriptDialog("Discard rhythm","Discards score rhythm and spreads notes equidistantly."
@@ -41,14 +50,29 @@ def apply(form: flp.ScriptDialog):
 
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 
-  # collect distinct (out-of-tolerance) note on events
-  events: list[int] = []
-  lastEvent: int|None = None
+  # collect all note events
+  allEvents: list[Event] = []
   for n in notes:
-    t = n.time
-    if lastEvent is None or t > lastEvent + overlapTolerance:
-      events.append(t)
-      lastEvent = t
+    allEvents.extend([
+      Event(n.time, True),
+      Event(n.time + n.length, False),
+    ])
+  # sort strictly by time
+  allEvents.sort(key=lambda e: e.time)
+  # merge consecutive note on events in tolerance
+  mergedEvents: list[Event] = []
+  lastEvent: Event|None = None
+  for e in allEvents:
+    if (
+      lastEvent is None or
+      lastEvent.type == False or
+      e.type == False or
+      e.time > lastEvent.time + overlapTolerance
+    ):
+      mergedEvents.append(e)
+      lastEvent = e
+  # convert to list of times of note on events only
+  events = [e.time for e in mergedEvents if e.type == True]
 
   def eventIndexForTime(t: int):
     """Returns the index of the last event before t"""
