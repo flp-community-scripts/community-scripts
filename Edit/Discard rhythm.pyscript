@@ -2,7 +2,7 @@
 Title: Discard rhythm
 Author: D3Mens (idea), BinaryBorn (code)
 Category: Edit
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
@@ -11,21 +11,37 @@ Discards score rhythm and spreads notes equidistantly.
 Changelog:
 v1.0 (2024-08-26)
   - initial version
+
+v1.1 (2024-08-28)
+  - fixed merger of quickly played notes
+  - added timeline selection support
+  - added keep length option
 """
 
 import flpianoroll as flp
 
+class Event:
+  __slots__ = ['time', 'type']
+  def __init__(self, time: int, type: bool):
+    self.time = time
+    "time in ticks"
+    self.type = type
+    "note on (True), note off (False)"
+
 def createDialog():
   form = flp.ScriptDialog("Discard rhythm","Discards score rhythm and spreads notes equidistantly."
-  + "\r\n\r\nv1.0 (2024-08-26), D3Mens & BinaryBorn")
+  + "\r\n\r\nv1.1 (2024-08-28), D3Mens & BinaryBorn")
   form.AddInputKnobInt('Distance', 1, 1, 16)
   form.AddInputCombo('Distance unit', ['step', 'beat', 'bar'], 0)
   form.AddInputKnob('Tolerance', 0, 0, 1)
+  form.AddInputCheckbox('Keep length', False)
   
   return form
 
 def apply(form: flp.ScriptDialog):
   ppq = flp.score.PPQ
+  selection = flp.score.getTimelineSelection()
+  toffset = selection[0] if selection[1] != -1 else 0
 
   distBase = int(form.GetInputValue('Distance'))
   distMulOpt = int(form.GetInputValue('Distance unit'))
@@ -33,17 +49,33 @@ def apply(form: flp.ScriptDialog):
   dist = distBase * distMul
   # arbitrarily scale tolerance by one beat (current time scale)
   overlapTolerance = ppq * float(form.GetInputValue('Tolerance'))
+  keepLengthOpt = bool(form.GetInputValue('Keep length'))
 
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 
-  # collect distinct (out-of-tolerance) note on events
-  events: list[int] = []
-  lastEvent: int|None = None
+  # collect all note events
+  allEvents: list[Event] = []
   for n in notes:
-    t = n.time
-    if lastEvent is None or t > lastEvent + overlapTolerance:
-      events.append(t)
-      lastEvent = t
+    allEvents.extend([
+      Event(n.time, True),
+      Event(n.time + n.length, False),
+    ])
+  # sort strictly by time
+  allEvents.sort(key=lambda e: e.time)
+  # merge consecutive note on events in tolerance
+  mergedEvents: list[Event] = []
+  lastEvent: Event|None = None
+  for e in allEvents:
+    if (
+      lastEvent is None or
+      lastEvent.type == False or
+      e.type == False or
+      e.time > lastEvent.time + overlapTolerance
+    ):
+      mergedEvents.append(e)
+      lastEvent = e
+  # convert to list of times of note on events only
+  events = [e.time for e in mergedEvents if e.type == True]
 
   def eventIndexForTime(t: int):
     """Returns the index of the last event before t"""
@@ -64,5 +96,6 @@ def apply(form: flp.ScriptDialog):
     # re-place
     t0n = i0 * dist
     t1n = i1 * dist
-    n.time = t0n
-    n.length = t1n - t0n
+    n.time = t0n + toffset
+    if not keepLengthOpt:
+      n.length = t1n - t0n
