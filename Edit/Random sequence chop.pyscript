@@ -2,7 +2,7 @@
 Title: Random sequence chop
 Author: D3Mens (idea), BinaryBorn (code)
 Category: Edit
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
@@ -11,11 +11,15 @@ Chops existing notes up into a random sequence.
 Changelog:
 v1.0 (2024-07-26)
   - initial version
+
+v1.1 (2024-09-04)
+  - added script termination when no notes are selected
 """
 
 import flpianoroll as flp
 import math
 import time
+import sys
 import _random
 
 random = _random.Random()
@@ -41,15 +45,13 @@ class Step:
 
 notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 if len(notes) == 0:
-  flp.Utils.ShowMessage(
-    "No notes provided."
-    + "\r\n\r\nPlease put some notes before running the script."
-  )
+  sys.exit("No notes provided."
+  + "\r\n\r\nPlease put some notes before running the script.")
 
 def createDialog():
   form = flp.ScriptDialog("Random sequence chop","Chop existing notes up into a random sequence."
   + "\r\nOctave jumps, Melody, Rhythm, Slides and Accents knobs are probability for random value."
-  + "\r\n\r\nv1.0 (2024-07-26), D3Mens & BinaryBorn")
+  + "\r\n\r\nv1.1 (2024-09-04), D3Mens & BinaryBorn")
   form.AddInputKnob('Octave jumps', 0, 0, 1.0)
   form.AddInputCombo('Octave range', ['+1', '+2', '-1', '-1 / +1', '-1 / +2'], 0)
   form.AddInputKnob('Melody', 0, 0, 1.0)
