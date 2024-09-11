@@ -1,34 +1,37 @@
-"""
-ISC License
+"""flp
+Title: Fade note length
+Author: BinaryBorn
+Category: Adjust
+Version: 1.4
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Fade note lengths from one length to another.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-06-30)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-07-01)
+  - fixed error when used on empty score
+
+v1.2 (2023-09-14)
+  - added ISC license text
+
+v1.3 (2024-03-08)
+  - fixed typings for Python engine upgrade
+
+v2.0 (2024-09-11)
+  - added length unit options
+  - added tension
 """
 
 import flpianoroll as flp
+import math
 
-"""
-Fade note length
-by: BinaryBorn
-
-2023-06-30
-  - initial version
-
-2023-07-01
-  - fixed error when used on empty score
-
-2023-09-14
-  - added ISC license text
-
-2024-03-08
-  - FIXED typings for Python engine upgrade
-"""
-
-# Utility function to get time range of selection / notes
-def getTimeRange(notes) -> tuple[int, int]:
+def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
+  """Returns the time range spanning notes.
+  """
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -36,17 +39,48 @@ def getTimeRange(notes) -> tuple[int, int]:
   # return start and end time
   return (first.time, last.time + last.length)
 
+def Tension(value: float, rate: float, knob=True):
+  """Applies the FL Studio Tension function to a value.
+
+  Args:
+    value (float): value to skew
+    rate (float): tension rate
+    knob (bool): if True, function behaves like the one behind knobs (e.g. scale levels), if False, it behaves like the one in Formula Controller
+  """
+  if rate == 0: return value
+  # rate mapping
+  R = rate
+  if not knob and rate > 0:
+    R = math.log2(rate + 1) / 10
+  elif not knob and rate < 0:
+    R = -math.log2(-rate + 1) / 10
+  # f(x,R) = (2^(-10*R*x)-1)/(2^(-10*R)-1)
+  return (pow(2, -10 * R * value) - 1) / (pow(2, -10 * R) - 1)
 
 def createDialog():
-  form = flp.ScriptDialog("Fade note length","Fade note lengths from 0% to 100%"
-  + "\r\n\r\n2024-03-08, BinaryBorn")
-  form.AddInputKnob('Start length', 100, 0, 100)
-  form.AddInputKnob('End length', 100, 0, 100)
+  form = flp.ScriptDialog("Fade note length","Fade note lengths from one length to another."
+  + "\r\n\r\nv2.0 (2024-09-11), BinaryBorn")
+  form.AddInputKnob('Start length', 1, 0, 16)
+  form.AddInputCombo('Start unit', ['Multiply', 'Step', 'Beat', 'Bar'], 0)
+  form.AddInputKnob('End length', 1, 0, 16)
+  form.AddInputCombo('End unit', ['Multiply', 'Step', 'Beat', 'Bar'], 0)
   form.AddInputCombo('Interpolate by', ['Time', 'Note number'], 0)
+  form.AddInputKnob('Tension', 0, -1, 1)
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
+  ppq = flp.score.PPQ
+  pp16th = ppq // 4
+  ppbar = ppq * 4
+
   noteCount = flp.score.noteCount
+
+  value0 = float(form.GetInputValue('Start length'))
+  unit0 = int(form.GetInputValue('Start unit'))
+  value1 = float(form.GetInputValue('End length'))
+  unit1 = int(form.GetInputValue('End unit'))
+  mode = int(form.GetInputValue('Interpolate by'))
+  tension = float(form.GetInputValue('Tension'))
 
   # get current notes
   notes = [flp.score.getNote(i) for i in range(noteCount)]
@@ -62,25 +96,30 @@ def apply(form):
   i1 = noteCount - 1
   di = i1 - i0
 
+  def getTargetLength(initial: int, value: float, unit: int) -> float:
+    "Returns target note length for value/unit in ticks"
+    if unit == 1:
+      return value * pp16th
+    elif unit == 2:
+      return value * ppq
+    elif unit == 3:
+      return value * ppbar
+    return initial * value
+
   # go through all notes and fade length
-  mode = int(form.GetInputValue('Interpolate by'))
-  scale0 = float(form.GetInputValue('Start length')) / 100
-  scale1 = float(form.GetInputValue('End length')) / 100
-  dscale = scale1 - scale0
   idx = 0
   for note in notes:
-    scale = 1
     # note time / index
-    t = note.time
-    i = idx
-    # interpolate according to selected mode
     if mode == 0:
-      scale = scale0 + dscale * ((t - t0) / dt)
+      jrel = (note.time - t0) / dt
     else:
-      scale = scale0 + dscale * ((i - i0) / di)
+      jrel = idx / di
+    # calculate target length for both start and end values and interpolate
+    length0 = getTargetLength(note.length, value0, unit0)
+    length1 = getTargetLength(note.length, value1, unit1)
+    dlength = length1 - length0
 
-    # scale note length
-    note.length = int(max(1, note.length * scale))
+    note.length = int(max(1, length0 + dlength * Tension(jrel, tension)))
 
     idx += 1
 
