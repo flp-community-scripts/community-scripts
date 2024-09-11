@@ -2,11 +2,11 @@
 Title: Generate tempo transition
 Author: BinaryBorn
 Category: Generate (rhythm)
-Version: 1.6
+Version: 1.8
 License: ISC
 
 Description: 
-Generates a transition from one rate to another.
+Generate a transition from one rate to another.
 
 Changelog:
 v1.0 (2023-07-11)
@@ -40,6 +40,9 @@ v1.6 (2024-06-10)
 
 v1.7 (2024-07-10)
   - ADDED note grouping
+
+v1.8 (2024-09-11)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -52,7 +55,7 @@ def createDialog():
   form = flp.ScriptDialog("Generate tempo transition","Start and end freq are in 'pulses per whole note'."
   + "\r\nDuration is in beats."
   + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
-  + "\r\n\r\nv1.7 (2024-07-10), BinaryBorn")
+  + "\r\n\r\nv1.8 (2024-09-11), BinaryBorn")
 
   # fmax = flp.score.PPQ * 4 # actual technical maximum
   fmax = flp.score.PPQ # feels like the better UX choice
@@ -61,18 +64,18 @@ def createDialog():
   if selection[1] != -1:
     duration = round((selection[1] - selection[0]) / flp.score.PPQ)
 
-  form.AddInputKnobInt('Start freq', 4, 1, fmax)
-  form.AddInputKnobInt('End freq', 8, 1, fmax)
-  form.AddInputKnobInt('Pulses before', 0, 0, 16)
-  form.AddInputKnobInt('Pulses after', 0, 0, 16)
-  form.AddInputKnobInt('Duration', duration, 1, 32 * 16)
-  form.AddInputCombo('Sweep', ['pulse frequency', 'pulse length'], 0)
-  form.AddInputKnob('Tension', 0, -1, 1)
-  form.AddInputKnobInt('Note', 60, 0, 131)
-  form.AddInputCombo('Phase correction', ['none', 'stretch', 'squash'], 0)
-  form.AddInputKnob('Ph. corr. tension', 0, -1, 1)
-  form.AddInputCheckbox('Zero length notes', False)
-  form.AddInputCheckbox('Markers', False)
+  form.AddInputKnobInt('Start freq', 4, 1, fmax, hint='Pulses per bar')
+  form.AddInputKnobInt('End freq', 8, 1, fmax, hint='Pulses per bar')
+  form.AddInputKnobInt('Pulses before', 0, 0, 16, hint='Pulses before transition')
+  form.AddInputKnobInt('Pulses after', 0, 0, 16, hint='Pulses after transition')
+  form.AddInputKnobInt('Duration', duration, 1, 32 * 16, hint='Transition duration in beats')
+  form.AddInputCombo('Sweep', ['pulse frequency', 'pulse length'], 0, hint='Sweep property')
+  form.AddInputKnob('Tension', 0, -1, 1, hint='Sweep tension')
+  form.AddInputKnobInt('Note', 60, 0, 131, hint='MIDI note')
+  form.AddInputCombo('Phase correction', ['none', 'stretch', 'squash'], 0, hint='How to fit transition')
+  form.AddInputKnob('Ph. corr. tension', 0, -1, 1, hint='Phase correction tension')
+  form.AddInputCheckbox('Zero length notes', False, hint='Place notes without length')
+  form.AddInputCheckbox('Markers', False, hint='Place markers for transition start/end')
   
   return form
 
