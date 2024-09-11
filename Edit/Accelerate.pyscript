@@ -1,32 +1,33 @@
-"""
-ISC License
+"""flp
+Title: Accelerate
+Author: BinaryBorn
+Category: Edit
+Version: 1.3
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Speed up or slow down score's playback rate.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-07-03)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-09-13)
+  - added ISC license text
+
+v1.2 (2024-03-08)
+  - fixed typings for Python engine upgrade
+
+v1.3 (2024-09-11)
+  - added hints
 """
 
 import flpianoroll as flp
 import math
 
-"""
-Accelerate
-by: BinaryBorn
-
-2023-07-03
-  - initial version
-  
-2023-09-13
-  - added ISC license text
-
-2024-03-08
-  - FIXED typings for Python engine upgrade
-"""
-
-# Utility function to get time range of selection / notes
-def getTimeRange(notes) -> tuple[int, int]:
+def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
+  """Returns the time range spanning notes.
+  """
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -43,15 +44,15 @@ def createDialog():
   + "\r\nAcceleration is 'rate change per bar', on a logarithmic scale:"
   + "\r\nValue:    -5      -4      -3      -2      -1       0       1       2       3       4       5"
   + "\r\nRate:     \u00d7\u215f\u2083\u2082   \u00d7\u215f\u2081\u2086   \u00d7\u215b   \u00d7\u00bc   \u00d7\u00bd    \u00d71    \u00d72    \u00d74    \u00d78    \u00d716    \u00d732"
-  + "\r\n\r\n2024-03-08, BinaryBorn")
-  form.AddInputKnob('Acceleration', 0, -expRange, expRange)
-  form.AddInputCombo('Off limit notes', ['leave', 'mute', 'select'], 0)
-  form.AddInputKnob('Lower rate limit %', 100/mulRange, 100/mulRange, 100)
-  form.AddInputKnob('Upper rate limit %', 100*mulRange, 100, 100*mulRange)
+  + "\r\n\r\nv1.3 (2024-09-11), BinaryBorn")
+  form.AddInputKnob('Acceleration', 0, -expRange, expRange, hint='Acceleration (rate change per bar)')
+  form.AddInputCombo('Off limit notes', ['leave', 'mute', 'select'], 0, hint='What to do with off limit notes')
+  form.AddInputKnob('Lower rate limit %', 100/mulRange, 100/mulRange, 100, hint='Lower rate limit (percentage)')
+  form.AddInputKnob('Upper rate limit %', 100*mulRange, 100, 100*mulRange, hint='Upper rate limit (percentage)')
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   # to find acceleration, go via target rate after 1 bar
   trExp = float(form.GetInputValue('Acceleration'))
   tr = pow(2, trExp)
