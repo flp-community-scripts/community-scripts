@@ -1,41 +1,41 @@
-"""
-ISC License
+"""flp
+Title: Convert BPM
+Author: BinaryBorn
+Category: Edit
+Version: 1.4
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Convert score from one BPM to another.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-06-30)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-07-01)
+  - cleaned up code
+
+v1.2 (2023-09-13)
+  - added ISC license text
+
+v1.3 (2024-03-08)
+  - fixed typings for Python engine upgrade
+
+v1.4 (2024-09-11)
+  - added hints
 """
 
 import flpianoroll as flp
 
-"""
-Convert BPM
-by: BinaryBorn
-
-2023-06-30
-  - initial version
-
-2023-07-01
-  - cleaned up code
-
-2023-09-13
-  - added ISC license text
-
-2024-03-08
-  - FIXED typings for Python engine upgrade
-"""
-
 def createDialog():
-  form = flp.ScriptDialog("Convert BPM","Convert score from one BPM to another"
-  + "\r\n\r\n2024-03-08, BinaryBorn")
-  form.AddInputKnobInt('From tempo', 120, 10, 522)
-  form.AddInputKnobInt('To tempo', 120, 10, 522)
+  form = flp.ScriptDialog("Convert BPM","Convert score from one BPM to another."
+  + "\r\n\r\nv1.4 (2024-09-11), BinaryBorn")
+  form.AddInputKnobInt('From tempo', 120, 10, 522, hint='Current project tempo')
+  form.AddInputKnobInt('To tempo', 120, 10, 522, hint='Target playback tempo')
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   tempoA = int(form.GetInputValue('From tempo'))
   tempoB = int(form.GetInputValue('To tempo'))
   tscale = tempoA / tempoB
