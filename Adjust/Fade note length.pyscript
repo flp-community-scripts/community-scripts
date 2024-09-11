@@ -24,6 +24,9 @@ v1.3 (2024-03-08)
 v2.0 (2024-09-11)
   - added length unit options
   - added tension
+
+v2.1 (2024-09-11)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -60,12 +63,12 @@ def Tension(value: float, rate: float, knob=True):
 def createDialog():
   form = flp.ScriptDialog("Fade note length","Fade note lengths from one length to another."
   + "\r\n\r\nv2.0 (2024-09-11), BinaryBorn")
-  form.AddInputKnob('Start length', 1, 0, 16)
-  form.AddInputCombo('Start unit', ['Multiply', 'Step', 'Beat', 'Bar'], 0)
-  form.AddInputKnob('End length', 1, 0, 16)
-  form.AddInputCombo('End unit', ['Multiply', 'Step', 'Beat', 'Bar'], 0)
-  form.AddInputCombo('Interpolate by', ['Time', 'Note number'], 0)
-  form.AddInputKnob('Tension', 0, -1, 1)
+  form.AddInputKnob('Start length', 1, 0, 16, hint='Length modifier for notes at the start')
+  form.AddInputCombo('Start unit', ['Multiply', 'Step', 'Beat', 'Bar'], 0, hint='Unit for start length modifier')
+  form.AddInputKnob('End length', 1, 0, 16, hint='Length modifier for notes at the end')
+  form.AddInputCombo('End unit', ['Multiply', 'Step', 'Beat', 'Bar'], 0, hint='Unit for end length modifier')
+  form.AddInputCombo('Interpolate by', ['Time', 'Note number'], 0, hint='By what to interpolate')
+  form.AddInputKnob('Tension', 0, -1, 1, hint='Interpolation tension')
   return form
 
 def apply(form: flp.ScriptDialog):
