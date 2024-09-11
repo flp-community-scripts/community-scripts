@@ -181,58 +181,69 @@ class ScriptDialog():
         pass
         
 
-    def AddInput(self, name: str, value: float) -> None:
+    def AddInput(self, name: str, value: float, hint: str = '') -> None:
         """Adds a generic input control, rotary boolean
 
         Args:
             name (str): Name of control
             value (float): Initial value
+            hint (str, optional): Text to display in hint panel
         """
         pass
 
-    def AddInputKnob(self, name: str, value: float, min: float, max: float) -> None:
+    def AddInputKnob(self, name: str, value: float, min: float, max: float, hint: str = '') -> None:
         """Adds a knob input control with float values
 
         Args:
             name (str): Name of control
             value (float): Initial value
+            min (float): Minimum value
+            max (float): Maximum value
+            hint (str, optional): Text to display in hint panel
         """
         pass
 
-    def AddInputKnobInt(self, name: str, value: int, min: int, max: int) -> None:
+    def AddInputKnobInt(self, name: str, value: int, min: int, max: int, reserved: int, hint: str = '') -> None:
         """Adds a knob input control with int values
 
         Args:
             name (str): Name of control
             value (int): Initial value
+            min (int): Minimum value
+            max (int): Maximum value
+            reserved (int): Unused
+            hint (str, optional): Text to display in hint panel
         """
         pass
 
-    def AddInputCombo(self, name: str, options: list, value: int) -> None:
+    def AddInputCombo(self, name: str, options: list, value: int, hint: str = '') -> None:
         """Adds a combo box input control with list of strings
 
         Args:
             name (str): Name of control
             options (list): Options for selection
             value (int): Index of initial option
+            hint (str, optional): Text to display in hint panel
         """
         pass
 
-    def AddInputText(self, name: str, value: str) -> None:
+    def AddInputText(self, name: str, value: str, hint: str = '') -> None:
         """Adds a text box input control with string value
 
         Args:
             name (str): Name of control
             value (str): text to display
+            hint (str, optional): Text to display in hint panel
         """
         pass
 
-    def AddInputCheckbox(self, name: str, value: bool) -> None:
+    def AddInputCheckbox(self, name: str, value: bool, hint: str = '') -> None:
         """Adds a checkbox input control with string value
 
         Args:
             name (str): Name of control
             value (bool): Initial value
+            hint (str, optional): Text to display in hint panel
         """
         pass
 
