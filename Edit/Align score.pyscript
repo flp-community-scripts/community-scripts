@@ -2,15 +2,18 @@
 Title: Align score
 Author: BinaryBorn
 Category: Edit
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
-Aligns all notes in a timeline selection to the grid.
+Align all notes in a timeline selection to the grid.
 
 Changelog:
 v1.0 (2024-03-20)
   - initial version
+
+v1.1 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -34,9 +37,9 @@ def getNoteFollowing(notes: list[flp.Note], time: int):
 
 
 def createDialog():
-  form = flp.ScriptDialog("Align score","Aligns all notes in a timeline selection to the grid."
-  + "\r\n\r\nv1.0 (2024-03-20), BinaryBorn")
-  form.AddInputKnobInt('Delta steps', 0, -16, 16)
+  form = flp.ScriptDialog("Align score","Align all notes in a timeline selection to the grid."
+  + "\r\n\r\nv1.1 (2024-09-12), BinaryBorn")
+  form.AddInputKnobInt('Delta steps', 0, -16, 16, hint='Additional space to insert (steps)')
 
   return form
 
