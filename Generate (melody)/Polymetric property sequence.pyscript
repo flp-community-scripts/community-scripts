@@ -2,7 +2,7 @@
 Title: Polymetric property sequence
 Author: BinaryBorn
 Category: Generate (melody)
-Version: 1.1
+Version: 1.2
 License: ISC
 
 Description: 
@@ -24,6 +24,9 @@ v1.1 (2024-08-21)
   - added generic sequence
   - changed 'Melody' to 'Pitch'
   - changed end on grid option to '#'
+
+v1.2 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -632,25 +635,25 @@ def createDialog():
   + '\r\n\tvalue_generic ::= "."?'
   + '\r\n'
   + '\r\n'
-  + "\r\nv1.1 (2024-08-21), BinaryBorn")
-  form.AddInputKnobInt('Duration', 16, 1, 512)
-  form.AddInputCombo('Duration unit', ['beats', 'bars', 'iterations'], 0)
-  form.AddInputCheckbox('Clear score', True)
-  form.AddInputCheckbox('Place markers', True)
-  form.AddInputCheckbox('Limit to one', False)
-  form.AddInputText('Rhythm', '3xs 0.5s 0.5s-')
-  form.AddInputText('Pitch', 'C4 C5 C6')
-  form.AddInputText('Length', '1')
-  form.AddInputText('Pan', '0.5l 0.5r')
-  form.AddInputText('Velocity', 'D')
-  form.AddInputText('Release', 'D')
-  form.AddInputText('Mod X', '0')
-  form.AddInputText('Mod Y', '0')
-  form.AddInputText('Fine Pitch', '0')
-  form.AddInputText('Repeats', '0')
-  form.AddInputText('Color', 'C')
-  form.AddInputText('Porta', '0')
-  form.AddInputText('Generic', '.')
+  + "\r\nv1.2 (2024-09-12), BinaryBorn")
+  form.AddInputKnobInt('Duration', 16, 1, 512, 0, hint='Sequence duration')
+  form.AddInputCombo('Duration unit', ['beats', 'bars', 'iterations'], 0, hint='Sequence duration unit')
+  form.AddInputCheckbox('Clear score', True, hint='Clear existing score')
+  form.AddInputCheckbox('Place markers', True, hint='Place markers on repetitions')
+  form.AddInputCheckbox('Limit to one', False, hint='Only generate one repetition')
+  form.AddInputText('Rhythm', '3xs 0.5s 0.5s-', hint='Rhythm sequence')
+  form.AddInputText('Pitch', 'C4 C5 C6', hint='Note sequence')
+  form.AddInputText('Length', '1', hint='Note length sequence')
+  form.AddInputText('Pan', '0.5l 0.5r', hint='Note panning sequence')
+  form.AddInputText('Velocity', 'D', hint='Note velocity sequence')
+  form.AddInputText('Release', 'D', hint='Note release sequence')
+  form.AddInputText('Mod X', '0', hint='Note cutoff frequency sequence')
+  form.AddInputText('Mod Y', '0', hint='Note resonance (Q) sequence')
+  form.AddInputText('Fine Pitch', '0', hint='Note fine pitch sequence')
+  form.AddInputText('Repeats', '0', hint='Note repeat length seqence')
+  form.AddInputText('Color', 'C', hint='Note color sequence')
+  form.AddInputText('Porta', '0', hint='Note portamento sequence')
+  form.AddInputText('Generic', '.', hint='Generic sequence for overrides')
   
   return form
 
