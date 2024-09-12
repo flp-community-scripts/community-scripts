@@ -1,27 +1,33 @@
-"""
-ISC License
+"""flp
+Title: Tilt and transform
+Author: BinaryBorn
+Category: Edit
+Version: 1.1
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Tilt and transform score.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-10-16)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
+import math
 
-"""
-Tilt and transform
-by: BinaryBorn
-
-2023-10-16
-  - initial version
-"""
-
+class Scale:
+  __slots__ = ['time', 'notes']
+  def __init__(self, time: int, notes: list[bool]):
+    self.time = time
+    self.notes = notes
 
 # gathering markers is only required once - they don't update as long as script is active
 
-scales = []
+scales: list[Scale] = []
 
 for m in range(flp.score.markerCount):
   marker = flp.score.getMarker(m)
@@ -34,19 +40,20 @@ for m in range(flp.score.markerCount):
     # "default" scale will be all False - don't append that, invert instead
     if not max(notes) == 0:
       # append that with its starting time
-      scales.append({
-        'time': marker.time,
-        'notes': notes
-      })
+      scales.append(Scale(
+        time = marker.time,
+        notes = notes
+      ))
     else:
-      scales.append({
-        'time': marker.time,
-        'notes': [True, True, True, True, True, True, True, True, True, True, True, True]
-      })
+      scales.append(Scale(
+        time = marker.time,
+        notes = [True, True, True, True, True, True, True, True, True, True, True, True]
+      ))
 
 
-# Utility function to get time range of selection / notes
-def getTimeRange(notes):
+def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
+  """Returns the time range spanning notes.
+  """
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -54,10 +61,14 @@ def getTimeRange(notes):
   # return start and end time
   return (first.time, last.time + last.length)
 
-# Utility function, Tension.
-# If knob is True it behaves like the tension knob in scale levels,
-# if knob is False it behaves like the Tension function in Formula Controller.
-def Tension(value, rate, knob=True):
+def Tension(value: float, rate: float, knob=True):
+  """Applies the FL Studio Tension function to a value.
+
+  Args:
+    value (float): value to skew
+    rate (float): tension rate
+    knob (bool): if True, function behaves like the one behind knobs (e.g. scale levels), if False, it behaves like the one in Formula Controller
+  """
   if rate == 0: return value
   # rate mapping
   R = rate
@@ -68,23 +79,35 @@ def Tension(value, rate, knob=True):
   # f(x,R) = (2^(-10*R*x)-1)/(2^(-10*R)-1)
   return (pow(2, -10 * R * value) - 1) / (pow(2, -10 * R) - 1)
 
-# return scale active at "time" (use "Default" as fallback)
-def relevantScaleAt(time):
-  s = {
-    'time': 0,
-    'notes': [True, True, True, True, True, True, True, True, True, True, True, True]
-  }
+def relevantScaleAt(time: int):
+  """Returns scale active at given time (or "Default" all True as fallback).
+
+  Args:
+      time (int): time in ticks
+  """
+  s = Scale(
+    time = 0,
+    notes = [True, True, True, True, True, True, True, True, True, True, True, True]
+  )
 
   # find latest scale before time
   for scale in scales:
-    if time >= scale['time']: s = scale
+    if time >= scale.time: s = scale
 
   return s
 
-# transpose note into scale
-def transposeIntoScale(number, scale):
+def transposeIntoScale(number: int, scale: Scale):
+  """Transposes a given note number into scale.
+
+  Args:
+      number (int): source note number
+      scale (Scale): scale to transpose into
+
+  Returns:
+      int: target note number
+  """
   # look for "True" in scale above and below original note with increasing distance
-  s = scale['notes']
+  s = scale.notes
   for t in range(12):
     if s[(number + t) % 12]: return number + t
     if s[(number - t + 12) % 12]: return number - t
@@ -95,23 +118,23 @@ def transposeIntoScale(number, scale):
 def createDialog():
   form = flp.ScriptDialog("Tilt and transform","Tilt and transform score."
   + "\r\nAxis is MIDI note and describes the axis for scaling transformations."
-  + "\r\n\r\n2023-10-16, BinaryBorn")
-  form.AddInputKnobInt('Axis', 60, 0, 131)
-  form.AddInputKnobInt('Tilt', 0, -48, 48)
-  form.AddInputKnob('Scale start', 1, -2, 2)
-  form.AddInputKnob('Scale end', 1, -2, 2)
-  form.AddInputKnob('Tension', 0, -1, 1)
-  form.AddInputCombo('Snap to scale', ['None', 'Notes', 'Scale'], 1)
+  + "\r\n\r\nv1.1 (2024-09-12), BinaryBorn")
+  form.AddInputKnobInt('Axis', 60, 0, 131, hint='Axis for scaling (MIDI note)')
+  form.AddInputKnobInt('Tilt', 0, -48, 48, hint='Tilt to horizon')
+  form.AddInputKnob('Scale start', 1, -2, 2, hint='Start Y-scaling factor')
+  form.AddInputKnob('Scale end', 1, -2, 2, hint='End Y-scaling factor')
+  form.AddInputKnob('Tension', 0, -1, 1, hint='Transformation tension')
+  form.AddInputCombo('Snap to scale', ['None', 'Notes', 'Scale'], 1, hint='How to snap notes')
   
   return form
 
-def apply(form):
-  axis = form.GetInputValue('Axis')
-  tilt = form.GetInputValue('Tilt')
-  scale0 = form.GetInputValue('Scale start')
-  scale1 = form.GetInputValue('Scale end')
-  snap = form.GetInputValue('Snap to scale')
-  tension = form.GetInputValue('Tension')
+def apply(form: flp.ScriptDialog):
+  axis = int(form.GetInputValue('Axis'))
+  tilt = int(form.GetInputValue('Tilt'))
+  scale0 = float(form.GetInputValue('Scale start'))
+  scale1 = float(form.GetInputValue('Scale end'))
+  snap = int(form.GetInputValue('Snap to scale'))
+  tension = float(form.GetInputValue('Tension'))
 
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
