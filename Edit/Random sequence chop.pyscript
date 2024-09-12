@@ -12,8 +12,9 @@ Changelog:
 v1.0 (2024-07-26)
   - initial version
 
-v1.1 (2024-09-04)
+v1.1 (2024-09-12)
   - added script termination when no notes are selected
+  - added hints
 """
 
 import flpianoroll as flp
@@ -51,16 +52,16 @@ if len(notes) == 0:
 def createDialog():
   form = flp.ScriptDialog("Random sequence chop","Chop existing notes up into a random sequence."
   + "\r\nOctave jumps, Melody, Rhythm, Slides and Accents knobs are probability for random value."
-  + "\r\n\r\nv1.1 (2024-09-04), D3Mens & BinaryBorn")
-  form.AddInputKnob('Octave jumps', 0, 0, 1.0)
-  form.AddInputCombo('Octave range', ['+1', '+2', '-1', '-1 / +1', '-1 / +2'], 0)
-  form.AddInputKnob('Melody', 0, 0, 1.0)
-  form.AddInputKnob('Rhythm', 0, 0, 1.0)
-  form.AddInputKnob('Gaps', 0, 0, 1.0)
-  form.AddInputKnob('Slides', 0, 0, 1.0)
-  form.AddInputKnob('Accents', 0, 0, 1.0)
+  + "\r\n\r\nv1.1 (2024-09-12), D3Mens & BinaryBorn")
+  form.AddInputKnob('Octave jumps', 0, 0, 1.0, hint='Probability for octave jumps')
+  form.AddInputCombo('Octave range', ['+1', '+2', '-1', '-1 / +1', '-1 / +2'], 0, hint='How far octave jumps can go')
+  form.AddInputKnob('Melody', 0, 0, 1.0, hint='Probability for note jumps')
+  form.AddInputKnob('Rhythm', 0, 0, 1.0, hint='Probability for shorter and longer notes')
+  form.AddInputKnob('Gaps', 0, 0, 1.0, hint='Probability for note omissions')
+  form.AddInputKnob('Slides', 0, 0, 1.0, hint='Probability for slide notes')
+  form.AddInputKnob('Accents', 0, 0, 1.0, hint='Probability for accented (louder) notes')
   # randomly initialize seed value - will only ever "rand" back on reset
-  form.AddInputKnobInt('Seed', int(time.time() * 1000) % 1000, 0, 999)
+  form.AddInputKnobInt('Seed', int(time.time() * 1000) % 1000, 0, 999, hint='Seed for random number generator')
   
   return form
 
