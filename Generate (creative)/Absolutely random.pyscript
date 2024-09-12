@@ -2,11 +2,11 @@
 Title: Absolutely random
 Author: BinaryBorn
 Category: Generate (creative)
-Version: 1.0
+Version: 2.1
 License: ISC
 
 Description: 
-Generates absolutely random, unquantized notes.
+Generate absolutely random, unquantized notes.
 
 Changelog:
 v1.0 (2024-02-14)
@@ -15,8 +15,11 @@ v1.0 (2024-02-14)
 v1.1 (2024-02-14)
   - fixed fine pitch
 
-v1.2 (2024-03-08)
+v2.0 (2024-03-08)
   - FIXED typings for Python engine upgrade
+
+v2.1 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -26,30 +29,30 @@ import _random
 random = _random.Random()
 
 def createDialog():
-  form = flp.ScriptDialog("Absolutely random","Generates absolutely random, unquantized notes."
-  + "\r\n\r\nv1.2 (2024-03-08), BinaryBorn")
-  form.AddInputKnobInt('Seed', 0, 0, 999)
-  form.AddInputKnobInt('Density', 6, 0, 100)
-  form.AddInputKnobInt('Note min', 48, 0, 131)
-  form.AddInputKnobInt('Note max', 84, 0, 131)
-  form.AddInputKnob('Length min', 1, 0, 32)
-  form.AddInputKnob('Length max', 2, 0, 32)
-  form.AddInputKnob('Velocity min', 100/127, 0, 1)
-  form.AddInputKnob('Velocity max', 100/127, 0, 1)
-  form.AddInputKnob('Pan min', 0.5, 0, 1)
-  form.AddInputKnob('Pan max', 0.5, 0, 1)
-  form.AddInputKnob('Mod X min', 0.5, 0, 1)
-  form.AddInputKnob('Mod X max', 0.5, 0, 1)
-  form.AddInputKnob('Mod Y min', 0.5, 0, 1)
-  form.AddInputKnob('Mod Y max', 0.5, 0, 1)
-  form.AddInputKnob('Fine pitch min', 0, -1, 1)
-  form.AddInputKnob('Fine pitch max', 0, -1, 1)
-  form.AddInputKnobInt('Color min', 0, 0, 15)
-  form.AddInputKnobInt('Color max', 0, 0, 15)
+  form = flp.ScriptDialog("Absolutely random","Generate absolutely random, unquantized notes."
+  + "\r\n\r\nv2.1 (2024-09-12), BinaryBorn")
+  form.AddInputKnobInt('Seed', 0, 0, 999, hint='Seed for random number generator')
+  form.AddInputKnobInt('Density', 6, 0, 100, hint='Note density (percentage)')
+  form.AddInputKnobInt('Note min', 48, 0, 131, hint='Lowest note (MIDI note)')
+  form.AddInputKnobInt('Note max', 84, 0, 131, hint='Highest note (MIDI note)')
+  form.AddInputKnob('Length min', 1, 0, 32, hint='Note length minimum (steps)')
+  form.AddInputKnob('Length max', 2, 0, 32, hint='Note length maximum (steps)')
+  form.AddInputKnob('Velocity min', 100/127, 0, 1, hint='Note velocity minimum')
+  form.AddInputKnob('Velocity max', 100/127, 0, 1, hint='Note velocity maximum')
+  form.AddInputKnob('Pan min', 0.5, 0, 1, hint='Note panning minimum')
+  form.AddInputKnob('Pan max', 0.5, 0, 1, hint='Note panning maximum')
+  form.AddInputKnob('Mod X min', 0.5, 0, 1, hint='Note cutoff frequency minimum')
+  form.AddInputKnob('Mod X max', 0.5, 0, 1, hint='Note cutoff frequency maximum')
+  form.AddInputKnob('Mod Y min', 0.5, 0, 1, hint='Note resonance (Q) minimum')
+  form.AddInputKnob('Mod Y max', 0.5, 0, 1, hint='Note resonance (Q) maximum')
+  form.AddInputKnob('Fine pitch min', 0, -1, 1, hint='Note fine pitch minimum')
+  form.AddInputKnob('Fine pitch max', 0, -1, 1, hint='Note fine pitch maximum')
+  form.AddInputKnobInt('Color min', 0, 0, 15, hint='Note color minimum')
+  form.AddInputKnobInt('Color max', 0, 0, 15, hint='Note color maximum')
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   ppq = flp.score.PPQ
   pp16th = int(ppq / 4)
   # always seed with user provided seed
