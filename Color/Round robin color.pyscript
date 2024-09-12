@@ -2,11 +2,11 @@
 Title: Round robin color
 Author: BinaryBorn
 Category: Color
-Version: 1.1
+Version: 1.2
 License: ISC
 
 Description: 
-Colors all notes cycling through the palette.
+Color all notes cycling through the palette.
 
 Changelog:
 v1.0 (2024-01-26)
@@ -14,16 +14,19 @@ v1.0 (2024-01-26)
 
 v1.1 (2024-08-26)
   - added note deselection for visibility
+
+v1.2 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
 
 def createDialog():
-  form = flp.ScriptDialog("Round robin color","Colors all notes cycling through the palette."
-  + "\r\n\r\nv1.1 (2024-08-26), BinaryBorn")
-  form.AddInputKnobInt('Min color', 0, 0, 15)
-  form.AddInputKnobInt('Max color', 15, 0, 15)
-  form.AddInputKnobInt('Start color', 0, 0, 15)
+  form = flp.ScriptDialog("Round robin color","Color all notes cycling through the palette."
+  + "\r\n\r\nv1.2 (2024-09-12), BinaryBorn")
+  form.AddInputKnobInt('Min color', 0, 0, 15, hint='Minimum color')
+  form.AddInputKnobInt('Max color', 15, 0, 15, hint='Maximum color')
+  form.AddInputKnobInt('Start color', 0, 0, 15, hint='Start color')
   
   return form
 
