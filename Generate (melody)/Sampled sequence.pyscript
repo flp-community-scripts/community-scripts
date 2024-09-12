@@ -2,7 +2,7 @@
 Title: Sampled sequence
 Author: D3Mens (idea), BinaryBorn (code)
 Category: Generate (melody)
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
@@ -11,6 +11,9 @@ Sample beats from existing score and create a new sequence from it.
 Changelog:
 v1.0 (2024-05-13)
   - initial version
+
+v1.1 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -30,12 +33,12 @@ def createDialog():
   form = flp.ScriptDialog("Sampled sequence","Sample beats from existing score and create a new sequence from it."
   + "\r\nUse comma or space to separate numbers in sequence."
   + "\r\nUse r in sampling to select a random sample source."
-  + "\r\n\r\nv1.0 (2024-05-13), D3Mens & BinaryBorn")
-  form.AddInputText('Sampling', '1 2 3 4')
-  form.AddInputText('Sequence', '1 1 1 1')
-  form.AddInputCombo('Unit', ['1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)'], 3)
-  form.AddInputCheckbox('Round robin color', True)
-  form.AddInputKnobInt('Seed', 0, 0, 999)
+  + "\r\n\r\nv1.1 (2024-09-12), D3Mens & BinaryBorn")
+  form.AddInputText('Sampling', '1 2 3 4', hint='Where to sample')
+  form.AddInputText('Sequence', '1 1 1 1', hint='Sequence of repetitions to place')
+  form.AddInputCombo('Unit', ['1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)'], 3, hint='Time unit of sequence')
+  form.AddInputCheckbox('Round robin color', True, hint='Whether to increase note color for every sample')
+  form.AddInputKnobInt('Seed', 0, 0, 999, hint='Seed for random number generator')
 
   return form
 
