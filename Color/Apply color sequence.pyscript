@@ -2,11 +2,11 @@
 Title: Apply color sequence
 Author: D3Mens (idea), BinaryBorn (code)
 Category: Color
-Version: 1.1
+Version: 1.2
 License: ISC
 
 Description: 
-Rotates note color every few notes or steps following the defined sequence.
+Rotate note color every few notes or steps following the defined sequence.
 
 Changelog:
 v1.0 (2024-02-19)
@@ -15,6 +15,9 @@ v1.0 (2024-02-19)
 v1.1 (2024-08-19)
   - added note deselection for visibility
   - changed script description
+
+v1.2 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -24,33 +27,33 @@ import _random
 random = _random.Random()
 
 def createDialog():
-  form = flp.ScriptDialog("Apply color sequence","Rotates note color every few notes or steps following the defined sequence."
+  form = flp.ScriptDialog("Apply color sequence","Rotate note color every few notes or steps following the defined sequence."
   + "\r\nUse comma or space to separate numbers in sequence."
-  + "\r\n\r\nv1.1 (2024-08-19), D3Mens & BinaryBorn")
-  form.AddInputText('Sequence', '1')
-  form.AddInputKnobInt('Seq. multiplier', 1, 1, 32)
-  form.AddInputCombo('Unit', ['note index', '1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)'], 0)
-  form.AddInputKnobInt('Color min', 0, 0, 15)
-  form.AddInputKnobInt('Color max', 15, 0, 15)
-  form.AddInputCheckbox('Loop sequence', True)
-  form.AddInputCheckbox('Reset on loop', False)
-  form.AddInputCheckbox('Randomize sequence', False)
-  form.AddInputKnobInt('Seed', 0, 0, 999)
+  + "\r\n\r\nv1.2 (2024-09-12), D3Mens & BinaryBorn")
+  form.AddInputText('Sequence', '1', hint='Sequence of color repetitions')
+  form.AddInputKnobInt('Seq. multiplier', 1, 1, 32, hint='Repetitions multiplier')
+  form.AddInputCombo('Unit', ['note index', '1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)'], 0, hint='Sequence time unit')
+  form.AddInputKnobInt('Color min', 0, 0, 15, hint='Note color minimum')
+  form.AddInputKnobInt('Color max', 15, 0, 15, hint='Note color maximum')
+  form.AddInputCheckbox('Loop sequence', True, hint='Whether to loop the sequence')
+  form.AddInputCheckbox('Reset on loop', False, hint='Whether to reset note color when sequence repeats')
+  form.AddInputCheckbox('Randomize sequence', False, hint='Whether to randomize the sequence')
+  form.AddInputKnobInt('Seed', 0, 0, 999, hint='Seed for random number generator')
 
   return form
 
 def apply(form: flp.ScriptDialog):
   ppq = flp.score.PPQ
 
-  seqText = form.GetInputValue('Sequence')
-  seqMul = form.GetInputValue('Seq. multiplier')
-  seqUnit = form.GetInputValue('Unit')
-  colMin = form.GetInputValue('Color min')
-  colMax = form.GetInputValue('Color max')
-  doLoop = form.GetInputValue('Loop sequence')
-  doReset = form.GetInputValue('Reset on loop')
-  doRandomize = form.GetInputValue('Randomize sequence')
-  seed = form.GetInputValue('Seed')
+  seqText = str(form.GetInputValue('Sequence'))
+  seqMul = int(form.GetInputValue('Seq. multiplier'))
+  seqUnit = int(form.GetInputValue('Unit'))
+  colMin = int(form.GetInputValue('Color min'))
+  colMax = int(form.GetInputValue('Color max'))
+  doLoop = int(form.GetInputValue('Loop sequence'))
+  doReset = int(form.GetInputValue('Reset on loop'))
+  doRandomize = int(form.GetInputValue('Randomize sequence'))
+  seed = int(form.GetInputValue('Seed'))
   random.seed(seed)
 
   # turn sequence text into list of numbers
