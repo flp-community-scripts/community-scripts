@@ -1,34 +1,34 @@
-"""
-ISC License
+"""flp
+Title: Tune in Hz
+Author: BinaryBorn
+Category: Adjust
+Version: 1.1
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Fine tune a note to specific frequency.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-09-26)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
 import math
 
-"""
-Convert BPM
-by: BinaryBorn
-
-2023-09-26
-  - initial version
-"""
-
 def createDialog():
   form = flp.ScriptDialog("Tune in Hz","Fine tune a note to specific frequency."
-  + "\r\n\r\n2023-09-26, BinaryBorn")
-  form.AddInputKnobInt('Frequency (Hz)', 440, 20, 20000)
+  + "\r\n\r\nv1.1 (2024-09-12), BinaryBorn")
+  form.AddInputKnobInt('Frequency (Hz)', 440, 20, 20000, hint='Note frequency')
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   # transform frequency to midi note and fine pitch
-  frequency = form.GetInputValue('Frequency (Hz)')
+  frequency = int(form.GetInputValue('Frequency (Hz)'))
 
   # A4 is midi note 57
   midiPitch = 57 + 12 * math.log2(frequency / 440)
