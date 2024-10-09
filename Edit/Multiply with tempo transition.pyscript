@@ -2,11 +2,11 @@
 Title: Multiply with tempo transition
 Author: BinaryBorn
 Category: Edit
-Version: 1.6
+Version: 1.7
 License: ISC
 
 Description: 
-Repeats notes with a tempo transition from one rate to another.
+Repeat notes with a tempo transition from one rate to another.
 
 Changelog:
 v1.0 (2023-07-11)
@@ -36,6 +36,9 @@ v1.5 (2024-06-06)
 v1.6 (2024-06-10)
   - CHANGED calculation is now done by TempoTransition utility class
   - FIXED division by zero error
+
+v1.7 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -59,17 +62,17 @@ def createDialog():
   form = flp.ScriptDialog("Multiply with tempo transition","Start and end rate multiply the sequences's tempo."
   + "\r\nDuration is in beats."
   + "\r\nPhase correction is only relevant when the transition doesn't fit the transition duration exactly, the transition will then include a whole number multiple of the sequence. Phase correction tension defines how immediate the correction is applied - higher values will correct faster."
-  + "\r\n\r\nv1.6 (2024-06-10), BinaryBorn")
-  form.AddInputKnob('Start rate', 1, 1/16, 16)
-  form.AddInputKnob('End rate', 2, 1/16, 16)
-  form.AddInputKnobInt('Copies before', 0, 0, 16)
-  form.AddInputKnobInt('Copies after', 0, 0, 16)
-  form.AddInputKnobInt('Duration', 8, 1, 32 * 16)
-  form.AddInputCombo('Sweep', ['note frequency', 'note length'], 0)
-  form.AddInputKnob('Tension', 0, -1, 1)
-  form.AddInputCombo('Phase correction', ['none', 'stretch', 'squash'], 0)
-  form.AddInputKnob('Ph. corr. tension', 0, -1, 1)
-  form.AddInputCheckbox('Markers', True)
+  + "\r\n\r\nv1.7 (2024-09-12), BinaryBorn")
+  form.AddInputKnob('Start rate', 1, 1/16, 16, hint='Start rate multiplicator')
+  form.AddInputKnob('End rate', 2, 1/16, 16, hint='End rate multiplicator')
+  form.AddInputKnobInt('Copies before', 0, 0, 16, hint='Copies before transition')
+  form.AddInputKnobInt('Copies after', 0, 0, 16, hint='Copies after transition')
+  form.AddInputKnobInt('Duration', 8, 1, 32 * 16, hint='Transition duration in beats')
+  form.AddInputCombo('Sweep', ['note frequency', 'note length'], 0, hint='Sweep property')
+  form.AddInputKnob('Tension', 0, -1, 1, hint='Sweep tension')
+  form.AddInputCombo('Phase correction', ['none', 'stretch', 'squash'], 0, hint='How to fit transition')
+  form.AddInputKnob('Ph. corr. tension', 0, -1, 1, hint='Phase correction tension')
+  form.AddInputCheckbox('Markers', True, hint='Place markers for transition start/end')
   
   return form
 

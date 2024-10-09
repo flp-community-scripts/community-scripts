@@ -2,7 +2,7 @@
 Title: Interlaced repeat
 Author: BinaryBorn
 Category: Edit
-Version: 1.0
+Version: 1.1
 License: ISC
 
 Description: 
@@ -11,6 +11,9 @@ Create interlaced repetitions of small time windows.
 Changelog:
 v1.0 (2024-07-31)
   - initial version
+
+v1.1 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -18,10 +21,10 @@ import math
 
 def createDialog():
   form = flp.ScriptDialog("Interlaced repeat","Create interlaced repetitions of small time windows."
-  + "\r\n\r\nv1.0 (2024-07-31), BinaryBorn")
-  form.AddInputKnobInt('Window size', 1, 1, 16)
-  form.AddInputCombo('Window unit', ['step', 'beat', 'bar'], 1)
-  form.AddInputKnobInt('Repetitions', 2, 2, 16)
+  + "\r\n\r\nv1.1 (2024-09-12), BinaryBorn")
+  form.AddInputKnobInt('Window size', 1, 1, 16, hint='Size of time window to look at')
+  form.AddInputCombo('Window unit', ['step', 'beat', 'bar'], 1, hint='Unit for time window')
+  form.AddInputKnobInt('Repetitions', 2, 2, 16, hint='Window repetitions')
   
   return form
 

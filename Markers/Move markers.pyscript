@@ -2,7 +2,7 @@
 Title: Move markers
 Author: BinaryBorn
 Category: Markers
-Version: 1.0
+Version: 1.2
 License: ISC
 
 Description: 
@@ -15,6 +15,9 @@ v1.0 (2024-05-07)
 v1.1 (2024-05-08)
   - fixed scale markers not preserved properly
   - fixed project time signature not regarded
+
+v1.2 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -35,15 +38,15 @@ markers = [flp.score.getMarker(i) for i in range(flp.score.markerCount)]
 
 def createDialog():
   form = flp.ScriptDialog("Move markers","Move selected markers."
-  + "\r\n\r\nv1.1 (2024-05-08), BinaryBorn")
+  + "\r\n\r\nv1.2 (2024-09-12), BinaryBorn")
 
   ppq = flp.score.PPQ
   pp16th = int(ppq / 4)
 
-  form.AddInputKnobInt('Coarse (bars)', 0, -16, 16)
-  form.AddInputKnobInt('Coarse (beats)', 0, -16, 16)
-  form.AddInputKnobInt('Fine (steps)', 0, -4, 4)
-  form.AddInputKnobInt('Fine (ticks)', 0, -pp16th, pp16th)
+  form.AddInputKnobInt('Coarse (bars)', 0, -16, 16, hint='Move coarse (bars)')
+  form.AddInputKnobInt('Coarse (beats)', 0, -16, 16, hint='Move coarse (beats)')
+  form.AddInputKnobInt('Fine (steps)', 0, -4, 4, hint='Move fine (steps)')
+  form.AddInputKnobInt('Fine (ticks)', 0, -pp16th, pp16th, hint='Move fine (ticks)')
 
   return form
 

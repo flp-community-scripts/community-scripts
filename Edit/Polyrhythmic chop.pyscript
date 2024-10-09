@@ -1,24 +1,24 @@
-"""
-ISC License
+"""flp
+Title: Polyrhythmic chop
+Author: BinaryBorn
+Category: Edit
+Version: 1.1
+License: ISC
 
-Copyright 2024 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Chop your notes at different rates.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2024-02-05)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
 
-"""
-Polyrhythmic chop
-by: BinaryBorn
-
-2024-02-05
-  - initial version
-"""
-
-def splitNote(note, splits, relative = False):
+def splitNote(note: flp.Note, splits: list[int], relative: bool = False) -> list[flp.Note]:
   """Returns a list of notes representing `note` split at given times.
 
   Overlapping splits will be ignored.
@@ -64,20 +64,20 @@ def splitNote(note, splits, relative = False):
 
 def createDialog():
   form = flp.ScriptDialog("Polyrhythmic chop","Chop your notes at different rates."
-  + "\r\n\r\n2024-02-05, BinaryBorn")
-  form.AddInputCombo('Iterate by', ['start time', 'note (top down)', 'note (bottom up)', 'color'], 0)
-  form.AddInputKnobInt('Chops start', 2, 1, 32)
+  + "\r\n\r\nv1.1 (2024-09-12), BinaryBorn")
+  form.AddInputCombo('Iterate by', ['start time', 'note (top down)', 'note (bottom up)', 'color'], 0, hint='How to iterate through incoming notes')
+  form.AddInputKnobInt('Chops start', 2, 1, 32, hint='Lowest number of pieces')
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
 
   if not notes: return
 
-  iterMode = form.GetInputValue('Iterate by')
-  chopCnt = form.GetInputValue('Chops start')
+  iterMode = int(form.GetInputValue('Iterate by'))
+  chopCnt = int(form.GetInputValue('Chops start'))
 
   # order notes according to iteration mode
   if iterMode == 0:

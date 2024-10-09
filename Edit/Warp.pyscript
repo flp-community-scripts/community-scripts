@@ -1,32 +1,33 @@
-"""
-ISC License
+"""flp
+Title: Warp
+Author: BinaryBorn
+Category: Edit
+Version: 1.3
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Time warp score.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-07-14)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-07-17)
+  - replaced tension function
+
+v1.2 (2023-10-16)
+  - added ISC license text
+
+v1.3 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
+import math
 
-"""
-Warp
-by: BinaryBorn
-
-2023-07-14
-  - initial version
-
-CHANGES
-2023-07-17
-  - replaced tension function
-
-2023-10-16
-  - added ISC license text
-"""
-
-# Utility function to get time range of selection / notes
-def getTimeRange(notes):
+def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
+  """Returns the time range spanning notes.
+  """
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -34,10 +35,14 @@ def getTimeRange(notes):
   # return start and end time
   return (first.time, last.time + last.length)
 
-# Utility function, Tension.
-# If knob is True it behaves like the tension knob in scale levels,
-# if knob is False it behaves like the Tension function in Formula Controller.
-def Tension(value, rate, knob=True):
+def Tension(value: float, rate: float, knob=True):
+  """Applies the FL Studio Tension function to a value.
+
+  Args:
+    value (float): value to skew
+    rate (float): tension rate
+    knob (bool): if True, function behaves like the one behind knobs (e.g. scale levels), if False, it behaves like the one in Formula Controller
+  """
   if rate == 0: return value
   # rate mapping
   R = rate
@@ -50,14 +55,14 @@ def Tension(value, rate, knob=True):
 
 
 def createDialog():
-  form = flp.ScriptDialog("Warp","Warp score"
-  + "\r\n\r\n2023-10-16, BinaryBorn")
-  form.AddInputKnob('Warp', 0, -1, 1)
+  form = flp.ScriptDialog("Warp","Time warp score"
+  + "\r\n\r\nv1.3 (2024-09-12)")
+  form.AddInputKnob('Warp', 0, -1, 1, hint='Warp amount')
   
   return form
 
-def apply(form):
-  warp = form.GetInputValue('Warp')
+def apply(form: flp.ScriptDialog):
+  warp = float(form.GetInputValue('Warp'))
 
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]

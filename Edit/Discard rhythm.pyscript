@@ -2,11 +2,11 @@
 Title: Discard rhythm
 Author: D3Mens (idea), BinaryBorn (code)
 Category: Edit
-Version: 1.1
+Version: 1.2
 License: ISC
 
 Description: 
-Discards score rhythm and spreads notes equidistantly.
+Discard rhythm","Discard score rhythm and spread notes equidistantly.
 
 Changelog:
 v1.0 (2024-08-26)
@@ -16,6 +16,9 @@ v1.1 (2024-08-28)
   - fixed merger of quickly played notes
   - added timeline selection support
   - added keep length option
+
+v1.2 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -29,12 +32,12 @@ class Event:
     "note on (True), note off (False)"
 
 def createDialog():
-  form = flp.ScriptDialog("Discard rhythm","Discards score rhythm and spreads notes equidistantly."
-  + "\r\n\r\nv1.1 (2024-08-28), D3Mens & BinaryBorn")
-  form.AddInputKnobInt('Distance', 1, 1, 16)
-  form.AddInputCombo('Distance unit', ['step', 'beat', 'bar'], 0)
-  form.AddInputKnob('Tolerance', 0, 0, 1)
-  form.AddInputCheckbox('Keep length', False)
+  form = flp.ScriptDialog("Discard rhythm","Discard score rhythm and spread notes equidistantly."
+  + "\r\n\r\nv1.2 (2024-09-12), D3Mens & BinaryBorn")
+  form.AddInputKnobInt('Distance', 1, 1, 16, hint='Spread distance')
+  form.AddInputCombo('Distance unit', ['step', 'beat', 'bar'], 0, hint='Spread distance unit')
+  form.AddInputKnob('Tolerance', 0, 0, 1, hint='Tolerance for same start time')
+  form.AddInputCheckbox('Keep length', False, hint='Whether to keep note lengths')
   
   return form
 

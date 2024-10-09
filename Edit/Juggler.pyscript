@@ -1,11 +1,26 @@
-"""
-ISC License
+"""flp
+Title: Juggler
+Author: BinaryBorn
+Category: Edit
+Version: 1.3
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Shuffle existing notes to spice up sliced beats.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-07-18)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-09-21)
+  - added ISC license text
+
+v1.2 (2023-10-02)
+  - added dialog with seed knob
+
+v1.3 (2024-09-12)
+  - changed seed range to 999 for better UX
+  - added hints
 """
 
 import flpianoroll as flp
@@ -13,22 +28,9 @@ import _random
 
 random = _random.Random()
 
-"""
-Juggler
-by: BinaryBorn
-
-2023-07-18
-  - initial version
-
-2023-09-21
-  - added ISC license text
-
-2023-10-02
-  - added dialog with seed knob
-"""
-
-# Utility function to get time range of selection / notes
-def getTimeRange(notes):
+def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
+  """Returns the time range spanning notes.
+  """
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -40,14 +42,14 @@ def getTimeRange(notes):
 def createDialog():
   form = flp.ScriptDialog("Juggler","Shuffle existing notes to spice up sliced beats."
   + "\r\nIf seed is 0, a new random sequence is generated every time."
-  + "\r\n\r\n2023-10-02, BinaryBorn")
-  form.AddInputKnobInt('Seed', 0, 0, 0x7fffffff)
+  + "\r\n\r\nv1.3 (2024-09-12), BinaryBorn")
+  form.AddInputKnobInt('Seed', 0, 0, 999, hint='Seed for random number generator')
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   # set seed if seed is nonzero, otherwise use system time (default)
-  seed = form.GetInputValue('Seed')
+  seed = int(form.GetInputValue('Seed'))
   if seed > 0:
     random.seed(seed)
   else:

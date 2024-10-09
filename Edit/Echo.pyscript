@@ -1,27 +1,18 @@
-"""
-ISC License
+"""flp
+Title: Echo
+Author: BinaryBorn
+Category: Edit
+Version: 1.4
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Create an echo/delay effect in your score.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-"""
-
-import flpianoroll as flp
-import math
-import _random
-
-random = _random.Random()
-
-"""
-Echo
-by: BinaryBorn
-
-2024-01-16
+Changelog:
+v1.0 (2024-01-16)
   - initial version
 
-2024-01-26
+v1.1 (2024-01-26)
   - added pitch, fcut, fres
   - added group option
   - added per note randomization
@@ -29,15 +20,24 @@ by: BinaryBorn
   - changed name of existing pan control to stereo control
   - changed delay time range, including negative time
 
-2024-02-02
+v1.2 (2024-02-02)
   - added round robin (groups) color mode option
   - added pitch snap options
   - added legato option
   - added descriptions for knob values
 
-2024-03-08
+v1.3 (2024-03-08)
   - FIXED typings for Python engine upgrade
+
+v1.4 (2024-09-12)
+  - added hints
 """
+
+import flpianoroll as flp
+import math
+import _random
+
+random = _random.Random()
 
 # gathering markers is only required once - they don't update as long as script is active
 
@@ -70,8 +70,12 @@ for m in range(flp.score.markerCount):
         notes = [True, True, True, True, True, True, True, True, True, True, True, True]
       ))
 
-# return scale active at "time" (use "Default" as fallback)
 def relevantScaleAt(time: int):
+  """Returns scale active at given time (or "Default" all True as fallback).
+
+  Args:
+      time (int): time in ticks
+  """
   s = Scale(
     time = 0,
     notes = [True, True, True, True, True, True, True, True, True, True, True, True]
@@ -79,12 +83,20 @@ def relevantScaleAt(time: int):
 
   # find latest scale before time
   for scale in scales:
-    if time >= scale['time']: s = scale
+    if time >= scale.time: s = scale
 
   return s
 
-# transpose note into scale
 def transposeIntoScale(number: int, scale: Scale):
+  """Transposes a given note number into scale.
+
+  Args:
+      number (int): source note number
+      scale (Scale): scale to transpose into
+
+  Returns:
+      int: target note number
+  """
   # look for "True" in scale above and below original note with increasing distance
   s = scale.notes
   for t in range(12):
@@ -99,36 +111,36 @@ def createDialog():
   + "\r\nDelay time is in 16th."
   + "\r\nThe knob ranges for randomness are as follows:"
   + "\r\nTime \u00b11 bar; pitch \u00b112 semitones; rest \u00b110% f.s."
-  + "\r\n\r\n2024-03-08, BinaryBorn")
-  form.AddInputKnob('Delay time', 4, -16, 16)
-  form.AddInputKnobInt('Echos', 4, 1, 128)
-  form.AddInputCombo('Velocity mode', ['exponential', 'linear'], 0)
-  form.AddInputKnob('Velocity multiplier', 0.8, 0, 2)
-  form.AddInputCombo('Stereo mode', ['normal', 'ping pong'], 0)
-  form.AddInputKnob('Stereo multiplier', 1, 0, 2)
-  form.AddInputKnob('Pan shift', 0, -1, 1)
-  form.AddInputKnob('Pitch shift', 0, -12, 12)
-  form.AddInputKnob('Mod X shift', 0, -1, 1)
-  form.AddInputKnob('Mod Y shift', 0, -1, 1)
-  form.AddInputCombo('Note color mode', ['none', 'set', 'round robin (echos)', 'round robin (groups)'], 0)
-  form.AddInputKnobInt('Note color offset', 0, 0, 15)
-  form.AddInputCheckbox('Drop silent notes', True)
-  form.AddInputCheckbox('Group echos', True)
-  form.AddInputCombo('Pitch snapping', ['none', 'whole note', 'scale (at echo)', 'scale (at origin)'], 0)
-  form.AddInputCheckbox('Legato echos', False)
+  + "\r\n\r\nv1.4 (2024-09-12), BinaryBorn")
+  form.AddInputKnob('Delay time', 4, -16, 16, hint='Delay time (steps)')
+  form.AddInputKnobInt('Echos', 4, 1, 128, hint='Number of echos')
+  form.AddInputCombo('Velocity mode', ['exponential', 'linear'], 0, hint='Velocity decay mode')
+  form.AddInputKnob('Velocity multiplier', 0.8, 0, 2, hint='Velocity decay')
+  form.AddInputCombo('Stereo mode', ['normal', 'ping pong'], 0, hint='Stereo mode')
+  form.AddInputKnob('Stereo multiplier', 1, 0, 2, hint='Stereo width multiplier')
+  form.AddInputKnob('Pan shift', 0, -1, 1, hint='Pan shift per echo')
+  form.AddInputKnob('Pitch shift', 0, -12, 12, hint='Pitch shift per echo')
+  form.AddInputKnob('Mod X shift', 0, -1, 1, hint='Note cutoff frequency shift per echo')
+  form.AddInputKnob('Mod Y shift', 0, -1, 1, hint='Note resonance (Q) shift per echo')
+  form.AddInputCombo('Note color mode', ['none', 'set', 'round robin (echos)', 'round robin (groups)'], 0, hint='How to color echos')
+  form.AddInputKnobInt('Note color offset', 0, 0, 15, hint='Base color')
+  form.AddInputCheckbox('Drop silent notes', True, hint='Whether to drop notes with zero velocity')
+  form.AddInputCheckbox('Group echos', True, hint='Whether to group echos with their source')
+  form.AddInputCombo('Pitch snapping', ['none', 'whole note', 'scale (at echo)', 'scale (at origin)'], 0, hint='How to snap notes')
+  form.AddInputCheckbox('Legato echos', False, hint='Cut notes when overlapping with echo')
   # all the randomization stuff
-  form.AddInputCheckbox('Randomize', False)
-  form.AddInputKnobInt('Seed', 0, 0, 999)
-  form.AddInputKnob('Rnd time', 0, 0, 1)
-  form.AddInputKnob('Rnd velocity', 0, 0, 1)
-  form.AddInputKnob('Rnd pan', 0, 0, 1)
-  form.AddInputKnob('Rnd pitch', 0, 0, 1)
-  form.AddInputKnob('Rnd mod X', 0, 0, 1)
-  form.AddInputKnob('Rnd mod Y', 0, 0, 1)
+  form.AddInputCheckbox('Randomize', False, hint='Use randomness')
+  form.AddInputKnobInt('Seed', 0, 0, 999, hint='Seed for random number generator')
+  form.AddInputKnob('Rnd time', 0, 0, 1, hint='Time randomness (bars)')
+  form.AddInputKnob('Rnd velocity', 0, 0, 1, hint='Velocity randomness (10% f.s.)')
+  form.AddInputKnob('Rnd pan', 0, 0, 1, hint='Panning randomness (10% f.s.)')
+  form.AddInputKnob('Rnd pitch', 0, 0, 1, hint='Pitch randomness (octaves)')
+  form.AddInputKnob('Rnd mod X', 0, 0, 1, hint='Note cutoff frequency randomness (10% f.s.)')
+  form.AddInputKnob('Rnd mod Y', 0, 0, 1, hint='Note resonance (Q) randomness (10% f.s.)')
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
   # order by start time

@@ -2,11 +2,11 @@
 Title: Morse
 Author: BinaryBorn
 Category: Generate (creative)
-Version: 1.1
+Version: 1.2
 License: ISC
 
 Description: 
-Generates absolutely random, unquantized notes.
+Translate text to morse code.
 
 Changelog:
 v1.0 (2023-10-23)
@@ -14,6 +14,9 @@ v1.0 (2023-10-23)
 
 v1.1 (2024-03-15)
   - CHANGED note properties now consider current defaults
+
+v1.2 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -88,18 +91,18 @@ dictionary = {
 }
 
 def createDialog():
-  form = flp.ScriptDialog("Morse","Translates input text to morse code."
-  + "\r\n\r\nv1.1 (2024-03-15), BinaryBorn")
-  form.AddInputKnobInt('Note', 60, 0, 131)
-  form.AddInputCombo('Unit length', ['1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)', '1/24', '1/32', '1/48', '1/64'], 7)
-  form.AddInputText('Text', 'Hello World')
+  form = flp.ScriptDialog("Morse","Translate text to morse code."
+  + "\r\n\r\nv1.2 (2024-09-12), BinaryBorn")
+  form.AddInputKnobInt('Note', 60, 0, 131, hint='MIDI note')
+  form.AddInputCombo('Unit length', ['1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)', '1/24', '1/32', '1/48', '1/64'], 7, hint='Length of one unit (dot)')
+  form.AddInputText('Text', 'Hello World', hint='Text to translate')
   
   return form
 
 def apply(form: flp.ScriptDialog):
-  root = form.GetInputValue('Note')
-  text = form.GetInputValue('Text').upper()
-  length = form.GetInputValue('Unit length')
+  root = int(form.GetInputValue('Note'))
+  text = str(form.GetInputValue('Text')).upper()
+  length = int(form.GetInputValue('Unit length'))
   lengthTicks = int([1, 1/2, 1/3, 1/4, 1/6, 1/8, 1/12, 1/16, 1/24, 1/32, 1/48, 1/64][length] * 4 * flp.score.PPQ)
 
   newNotes = []

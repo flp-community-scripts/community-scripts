@@ -1,37 +1,40 @@
 """
-ISC License
+Title: Fade out
+Author: BinaryBorn
+Category: Adjust
+Version: 1.4
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description:
+Fade velocity out to terminal percentage.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-"""
-
-import flpianoroll as flp
-
-"""
-Fade out
-by: BinaryBorn
-
-2023-06-30
+Changelog:
+v1.0 (2023-06-30)
   - initial version
 
-2023-07-01
+v1.1 (2023-07-01)
   - fixed error when used on empty score
   - added GUI
   - added option for terminal %
   - added option for interpolation point (start, mid, end)
 
-2023-09-14
+v1.2 (2023-09-14)
   - added ISC license text
 
-2023-10-02
+v1.3 (2023-10-02)
   - added tension knob
+
+v1.4 (2024-09-11)
+  - updated typings
+  - added hints
 """
 
-# Utility function to get time range of selection / notes
-def getTimeRange(notes):
+import flpianoroll as flp
+import math
+
+def getTimeRange(notes: list[flp.Note]) -> tuple[int, int]:
+  """Returns the time range spanning notes.
+  """
   if len(notes) == 0: return (0, 0)
   # find first starting and last ending note
   first = min(notes, key=lambda n: n.time)
@@ -39,10 +42,14 @@ def getTimeRange(notes):
   # return start and end time
   return (first.time, last.time + last.length)
 
-# Utility function, Tension.
-# If knob is True it behaves like the tension knob in scale levels,
-# if knob is False it behaves like the Tension function in Formula Controller.
-def Tension(value, rate, knob=True):
+def Tension(value: float, rate: float, knob=True):
+  """Applies the FL Studio Tension function to a value.
+
+  Args:
+    value (float): value to skew
+    rate (float): tension rate
+    knob (bool): if True, function behaves like the one behind knobs (e.g. scale levels), if False, it behaves like the one in Formula Controller
+  """
   if rate == 0: return value
   # rate mapping
   R = rate
@@ -55,20 +62,20 @@ def Tension(value, rate, knob=True):
 
 
 def createDialog():
-  form = flp.ScriptDialog("Fade out","Fade velocity out to terminal %"
-  + "\r\n\r\n2023-10-02, BinaryBorn")
-  form.AddInputKnobInt('Terminal', 1, 0, 100)
-  form.AddInputCombo('Interpolate at', ['Note start', 'Note center', 'Note end'], 0)
-  form.AddInputKnob('Tension', 0, -1, 1)
+  form = flp.ScriptDialog("Fade out","Fade velocity out to terminal percentage."
+  + "\r\n\r\nv1.4 (2024-09-11), BinaryBorn")
+  form.AddInputKnobInt('Terminal', 1, 0, 100, hint='Terminal velocity percentage')
+  form.AddInputCombo('Interpolate at', ['Note start', 'Note center', 'Note end'], 0, hint='Point in note to take for interpolation')
+  form.AddInputKnob('Tension', 0, -1, 1, 'Fade tension')
   
   return form
 
-def apply(form):
+def apply(form: flp.ScriptDialog):
   f0 = 1
-  f1 = form.GetInputValue('Terminal') / 100
+  f1 = float(form.GetInputValue('Terminal')) / 100
   df = f1 - f0
-  mode = form.GetInputValue('Interpolate at')
-  tension = form.GetInputValue('Tension')
+  mode = int(form.GetInputValue('Interpolate at'))
+  tension = float(form.GetInputValue('Tension'))
 
   # get current notes
   notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]

@@ -2,7 +2,7 @@
 Title: Euclidean chop
 Author: Trancit (idea), BinaryBorn (code)
 Category: Edit
-Version: 1.3
+Version: 1.4
 License: ISC
 
 Description: 
@@ -20,6 +20,9 @@ v1.2 (2024-03-08)
 
 v1.3 (2024-07-08)
   - notes are now cloned using note.clone
+
+v1.4 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
@@ -28,10 +31,10 @@ def createDialog():
   form = flp.ScriptDialog("Euclidean chop","Chop notes into given number of pieces."
   + "\r\nWhen quantizing, you might not get the number of notes you specified, due to quantizing."
   + "\r\nWhen quantizing, use 'Rotation' to adjust the resulting note patterns phase."
-  + "\r\n\r\nv1.3 (2024-07-08), Trancit & BinaryBorn")
-  form.AddInputKnobInt('Chops', 2, 2, 32)
-  form.AddInputCombo('Quantization', ['off', '1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)', '1/24', '1/32', '1/48', '1/64'], 0)
-  form.AddInputKnobInt('Rotation', 0, -32, 32)
+  + "\r\n\r\nv1.4 (2024-09-12), Trancit & BinaryBorn")
+  form.AddInputKnobInt('Chops', 2, 2, 32, hint='Number of pieces')
+  form.AddInputCombo('Quantization', ['off', '1/1 (1 bar)', '1/2', '1/3', '1/4 (1 beat)', '1/6', '1/8', '1/12', '1/16 (1 step)', '1/24', '1/32', '1/48', '1/64'], 0, hint='Quantization size')
+  form.AddInputKnobInt('Rotation', 0, -32, 32, hint='Phase rotation')
   
   return form
 

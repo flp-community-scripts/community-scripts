@@ -1,36 +1,36 @@
-"""
-ISC License
+"""flp
+Title: Chord inversion
+Author: kikeyano (idea), BinaryBorn (code)
+Category: Edit
+Version: 1.2
+License: ISC
 
-Copyright 2023 Olivier Stuker a.k.a. BinaryBorn
+Description: 
+Change note spacing to squash them or move them apart.
 
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+Changelog:
+v1.0 (2023-08-07)
+  - initial version
 
-THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+v1.1 (2023-09-13)
+  - added ISC license text
+
+v1.2 (2024-09-12)
+  - added hints
 """
 
 import flpianoroll as flp
 
-"""
-Chord inversion
-idea: kikeyano
-code: BinaryBorn
-
-2023-08-07
-  - initial version
-
-2023-09-13
-  - added ISC license text
-"""
 
 def createDialog():
   form = flp.ScriptDialog("Chord inversion","Invert chords"
-  + "\r\n\r\n2023-09-13, kikeyano & BinaryBorn")
-  form.AddInputKnobInt('Inversion', 0, -24, 24)
+  + "\r\n\r\nv1.2 (2024-09-12), kikeyano & BinaryBorn")
+  form.AddInputKnobInt('Inversion', 0, -24, 24, hint='Chord inversion')
   
   return form
 
-def apply(form):
-  inversion = form.GetInputValue('Inversion')
+def apply(form: flp.ScriptDialog):
+  inversion = int(form.GetInputValue('Inversion'))
 
   # get current notes
   notesCnt = flp.score.noteCount

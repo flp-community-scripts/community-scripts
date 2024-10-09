@@ -2,7 +2,7 @@
 Title: Set note properties
 Author: BinaryBorn
 Category: Adjust
-Version: 1.4
+Version: 1.5
 License: ISC
 
 Description: 
@@ -23,27 +23,30 @@ v1.3 (2024-03-08)
 
 v1.4 (2024-07-08)
   - added note.repeats
+
+v1.5 (2024-09-11)
+  - added hints
 """
 
 import flpianoroll as flp
 
 def createDialog():
   form = flp.ScriptDialog("Set note properties","Set note properties of selected notes"
-  + "\r\n\r\nv1.4 (2024-07-08), BinaryBorn")
-  form.AddInputCombo('Set pan', ['leave', 'set'], 0)
-  form.AddInputKnobInt('Pan', 0, -100, 100)
-  form.AddInputCombo('Set velocity', ['leave', 'set'], 0)
-  form.AddInputKnobInt('Velocity', 78, 0, 100)
-  form.AddInputCombo('Set release', ['leave', 'set'], 0)
-  form.AddInputKnobInt('Release', 50, 0, 100)
-  form.AddInputCombo('Set filter cutoff', ['leave', 'set'], 0)
-  form.AddInputKnobInt('Filter cutoff', 0, -100, 100)
-  form.AddInputCombo('Set filter resonance', ['leave', 'set'], 0)
-  form.AddInputKnobInt('Filter resonance', 0, -100, 100)
-  form.AddInputCombo('Set pitch', ['leave', 'set'], 0)
-  form.AddInputKnobInt('Pitch', 0, -1200, 1200)
-  form.AddInputCombo('Set repeats', ['leave', 'set'], 0)
-  form.AddInputKnobInt('Repeats', 0, 0, 14)
+  + "\r\n\r\nv1.5 (2024-09-11), BinaryBorn")
+  form.AddInputCombo('Set pan', ['leave', 'set'], 0, hint='Whether to set note panning')
+  form.AddInputKnobInt('Pan', 0, -100, 100, hint='Note panning')
+  form.AddInputCombo('Set velocity', ['leave', 'set'], 0, hint='Whether to set note velocity')
+  form.AddInputKnobInt('Velocity', 78, 0, 100, hint='Note velocity')
+  form.AddInputCombo('Set release', ['leave', 'set'], 0, hint='Whether to set note release')
+  form.AddInputKnobInt('Release', 50, 0, 100, hint='Note release')
+  form.AddInputCombo('Set filter cutoff', ['leave', 'set'], 0, hint='Whether to set note filter cutoff frequency')
+  form.AddInputKnobInt('Filter cutoff', 0, -100, 100, hint='Note filter cutoff frequency')
+  form.AddInputCombo('Set filter resonance', ['leave', 'set'], 0, hint='Whether to set note filter resonance (Q)')
+  form.AddInputKnobInt('Filter resonance', 0, -100, 100, hint='Note filter resonance (Q)')
+  form.AddInputCombo('Set pitch', ['leave', 'set'], 0, hint='Whether to set note fine pitch')
+  form.AddInputKnobInt('Pitch', 0, -1200, 1200, hint='Note fine pitch')
+  form.AddInputCombo('Set repeat', ['leave', 'set'], 0, hint='Whether to set note repeat length')
+  form.AddInputKnobInt('Repeat', 0, 0, 14, hint='Note repeat length')
   return form
 
 def apply(form: flp.ScriptDialog):
@@ -63,8 +66,8 @@ def apply(form: flp.ScriptDialog):
   fRes = float(form.GetInputValue('Filter resonance')) / 200 + 0.5
   setPitch = int(form.GetInputValue('Set pitch'))
   pitch = int(form.GetInputValue('Pitch')) / 10
-  setRepeats = int(form.GetInputValue('Set repeats'))
-  repeats = int(form.GetInputValue('repeats'))
+  setRepeats = int(form.GetInputValue('Set repeat'))
+  repeats = int(form.GetInputValue('Repeat'))
   for note in notes:
     if setPan: note.pan = pan
     if setVelocity: note.velocity = velocity
