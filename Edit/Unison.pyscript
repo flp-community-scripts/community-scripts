@@ -1,0 +1,108 @@
+"""flp
+Title: Unison
+Author: Trancelmania (idea), BinaryBorn (code)
+Category: Edit
+Version: 1.0
+License: ISC
+
+Description: 
+Create a unison/chorus effect in your score.
+
+Changelog:
+v1.0 (2024-10-11)
+  - initial version
+"""
+
+import flpianoroll as flp
+import math
+import _random
+
+random = _random.Random()
+
+def velocity2Amplitude(velocity: float) -> float:
+  """Returns relative amplitude (0...1) for given velocity."""
+  # the values and formulae have been found empirically
+  R = 1 + 1/3
+  b = 1 / (10 ** R)
+  a = 1 / (1 - b)
+  return a * (10 ** (R*velocity) / 10 ** R - b)
+
+def amplitude2Velocity(amplitude: float) -> float:
+  """Returns velocity for given relative amplitude."""
+  # the values and formulae have been found empirically
+  R = 1 + 1/3
+  b = 1 / (10 ** R)
+  a = 1 / (1 - b)
+  return math.log10(amplitude / a + b) / R + 1
+
+def createDialog():
+  form = flp.ScriptDialog("Unison","Create a unison/chorus effect in your score."
+  + "\r\nSpread is in semitones."
+  + "\r\nStrum is in steps."
+  + "\r\n\r\nv1.0 (2024-10-11), Trancelmania & BinaryBorn")
+  form.AddInputKnobInt('Order', 3, 2, 16, hint='Unison order (number of stacked notes)')
+  form.AddInputKnob('Spread', 0.5, 0, 2, hint='Span from lowest to highest pitch (semitones)')
+  form.AddInputKnob('Normalize', 1, 0, 1, hint='How much to gain compensate')
+  form.AddInputKnob('Strum', 0, 0, 1, hint='Strum effect (steps)')
+  form.AddInputKnob('Panning', 0, -1, 1, hint='Note panning to add')
+  form.AddInputCombo('Pan mode', ['Normal', 'Alternate', 'Ping pong', 'Ping pong + alternate'], 0, hint='How to apply note panning')
+  form.AddInputCheckbox('Group stacks', True, hint='Whether to group unison stacks')
+  
+  return form
+
+def apply(form: flp.ScriptDialog):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+  # order by start time
+  notes.sort(key=lambda n: (n.time, n.number))
+
+  if not notes: return
+
+  ppq = flp.score.PPQ
+  pp16th = ppq // 4
+
+  order = int(form.GetInputValue('Order'))
+  spread = float(form.GetInputValue('Spread'))
+  normalize = float(form.GetInputValue('Normalize'))
+  strum = float(form.GetInputValue('Strum'))
+  panning = float(form.GetInputValue('Panning'))
+  panmode = int(form.GetInputValue('Pan mode'))
+  group = bool(form.GetInputValue('Group stacks'))
+
+  flp.score.clearNotes()
+
+  # note index for ping pong panning modes
+  j = 0
+  for n_orig in notes:
+    dpof = spread * 10
+    pofmin = n_orig.pitchofs - dpof / 2
+    grp = flp.score.getNextFreeGroupIndex()
+    # gain compensation (target to keep overall amplitude)
+    a0 = velocity2Amplitude(n_orig.velocity)
+    a1 = a0 / order
+    da = a1 - a0
+    vel = amplitude2Velocity(max(a0 + da * normalize, 0))
+    # place copies
+    for i in range(order):
+      # panning offset (acc. to panning mode)
+      if panmode == 0 or panmode == 2:
+        panmul = i / (order - 1) - 0.5
+      else:
+        panmul = 0.5
+      if (panmode == 1 or panmode == 3) and i % 2:
+        panmul = -panmul
+      if (panmode == 2 or panmode == 3) and j % 2:
+        panmul = -panmul
+      dpan = panning * panmul
+      # time offset (strum)
+      dt = i / (order - 1) * strum * pp16th
+      # create, detune and place note
+      n = n_orig.clone()
+      n.time = int(n.time + dt)
+      n.velocity = vel
+      n.pan = min(max(n.pan + dpan, 0), 1)
+      n.pitchofs = int(pofmin + dpof * i / (order - 1))
+      if group:
+        n.group = grp
+      flp.score.addNote(n)
+    j += 1
