@@ -2,7 +2,7 @@
 Title: Paste note properties
 Author: BinaryBorn
 Category: Adjust
-Version: 1.1
+Version: 1.2
 License: ISC
 
 Description: 
@@ -14,6 +14,9 @@ v1.0 (2024-05-30)
 
 v1.1 (2024-08-07)
   - note.repeats property is now copied too
+
+v1.2 (2024-11-14)
+  - fixed incorrect offset when no timeline selection was made
 """
 
 import flpianoroll as flp
@@ -42,6 +45,9 @@ try:
     t1 = selection[1]
     notes = filter(lambda m: m.time >= t0 and m.time < t1, notes)
     offset = t0
+  # if there's no timeline selection, use first note as offset
+  elif notes:
+    offset = notes[0].time
 
   refNotes = utils.deserialize(serialized, offset)
 
