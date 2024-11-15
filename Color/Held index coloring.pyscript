@@ -1,0 +1,67 @@
+"""flp
+Title: Held index coloring
+Author: BinaryBorn
+Category: Color
+Version: 1.0
+License: ISC
+
+Description: 
+Color notes by held index.
+
+Changelog:
+v1.0 (2024-11-15)
+  - initial version
+"""
+
+import flpianoroll as flp
+
+def getNotesAt(notes: list[flp.Note], time: int):
+  """Returns notes playing at given time.
+  """
+  return list(filter(lambda n: n.time <= time and (n.time + n.length) > time, notes))
+
+colorUsage = [0] * 16
+
+def createDialog():
+  form = flp.ScriptDialog("Held index coloring","Color notes by held index."
+  + "\r\n\r\nv1.0 (2024-11-15), BinaryBorn")
+  form.addInputKnobInt('Min color', 1, 1, 16, hint='Minimum color')
+  form.addInputKnobInt('Max color', 16, 1, 16, hint='Maximum color')
+  
+  return form
+
+def apply(form: flp.ScriptDialog):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+  # order by start time
+  notes.sort(key=lambda n: (n.time, n.number))
+
+  if not notes: return
+
+  _colMin = int(form.getInputValue('Min color')) - 1
+  _colMax = int(form.getInputValue('Max color')) - 1
+
+  # make sure min is min and max is max
+  colMin = min(_colMin, _colMax)
+  colMax = max(_colMin, _colMax)
+
+  # go through all notes and color them individually
+  processedNotes: list[flp.Note] = []
+  for n in notes:
+    # find free (or least used) color
+    concurrentNotes = getNotesAt(processedNotes, n.time)
+    if not concurrentNotes:
+      color = colMin
+    else:
+      # count used colors, only consider those in user range
+      usages = [(0 if i >= colMin and i <= colMax else 0x7fffffff) for i in range(16)]
+      for cn in concurrentNotes:
+        col = cn.color
+        if col >= colMin and col <= colMax:
+          usages[col] += 1
+      color = usages.index(min(usages))
+    # use found color
+    n.color = color
+    processedNotes.append(n)
+    # deselect note to make color noticeable
+    n.selected = False
