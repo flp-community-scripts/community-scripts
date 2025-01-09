@@ -1,0 +1,129 @@
+"""flp
+Title: Property averaging
+Author: Trancelmania (idea), BinaryBorn (code)
+Category: Adjust
+Version: 1.0
+License: ISC
+
+Description: 
+Applies averaging to selected note's properties.
+
+Changelog:
+v1.0 (2025-09-01)
+  - initial version
+"""
+
+import flpianoroll as flp
+
+def getAverageNote(notes: list[flp.Note]):
+  """Returns a note that represents the average of all given notes.
+  """
+
+  # start with all 0
+  avg = flp.Note()
+  avg.pan = 0
+  avg.velocity = 0
+  avg.release = 0
+  avg.fcut = 0
+  avg.fres = 0
+  avg.pitchofs = 0
+  avg.length = 0
+  count = 0
+
+  # sum up
+  for n in notes:
+    avg.pan += n.pan
+    avg.velocity += n.velocity
+    avg.release += n.release
+    avg.fcut += n.fcut
+    avg.fres += n.fres
+    avg.pitchofs += n.pitchofs
+    avg.length += n.length
+    count += 1
+  
+  # divide, if necessary
+  if count > 1:
+    avg.pan /= count
+    avg.velocity /= count
+    avg.release /= count
+    avg.fcut /= count
+    avg.fres /= count
+    avg.pitchofs = round(avg.pitchofs / count)
+    avg.length = round(avg.length / count)
+  
+  return avg
+
+def interpolateWithNote(note: flp.Note, target: flp.Note, strength: float, properties: dict):
+  # go through given properties
+  for key in list(properties.keys()):
+    #... and, if required
+    if properties[key]:
+      #... interpolate
+      vn = getattr(note, key)
+      vt = getattr(target, key)
+      v = vn + (vt - vn) * strength
+      # assert correct data type
+      if key == 'pitchofs' or key == 'length':
+        v = round(v)
+      # update note
+      setattr(note, key, v)
+
+def apply(form: flp.ScriptDialog):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+  # order by start time (necessary for moving average)
+  notes.sort(key=lambda n: (n.time, n.number))
+
+  if not notes: return
+
+  # read input values
+  avgStrength = float(form.getInputValue('Average: Strength'))
+  avgWindow = int(form.getInputValue('Average: Window'))
+  properties = {
+    "pan": bool(form.getInputValue('Properties: Pan')),
+    "velocity": bool(form.getInputValue('Properties: Velocity')),
+    "release": bool(form.getInputValue('Properties: Release')),
+    "fcut": bool(form.getInputValue('Properties: Mod X')),
+    "fres": bool(form.getInputValue('Properties: Mod Y')),
+    "pitchofs": bool(form.getInputValue('Properties: Fine pitch')),
+    "length": bool(form.getInputValue('Properties: Length')),
+  }
+
+  # if window size is 0, average over all
+  if avgWindow == 0:
+    avg = getAverageNote(notes)
+    for n in notes:
+      interpolateWithNote(n, avg, avgStrength, properties)
+  else:
+    for i in range(len(notes)):
+      # get average over window
+      i0 = max(i - avgWindow, 0)
+      i1 = min(i + avgWindow, len(notes) - 1)
+      avg = getAverageNote(notes[i0:i1+1])
+      # interpolate note with average
+      n = notes[i]
+      interpolateWithNote(n, avg, avgStrength, properties)
+
+
+def createDialog():
+  form = flp.ScriptDialog('Property averaging',
+    "Applies averaging to selected note's properties.\r\n"
+    + '\r\n'
+    + '\r\n'
+    + 'v1.0 (2025-09-01), Trancelmania & BinaryBorn'
+  )
+  form.addGroup('Average')
+  form.addInputKnob('Strength', 1, 0, 1, hint='How much to apply average')
+  form.addInputKnobInt('Window', 0, 0, 64, hint='Window half-width for moving average.\r\n0 disables moving average.')
+  form.endGroup()
+  form.addGroup('Properties')
+  form.addInputCheckbox('Pan', False, hint='Average note panning')
+  form.addInputCheckbox('Velocity', True, hint='Average note velocity')
+  form.addInputCheckbox('Release', False, hint='Average note release')
+  form.addInputCheckbox('Mod X', False, hint='Average note modulation X')
+  form.addInputCheckbox('Mod Y', False, hint='Average note modulation Y')
+  form.addInputCheckbox('Fine pitch', False, hint='Average note fine pitch')
+  form.addInputCheckbox('Length', False, hint='Average note length')
+  form.endGroup()
+  
+  return form
