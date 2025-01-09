@@ -1,0 +1,145 @@
+"""flp
+Title: Pre-Roll
+Author: D3Mens (idea), BinaryBorn (code)
+Category: Edit
+Version: 1.0
+License: ISC
+
+Description: 
+Adds pre-roll to existing notes.
+
+Changelog:
+v1.0 (2024-12-19)
+  - initial version
+"""
+
+import flpianoroll as flp
+import time
+import math
+import random
+
+TIME_UNIT_NAMES = ['1/1 (bar)', '1/2', '1/3', '1/4 (beat)', '1/6', '1/8', '1/12', '1/16 (step)', '1/24', '1/32', '1/48', '1/64']
+TIME_UNIT_PPQMULS: list[float] = [4, 4/2, 4/3, 4/4, 4/6, 4/8, 4/12, 4/16, 4/24, 4/32, 4/48, 4/64]
+
+def tension(value: float, rate: float, knob=True):
+  """Applies the FL Studio Tension function to a value.
+
+  Args:
+    value (float): value to skew
+    rate (float): tension rate
+    knob (bool): if True, function behaves like the one behind knobs (e.g. scale levels), if False, it behaves like the one in Formula Controller
+  """
+  if rate == 0: return value
+  # rate mapping
+  R = rate
+  if not knob and rate > 0:
+    R = math.log2(rate + 1) / 10
+  elif not knob and rate < 0:
+    R = -math.log2(-rate + 1) / 10
+  # f(x,R) = (2^(-10*R*x)-1)/(2^(-10*R)-1)
+  return (pow(2, -10 * R * value) - 1) / (pow(2, -10 * R) - 1)
+
+def apply(form: flp.ScriptDialog):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+  # order by start time (minimizes surprises when using randomness)
+  notes.sort(key=lambda n: (n.time, n.number))
+
+  if not notes: return
+
+  ppq = flp.score.PPQ
+  lengthNum = float(form.getInputValue('Timing: Length'))
+  lengthUnit = int(form.getInputValue('Timing: Length unit'))
+  speedNum = float(form.getInputValue('Timing: Speed'))
+  speedUnit = int(form.getInputValue('Timing: Speed unit'))
+  velocity = float(form.getInputValue('Dynamics: Velocity'))
+  velTension = float(form.getInputValue('Dynamics: Velocity tension'))
+  stereo = float(form.getInputValue('Dynamics: Stereo width'))
+  panning = float(form.getInputValue('Dynamics: Panning offset'))
+  useRandom = float(form.getInputValue('Randomness: Randomize'))
+  rndSeed = int(form.getInputValue('Randomness: Seed'))
+  rndProbability = float(form.getInputValue('Randomness: Probability'))
+  rndLength = float(form.getInputValue('Randomness: Length'))
+  rndSpeed = float(form.getInputValue('Randomness: Speed'))
+  rndVelocity = float(form.getInputValue('Randomness: Velocity'))
+  rndStereo = float(form.getInputValue('Randomness: Stereo width'))
+  rndPanning = float(form.getInputValue('Randomness: Panning offset'))
+
+  lengthTime = round(lengthNum * TIME_UNIT_PPQMULS[lengthUnit] * ppq)
+  speedTime = max(round(speedNum * TIME_UNIT_PPQMULS[speedUnit] * ppq), 1)
+
+  # always seed with user provided seed
+  seed = int(rndSeed)
+  random.seed(seed)
+
+  # iterate notes and add pre-roll
+  for n in notes:
+    doPut = True
+    t0 = n.time
+    tlen = lengthTime
+    tspd = speedTime
+    v0 = velocity
+    w0 = stereo
+    p0 = panning
+    if useRandom:
+      # random() is 1 exclusive, thus won't ever be >= 1
+      doPut = random.random() >= (1 - rndProbability)
+      tlen = max(round(tlen * (1 + rndLength * random.random())), 0)
+      tspd = max(round(tspd * (1 + rndSpeed * random.random())), 1)
+      v0 = max(v0 + rndVelocity * random.random(), 0)
+      w0 = w0 + rndStereo * random.random()
+      p0 = p0 + rndPanning * random.random()
+
+    if not doPut: continue
+
+    rolls = math.floor(tlen / tspd)
+
+    grp = flp.score.getNextFreeGroupIndex()
+
+    for i in range(rolls):
+      ri = i / rolls
+      t = t0 - tspd * (rolls - i)
+      if t >= 0:
+        note = n.clone()
+        note.time = t
+        note.length = tspd
+        note.velocity *= v0 + (1 - v0) * tension(ri, velTension)
+        pan = note.pan * 2 - 1
+        pan *= w0 + (1 - w0) * ri
+        pan += p0 * (1 - ri)
+        note.pan = min(max((pan + 1) / 2, 0), 1)
+        note.group = grp
+        flp.score.addNote(note)
+
+def createDialog():
+  form = flp.ScriptDialog('Pre-Roll',
+    'Adds pre-roll to existing notes.\r\n'
+    + '\r\n'
+    + '\r\n'
+    + 'v1.0 (2024-12-19), D3Mens & BinaryBorn'
+  )
+  form.addGroup('Timing')
+  form.addInputKnob('Length', 1, 0, 16, hint='Length of pre-roll')
+  form.addInputCombo('Length unit', TIME_UNIT_NAMES, 3, hint='Unit for length')
+  form.addInputKnob('Speed', 1, 0, 16, hint='Speed of pre-roll')
+  form.addInputCombo('Speed unit', TIME_UNIT_NAMES, 9, hint='Unit for speed')
+  form.endGroup()
+  form.addGroup('Dynamics')
+  form.addInputKnob('Velocity', 0, 0, 1, hint='Pre-roll starting velocity')
+  form.addInputKnob('Velocity tension', 0, -1, 1, hint='Tension for velocity curve')
+  form.addInputKnob('Stereo width', 1, -2, 2, hint='Multiplies existing note panning')
+  form.addInputKnob('Panning offset', 0, -1, 1, hint='Additional pre-roll panning')
+  form.endGroup()
+  form.addGroup('Randomness')
+  form.addInputCheckbox('Randomize', False, hint='Use randomness')
+  # randomly initialize seed value - will only ever "rand" back on reset
+  form.addInputKnobInt('Seed', int(time.time() * 1000) % 1000, 0, 999, hint='Seed for random number generator')
+  form.addInputKnob('Probability', 1, 0, 1, hint='Probability of pre-roll')
+  form.addInputKnob('Length', 0, -1, 1, hint='Random amount for length of pre-roll')
+  form.addInputKnob('Speed', 0, -1, 1, hint='Random amount for speed of pre-roll')
+  form.addInputKnob('Velocity', 0, -1, 1, hint='Random amount for velocity')
+  form.addInputKnob('Stereo width', 0, -1, 1, hint='Random amount for stereo width')
+  form.addInputKnob('Panning offset', 0, -1, 1, hint='Random amount for panning offset')
+  form.endGroup()
+  
+  return form
