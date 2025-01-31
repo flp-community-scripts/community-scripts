@@ -1,0 +1,76 @@
+"""flp
+Title: Flip vertically
+Author: Marcel68 (idea), BinaryBorn (code)
+Category: Edit
+Version: 1.0
+License: ISC
+
+Description: 
+Flips notes vertically around specified axis.
+
+Changelog:
+v1.0 (2025-01-31)
+  - initial version
+"""
+
+import flpianoroll as flp
+import math
+
+def apply(form: flp.ScriptDialog):
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(flp.score.noteCount)]
+
+  if not notes: return
+
+  # get form values
+  flipNote = int(form.getInputValue('Flip axis: Note'))
+  flipAnchor = int(form.getInputValue('Flip axis: Anchor'))
+  ubEnable = bool(form.getInputValue('Upper bound: Enable'))
+  ubNote = int(form.getInputValue('Upper bound: Note'))
+  lbEnable = bool(form.getInputValue('Lower bound: Enable'))
+  lbNote = int(form.getInputValue('Lower bound: Note'))
+
+  # flip notes
+  nflip = flipNote + 0.5 - flipAnchor / 2
+  for n in notes:
+    # flip note
+    dn = n.number - nflip
+    n.number = max(min(round(n.number - 2 * dn), 131), 0)
+
+    # Transposing imitates the behavior of Tools > Limit..., where transposing
+    # notes over the opposite bound clamps it to that.
+
+    # transpose notes above upper bound
+    if ubEnable:
+      if n.number > ubNote:
+        octs = math.ceil((n.number - ubNote) / 12)
+        n.number -= octs * 12
+        if lbEnable and n.number < lbNote: n.number = lbNote
+    # transpose notes below lower bound
+    if lbEnable:
+      if n.number < lbNote:
+        octs = math.ceil((n.number - lbNote) / -12)
+        n.number += octs * 12
+        if ubEnable and n.number > ubNote: n.number = ubNote
+
+def createDialog():
+  form = flp.ScriptDialog('Flip vertically',
+    "Flips notes vertically around specified axis.\r\n"
+    + '\r\n'
+    + '\r\n'
+    + 'v1.0 (2025-01-31), Marcel68 & BinaryBorn'
+  )
+  form.addGroup('Flip axis')
+  form.addInputKnobInt('Note', 60, 0, 131, hint='MIDI note for flip axis.')
+  form.addInputCombo('Anchor', ['Top', 'Middle', 'Bottom'], 1, hint='Where to place the axis in note.')
+  form.endGroup()
+  form.addGroup('Upper bound')
+  form.addInputCheckbox('Enable', False, hint='Enable inversing notes above upper bound down in octaves.')
+  form.addInputKnobInt('Note', 72, 0, 131, hint='MIDI note for upper bound.')
+  form.endGroup()
+  form.addGroup('Lower bound')
+  form.addInputCheckbox('Enable', False, hint='Enable inversing notes below lower bound up in octaves.')
+  form.addInputKnobInt('Note', 48, 0, 131, hint='MIDI note for lower bound.')
+  form.endGroup()
+  
+  return form
