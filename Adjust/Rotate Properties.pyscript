@@ -1,0 +1,76 @@
+"""flp
+Title: Rotate Properties
+Author: BinaryBorn
+Category: Adjust
+Version: 1.0
+License: ISC
+
+Description: 
+Rotate note properties along the time axis.
+
+Changelog:
+v1.0 (2026-01-11)
+  - initial version
+"""
+
+import flpianoroll as flp
+
+class Property:
+  __slots__ = ['name', 'label', 'checked']
+
+  def __init__(self, name: str, label: str, checked: bool = False):
+    self.name = name
+    self.label = label
+    self.checked = checked
+
+PROPERTIES = [
+  Property('number', 'Note number', True),
+  Property('length', 'Note duration'),
+  Property('pan', 'Pan'),
+  Property('velocity', 'Velocity'),
+  Property('release', 'Release'),
+  Property('fcut', 'Mod X'),
+  Property('fres', 'Mod Y'),
+  Property('pitchofs', 'Fine pitch'),
+  Property('repeats', 'Repeats'),
+  Property('color', 'Color'),
+  Property('porta', 'Portamento'),
+  Property('muted', 'Muted')
+]
+
+
+def createDialog():
+  form = flp.ScriptDialog("Rotate Properties","Rotate note properties along the time axis."
+  + "\r\n\r\nv1.0 2026-11-01, BinaryBorn")
+  form.addGroup('Rotation')
+  form.addInputKnobInt('Amount', 0, -flp.score.noteCount, flp.score.noteCount, hint='Index rotation offset')
+  form.endGroup()
+  form.addGroup('Properties')
+  for prop in PROPERTIES:
+    form.addInputCheckbox(prop.label, prop.checked, hint=f'Rotate the "{prop.label}" property')
+
+  return form
+
+
+def apply(form: flp.ScriptDialog):
+  rotation = form.getInputValue('Rotation: Amount')
+  # names of checked properties
+  props = [p.name for p in PROPERTIES if form.getInputValue(f'Properties: {p.label}')]
+
+  noteCount = flp.score.noteCount
+  if noteCount == 0: return
+
+  # get current notes
+  notes = [flp.score.getNote(i) for i in range(noteCount)]
+  # order by start time then number
+  notes.sort(key=lambda n: (n.time, n.number))
+
+  # copy values
+  values = [[getattr(note, prop) for prop in props] for note in notes]
+
+  # apply copied values to notes
+  for i in range(noteCount):
+    itarget = (i - rotation) % noteCount
+    vtarget = values[itarget]
+    for prop, value in zip(props, vtarget):
+      setattr(notes[i], prop, value)
