@@ -1,0 +1,39 @@
+import flpianoroll as flp
+from k0505_core import *
+
+__title__ = "Slidify"
+
+def OnExecute():
+	score = flp.score
+
+	analyzer = NoteAnalyzer(score, sort = True)
+	notes = analyzer.get_notes()
+
+	if len(notes) < 2:
+		log(f"Select at least 2 notes.")
+		return
+
+	# check for chords using the analyzer
+	if analyzer.has_chord():
+		log("Chords detected.", "Multiple notes can't have the same start time.", sep = "\n")
+		return
+
+	# calc duration using the analyzer method
+	duration = analyzer.determine_duration()
+
+	if duration <= 0:
+		log(f"Invalid duration.")
+		return
+
+	# accumulate duration into first note
+	first_note = notes[0]["note"]
+	first_note.length = duration
+
+	# convert remaining notes into slide/porta triggers
+	for entry in notes[1:]:
+		note = entry["note"]
+		note.length = 0
+		note.slide = True
+		note.porta = True
+
+OnExecute()
